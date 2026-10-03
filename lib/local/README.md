@@ -153,16 +153,14 @@ snapshot down the same code path.
   incomplete copy would read as an empty account.
 - A feed that says `hasMore` while handing back the same cursor would page forever; that is
   `SyncFeedStalledError`, not a retry.
-- **A copy from before a Start fresh is thrown away** (T-207, T-208). Start fresh erases the account's
-  rows for good, with no tombstone the feed could send, so the backend answers a cursor issued before
+- **A copy from before a Start fresh is thrown away** (T-207, T-208). Start fresh went with T-238, but an
+  account that used it keeps its reset date, and a device that last synced before it still holds the old
+  rows. Start fresh erased the account's rows for good, with no tombstone the feed could send, so the backend answers a cursor issued before
   it with `409 RESYNC_REQUIRED`. `pullChanges` then empties the mirror stores, the cursor and
   `syncedAt` in one transaction that also moves `mirrorEpoch`, and pages again with no cursor: a
   snapshot. The queue stays, as in "Force full resync" (invariant 7): what it holds for rows that are
   gone comes back refused and waits in Sync for its owner. A snapshot refused the same way is an error,
   not another round.
-- **Nothing of an account with "Keep what's in this account?" open is downloaded** (T-208): a page whose
-  profile carries the question is refused before anything is written (`QuestionOpenError`). The app
-  frame already opens no mirror when `/me` says the question is open; this covers a `/me` that failed.
 - **The row the feed sends is not the last word while the queue still holds writes for it** (D-23,
   F-25). `applyPage` hands each row to `outbox/reconcile.ts`, which puts the server's row down and
   projects back on top of it, in `seq` order, every operation on that row that is still `pending` or
@@ -511,6 +509,13 @@ the only way in.
   retry scheduled, the way a dead session does. `POST /sync` also names the owner in
   `x-lf-session-user`, so the BFF refuses a batch a refresh inside `lib/api` swapped to the other
   session.
+- **A closed door holds the queue** (T-239). Past its deadline, an account from before email gets
+  `403 EMAIL_CONFIRMATION_REQUIRED` for everything, `POST /sync` included and whole: the server says no
+  to the account, not to the write. So the pass stops as it does on a dead session — nothing undone,
+  nothing retried, the engine paused — on the batch and on the ordinary routes alike, where any other
+  4xx would undo the write. The app frame meanwhile shows Confirm your email to continue and opens no
+  mirror; once the email is confirmed the frame starts the mirror and the engine again, and the queue
+  goes out.
 - **Single flight.** One drain runs at a time; every trigger that arrives while it runs joins it. A
   request that lands _after_ the running pass took its last look at the queue is not lost — the pass
   records which request it served, and a later one asks for a pass of its own.

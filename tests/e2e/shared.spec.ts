@@ -1,19 +1,15 @@
 import { expect, type Page, test, uniqueEmail } from "../fixtures";
-import { confirmEmailOf, TEST_CAPTCHA } from "../mailpit";
+import { signUpWithCode } from "../mailpit";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 type Request = Parameters<Parameters<typeof test>[2]>[0]["request"];
 
 // Every mutation runs on a throwaway user with its ten seeded categories, so the seed stays untouched.
-// Invitations wait for a confirmed email (EMAIL_VERIFICATION_REQUIRED in the suite's backend).
+// Invitations wait for a confirmed email, and an account made by its sign-up code is confirmed.
 async function register(request: Request, name: string, email: string) {
-  const response = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { name, email, password: "LedgerFlow!2026", captcha: TEST_CAPTCHA },
-  });
+  const response = await signUpWithCode(request, { name, email, password: "LedgerFlow!2026" });
   expect(response.ok()).toBe(true);
-  await confirmEmailOf(request, email);
 }
 
 async function signUp(page: Page, request: Request) {

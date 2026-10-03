@@ -70,7 +70,7 @@
 
 ## Finish creating your account
 
-`#create-account-code`, `#create-account-wrong-code`
+`#create-account-code`, `#create-account-wrong-code`, `#create-account-expired`
 
 The step after Create account, in the same frame and at the same address, so a reload lands on it again
 for as long as its 24 hours run.
@@ -96,6 +96,12 @@ for as long as its 24 hours run.
   password?, and **a send that failed is never shown** on Create account or on Resend, for the same
   reason: only the branch with no account could fail differently. Whoever waits for a code that does
   not come has Resend, and "Not there? Check your spam folder.".
+- **A sign-up that is over** (`#create-account-expired`): Resend code answers `SIGN_UP_EXPIRED` when its 24
+  hours passed or a newer Create account with the same email replaced it. The step goes back to the form
+  with the email in place and a `warning` alert, "**That sign-up is over.** It lasts 24 hours, and a
+  newer Create account with the same email replaces it. Fill in the form again to get a new code." A
+  reload after the 24 hours lands on the plain form, because the browser forgot the sign-up with them.
+  A code typed for a sign-up that is over is a bad code like any other.
 
 ## Restore your account?
 
@@ -129,7 +135,7 @@ After Sign in with the right password of an account deleted in the last 30 days 
 
 For an account from before email existed that did not confirm by its deadline (the owner's decision 17:
 14 days from the email that announced it, [states.md](states.md) `#confirm-your-email`). **Its data is
-untouched**: this is only the door. After Sign in, and whenever an open app learns it from `/me`, the
+untouched**: this is only the door. It lives at `/confirm-to-continue`, in this frame. After Sign in, and whenever an open app learns it from `/me`, the
 frame shows this step instead of the app, and the app opens nothing of the account until it is done.
 
 - "Confirm your email to continue" and "Ledger Flow now asks every account to confirm its email. Nothing
@@ -279,13 +285,24 @@ needs a session. The frame's language chip changes only the page, never the acco
 The server answers the three with one code, `LINK_INVALID`, and the page does not tell them apart: a
 neutral tile, "This link no longer works", its own line, and a way on.
 
-| Path             | Line                                                                                                                                                                                                                                                                                                  | Way on                                                                                                                                |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `/verify`        | From `sign-up`: "A sign-up link works for 24 hours and only once. Start again from Create account." From `verify-email`: "A confirmation link works for 24 hours and only once, and asking for another code cancels it." From a deadline email: "This link worked until its deadline, and only once." | **Create account** for a sign-up; otherwise **Open Ledger Flow**, where the stripe or Confirm your email to continue offer a new code |
-| `/confirm-email` | The same.                                                                                                                                                                                                                                                                                             | **Open Ledger Flow**, where Password & email offers Resend                                                                            |
-| `/undo`          | "An undo link works for 7 days and only once. If something still looks wrong, Forgot your password? signs everyone out."                                                                                                                                                                              | **Forgot your password?**                                                                                                             |
-| `/restore`       | "A restore link works for 7 days and only once. Until the account is erased, Forgot your password? restores it too."                                                                                                                                                                                  | **Forgot your password?**                                                                                                             |
-| `/reset`         | "A password link works for 30 minutes and only once, and asking for another code cancels it."                                                                                                                                                                                                         | **Ask for a new code**                                                                                                                |
+| Path             | Line                                                                                                                                                                                                                                                                           | Way on                                                                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/verify`        | From a deadline email: "This link worked until its deadline, and only once." From `sign-up` or `verify-email` (`#link-no-longer-works-verify`): "A link to create an account or to confirm an email works for 24 hours and only once, and asking for another code cancels it." | **Open Ledger Flow** for a deadline email, where the stripe or Confirm your email to continue offer a new code; otherwise **Create account**, with **Open Ledger Flow** as a quiet second button |
+| `/confirm-email` | The same.                                                                                                                                                                                                                                                                      | **Open Ledger Flow**, where Password & email offers Resend                                                                                                                                       |
+| `/undo`          | "An undo link works for 7 days and only once. If something still looks wrong, Forgot your password? signs everyone out."                                                                                                                                                       | **Forgot your password?**                                                                                                                                                                        |
+| `/restore`       | "A restore link works for 7 days and only once. Until the account is erased, Forgot your password? restores it too."                                                                                                                                                           | **Forgot your password?**                                                                                                                                                                        |
+| `/reset`         | "A password link works for 30 minutes and only once, and asking for another code cancels it."                                                                                                                                                                                  | **Ask for a new code**                                                                                                                                                                           |
+
+**Which email a dead `/verify` link came from.** A deadline email's token has a shape of its own, so the
+page knows it; the links of `sign-up` and `verify-email` look the same, and a dead one tells the page
+nothing more — the server answers `LINK_INVALID` for both. So one line covers the two, and both ways on
+are offered: Create account first, since a sign-up is what most of these links are.
+
+**`/restore` when the code could not go** (`#restore-link-done-no-code`, `codeSent: false`): the account is
+back and its password stopped all the same, so the page does not claim a code: "Account restored",
+"Every device was signed out, and your old password no longer works. We couldn't send the code to choose
+a new one: ask for it from Forgot your password?." · **Forgot your password?**, with the address carried
+over. `/undo` gets its words in T-219.
 
 **An account that is already confirmed** is not a dead link on `/verify`: whoever confirmed with the code
 and then taps the link sees "Your account is ready" or "Email confirmed".

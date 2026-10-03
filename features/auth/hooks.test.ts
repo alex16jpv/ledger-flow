@@ -15,7 +15,8 @@ import { account, openTestVault, profile, wipeVaults } from "@/lib/testing/vault
 const marker = vi.hoisted(() => ({ value: null as SessionMarker | null }));
 vi.mock("@/lib/auth/marker", () => ({ readSessionMarker: () => marker.value }));
 
-const { useDeviceEmail, useLogin, useRegister } = await import("./hooks");
+const { useConfirmSignUp, useDeviceEmail, useLogin, useRestoreDeletedAccount } =
+  await import("./hooks");
 
 const fetchMock = vi.fn<typeof fetch>();
 const json = (body: unknown) =>
@@ -71,20 +72,24 @@ describe("auth", () => {
     expect(connectivityStore.getSnapshot()).toBe("offline");
   });
 
-  it("ends this-device-only mode when a registration succeeds", async () => {
+  it("ends this-device-only mode when the code that creates an account signs in", async () => {
     setLocalOnly(true);
     fetchMock.mockResolvedValue(json({ user: { id: "u2", name: "Grace" } }));
 
-    const { result } = renderHook(() => useRegister(), { wrapper });
-    await result.current.mutateAsync({
-      name: "Grace",
-      email: "g@b.test",
-      password: "LedgerFlow!2026",
-      currency: "COP",
-      timezone: "America/Bogota",
-      locale: "en",
-      captcha: "XXXX.DUMMY.TOKEN.XXXX",
+    const { result } = renderHook(() => useConfirmSignUp(), { wrapper });
+    await result.current.mutateAsync("482719");
+
+    await waitFor(() => {
+      expect(isLocalOnly()).toBe(false);
     });
+  });
+
+  it("ends this-device-only mode when restoring a deleted account signs in", async () => {
+    setLocalOnly(true);
+    fetchMock.mockResolvedValue(json({ user: { id: "u2", name: "Grace" } }));
+
+    const { result } = renderHook(() => useRestoreDeletedAccount(), { wrapper });
+    await result.current.mutateAsync({ email: "g@b.test", password: "LedgerFlow!2026" });
 
     await waitFor(() => {
       expect(isLocalOnly()).toBe(false);
@@ -126,16 +131,8 @@ describe("auth", () => {
     const post = vi.spyOn(tabChannel, "post");
     fetchMock.mockResolvedValue(json({ user: { id: "u2", name: "Grace" } }));
 
-    const { result } = renderHook(() => useRegister(), { wrapper });
-    const registration = result.current.mutateAsync({
-      name: "Grace",
-      email: "g@b.test",
-      password: "LedgerFlow!2026",
-      currency: "COP",
-      timezone: "America/Bogota",
-      locale: "en",
-      captcha: "XXXX.DUMMY.TOKEN.XXXX",
-    });
+    const { result } = renderHook(() => useConfirmSignUp(), { wrapper });
+    const registration = result.current.mutateAsync("482719");
     await waitFor(() => {
       expect(databases).toHaveBeenCalled();
     });

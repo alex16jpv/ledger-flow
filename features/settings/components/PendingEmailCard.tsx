@@ -22,9 +22,12 @@ import {
   useCancelEmailChange,
   useResendEmailChange,
 } from "@/lib/session/email-change";
+import {
+  type EmailFailure,
+  emailFailure,
+  RETRY_AFTER_FALLBACK_SECONDS,
+} from "@/lib/session/email-failure";
 import type { EmailChange } from "@/types/api";
-
-import { type EmailFailure, emailFailure, RETRY_AFTER_FALLBACK_SECONDS } from "../email-failure";
 
 const bold = (chunks: React.ReactNode) => <b className="font-semibold">{chunks}</b>;
 

@@ -1078,15 +1078,18 @@ const register = (state = "") => {
   const unavailable =
     state == "unavailable"
       ? `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>You can’t create an account here.</b> It needs Cloudflare’s check, which this version of the app doesn’t have.</span></div>`
-      : "";
+      : state == "expired"
+        ? `<div class="alert warning">${iconSvg("clock")}<span><b>That sign-up is over.</b> It lasts 24 hours, and a newer Create account with the same email replaces it. Fill in the form again to get a new code.</span></div>`
+        : "";
+  const blocked = state == "unavailable";
   return authFrame(`<div class="stack" style="gap:20px">
 <div class="stack-sm" style="text-align:center"><h1 class="h1">Create account</h1><p class="muted" style="margin:0">Under a minute. No card needed.</p></div>${unavailable}
-<div class="stack">${field("Name", "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
+<div class="stack">${field("Name", state == "expired" ? null : "John Doe", null, { icon: "user" })}${field("Email", "john@example.com", null, { icon: "user" })}${field("Password", null, "At least 8 characters", { icon: "lock", help: "Between 8 and 128 characters." })}
 <div class="field"><span class="label">Language</span><button class="picker">${tile("globe", "TEAL", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">English</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">The language of your account. You can change it any time in Settings.</span></div>
 <div class="field"><span class="label">Currency</span><button class="picker">${tile("coins", "GREEN", "sm")}<span class="body"><span class="lbl">Detected from your region</span><span class="val">COP · Colombian peso</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">Used for all your accounts. It locks once you create your first account.</span></div>
 <div class="field"><span class="label">Time zone</span><button class="picker">${tile("globe", "BLUE", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">America/Bogota · GMT−5</span></span>${iconSvg("chevron-down", "sm")}</button></div></div>
 <label class="check"><span class="box on">${iconSvg("check", "sm")}</span><span>I agree to the <a href="#">Privacy policy</a> and to the processing of my personal data (Ley 1581).</span></label>${check}
-<button class="btn primary lg block"${unavailable ? " disabled" : ""}>Create account</button>
+<button class="btn primary lg block"${blocked ? " disabled" : ""}>Create account</button>
 <p class="small muted" style="text-align:center;margin:0">Already have an account? <a href="#" style="color:var(--brand-text);font-weight:500">Sign in</a></p></div>`);
 };
 
@@ -1204,10 +1207,14 @@ const resetPassword = (state = "") => {
 ${after}`);
 };
 
-const linkNoLongerWorks = () =>
-  authPage(`${authOutcome("circle-alert", "NONE", "This link no longer works", "A password link works for 30 minutes and only once, and asking for another code cancels it.")}
+const linkNoLongerWorks = (kind = "") => {
+  if (kind == "verify")
+    return authPage(`${authOutcome("circle-alert", "NONE", "This link no longer works", "A link to create an account or to confirm an email works for 24 hours and only once, and asking for another code cancels it.")}
+<div class="stack-sm"><button class="btn primary lg block">Create account</button><button class="btn ghost lg block">Open Ledger Flow</button></div>`);
+  return authPage(`${authOutcome("circle-alert", "NONE", "This link no longer works", "A password link works for 30 minutes and only once, and asking for another code cancels it.")}
 <button class="btn primary lg block">Ask for a new code</button>
 ${authFoot(authLink("Back to sign in"))}`);
+};
 
 const registerCode = (state = "") =>
   authPage(`${authTitle("Check your email", "We sent an email to <b>john@example.com</b>. Type the 6-digit code in it to finish creating your account.")}
@@ -1266,6 +1273,9 @@ const emailLinkPage = (kind) => {
     return authPage(`${authTitle("Restore your account?", "Your account was deleted. This brings it back with everything in it, except the shared groups it left.")}
 <div class="alert warning">${iconSvg("triangle-alert")}<span>Every device is signed out and <b>your current password stops working</b>. We’ll email you a code to choose a new one.</span></div>
 <button class="btn primary lg block">Restore account</button>`);
+  if (kind == "restore-done-no-code")
+    return authPage(`${authOutcome("archive-restore", "NONE", "Account restored", "Every device was signed out, and your old password no longer works. We couldn’t send the code to choose a new one: ask for it from Forgot your password?.")}
+<button class="btn primary lg block">Forgot your password?</button>`);
   if (kind == "restore-done")
     return authPage(`${authOutcome("archive-restore", "NONE", "Account restored", "Every device was signed out. We sent a code to this address so you can choose a new password: it works for 30 minutes.")}
 <button class="btn primary lg block">Enter the code</button>`);
@@ -1276,6 +1286,8 @@ const emailLinkPage = (kind) => {
   return authPage(`${authOutcome("undo-2", "NONE", "Change undone", "Every device was signed out. We sent a code to this address so you can choose a new password: it works for 30 minutes.")}
 <button class="btn primary lg block">Enter the code</button>`);
 };
+
+const CONFIRM_STRIPE_UNDATED = `<div class="banner warning" role="status">${iconSvg("mail")}<span class="txt"><b>Confirm your email.</b><span class="sub">You need it to invite people to Shared and to be invited.</span></span><span class="actions"><button class="action">Confirm</button><button class="btn ghost icon-only sm round" aria-label="Not now" style="color:inherit">${iconSvg("x", "sm")}</button></span></div>`;
 
 const CONFIRM_STRIPE = `<div class="banner warning" role="status">${iconSvg("mail")}<span class="txt"><b>Confirm your email by October 12.</b><span class="sub">After that, signing in asks for a code first. Nothing in your account changes.</span></span><span class="actions"><button class="action">Confirm</button><button class="btn ghost icon-only sm round" aria-label="Not now" style="color:inherit">${iconSvg("x", "sm")}</button></span></div>`;
 
@@ -6986,6 +6998,13 @@ const PAGES = [
         { added: "2026-09-26" },
       ),
       plate(
+        "link-no-longer-works-verify",
+        "A link that no longer works · /verify",
+        "The links of sign-up and of verify-email look the same to the page, so one line says both and the two ways on are offered; a deadline email's link is told apart by its token and keeps its own line.",
+        linkNoLongerWorks("verify"),
+        { added: "2026-10-03" },
+      ),
+      plate(
         "create-account",
         "Create account",
         "With currency and time zone. It creates nothing yet: it sends the code, and the account exists once the code is typed (the owner's decision 16).",
@@ -7019,6 +7038,13 @@ const PAGES = [
         "A deployment with no Cloudflare site key, such as a preview, cannot run the check, and the server creates no account without it. The screen says so and the button stays off.",
         register("unavailable"),
         { added: "2026-09-27" },
+      ),
+      plate(
+        "create-account-expired",
+        "Create account · the sign-up is over",
+        "Resend code answered SIGN_UP_EXPIRED: 24 hours passed, or a newer Create account with the same email replaced it. The step goes back to the form with the email in place.",
+        register("expired"),
+        { added: "2026-10-03" },
       ),
       plate(
         "human-check-failed",
@@ -7113,6 +7139,13 @@ const PAGES = [
         "The code to choose a new password is on its way. Enter the code opens its screen without asking for another.",
         emailLinkPage("restore-done"),
         { added: "2026-09-28" },
+      ),
+      plate(
+        "restore-link-done-no-code",
+        "From an email · account restored, no code",
+        "The answer said codeSent: false. The account is back and its password stopped, so Forgot your password? is the way in; nothing claims a code is on its way.",
+        emailLinkPage("restore-done-no-code"),
+        { added: "2026-10-03" },
       ),
     ],
   },
@@ -8536,6 +8569,13 @@ const PAGES = [
         "Only an account from before email existed, until its deadline (the owner's decision 17). The stripe shares the one slot of the sync stripes, after the new-version one; the ✕ puts it away until the app is next opened. Settings › Password & email says it too.",
         home({ banner: CONFIRM_STRIPE }),
         { added: "2026-09-26", updated: "2026-09-28" },
+      ),
+      plate(
+        "confirm-your-email-undated",
+        "Confirm your email · no deadline yet",
+        "An account from before email existed whose deadline has not started: the server gives it one with the email that announces it, and until then the profile has no date. The stripe keeps the words it had before deadlines existed.",
+        home({ banner: CONFIRM_STRIPE_UNDATED }),
+        { added: "2026-10-03" },
       ),
       plate(
         "confirm-email-code",

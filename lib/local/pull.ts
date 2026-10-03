@@ -67,13 +67,6 @@ export class PullSupersededError extends Error {
   }
 }
 
-export class QuestionOpenError extends Error {
-  constructor() {
-    super("The account waits for Keep what's in this account?, so nothing of it is downloaded");
-    this.name = "QuestionOpenError";
-  }
-}
-
 export class SessionChangedError extends Error {
   readonly userId: string;
 
@@ -142,7 +135,6 @@ async function applyPage(
   epoch: number,
 ): Promise<Applied> {
   const { changes, pagination } = page;
-  if (changes.user?.keepOrStartFresh) throw new QuestionOpenError();
   const tx = writeTransaction(handle.db);
   // T-164: the first request of the transaction, so a purge lands wholly before this page or after it.
   if ((await readMirrorEpoch(tx.objectStore("meta"))) !== epoch) throw new PullSupersededError();

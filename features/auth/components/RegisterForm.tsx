@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User } from "lucide-react";
+import { Clock, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -13,7 +13,6 @@ import { Field, Input } from "@/components/ui/Field";
 import { HumanCheckFailed } from "@/components/ui/HumanCheckFailed";
 import { RateLimitAlert } from "@/components/ui/RateLimitAlert";
 import { ApiError, presentError } from "@/lib/api/errors";
-import { FORGOT_PATH, LOGIN_PATH } from "@/lib/auth/routes";
 import { HumanCheckSlot, useHumanCheck } from "@/lib/captcha/useHumanCheck";
 import { isEnabled } from "@/lib/flags";
 import { Link } from "@/lib/i18n/navigation";
@@ -21,24 +20,27 @@ import { type AppLocale } from "@/lib/i18n/routing";
 import { useDeviceDefaults } from "@/lib/i18n/useDeviceDefaults";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
-import type { SessionUser } from "@/lib/session/api";
 
-import { carryEmail } from "../carry";
-import { retryAfterOf, useRegister } from "../hooks";
+import type { PendingSignUp, SignUpValues } from "../api";
+import { retryAfterOf, useStartSignUp } from "../hooks";
 import { registerSchema, type RegisterValues } from "../schemas";
 import { PasswordInput } from "./PasswordInput";
 import { ProfileDefaultsFields } from "./ProfileDefaultsFields";
 
 const noSlot = () => undefined;
 
+export type TypedSignUp = Omit<SignUpValues, "password" | "captcha" | "locale">;
+
 interface RegisterFormProps {
   locale: AppLocale;
-  onSuccess: (session: SessionUser) => void;
+  typed?: Partial<TypedSignUp>;
+  expired?: boolean;
+  onSent: (pending: PendingSignUp, typed: TypedSignUp) => void;
 }
 
-export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
+export function RegisterForm({ locale, typed, expired = false, onSent }: RegisterFormProps) {
   const t = useTranslations();
-  const registerMutation = useRegister();
+  const registerMutation = useStartSignUp();
   const defaults = useDeviceDefaults();
   const canRegister = isEnabled("emailVerification");
   const check = useHumanCheck("register");
@@ -47,11 +49,11 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
   const form = useForm<RegisterValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      name: "",
-      email: "",
+      name: typed?.name ?? "",
+      email: typed?.email ?? "",
       password: "",
-      currency: "",
-      timezone: "",
+      currency: typed?.currency ?? "",
+      timezone: typed?.timezone ?? "",
       consent: undefined,
     },
   });
@@ -77,37 +79,31 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
       return;
     }
     try {
-      onSuccess(
-        await registerMutation.mutateAsync({
-          name,
-          email,
-          password,
-          currency,
-          timezone,
-          locale,
-          captcha,
-        }),
-      );
+      const pending = await registerMutation.mutateAsync({
+        name,
+        email,
+        password,
+        currency,
+        timezone,
+        locale,
+        captcha,
+      });
+      onSent(pending, { name, email, currency, timezone });
     } catch (error) {
       if (error instanceof ApiError && error.code === "CAPTCHA_INVALID") setHumanFailed(true);
       setRetryAfter(retryAfterOf(error));
     }
   });
 
-  const carryTyped = () => {
-    carryEmail(form.getValues("email"));
-  };
-
   const failure = registerMutation.error;
   const code = failure instanceof ApiError ? failure.code : null;
-  const emailTaken = code === "EMAIL_TAKEN";
   const humanRefused = humanFailed || code === "CAPTCHA_INVALID";
-  const nothingCreated = code === "CAPTCHA_UNAVAILABLE";
-  const serverError = failure instanceof ApiError && failure.status >= 500 && !nothingCreated;
+  const serverError =
+    failure !== null &&
+    code !== "CAPTCHA_UNAVAILABLE" &&
+    !(failure instanceof ApiError && failure.status < 500);
   const otherFailure =
-    failure && !emailTaken && !serverError && !humanRefused && retryAfter === null
-      ? presentError(failure)
-      : null;
+    failure && !serverError && !humanRefused && retryAfter === null ? presentError(failure) : null;
   const blocked = retryAfter !== null;
 
   return (
@@ -123,7 +119,12 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
           {t("auth.register.unavailable.body")}
         </Alert>
       )}
-      {serverError && <Alert tone="warning">{t("auth.register.maybeCreated")}</Alert>}
+      {expired && !failure && (
+        <Alert tone="warning" icon={Clock} title={t("auth.register.expired.title")}>
+          {t("auth.register.expired.body")}
+        </Alert>
+      )}
+      {serverError && <Alert tone="danger">{t("auth.register.serverError")}</Alert>}
       {otherFailure && <Alert tone="danger">{t(otherFailure.messageKey)}</Alert>}
       {blocked && (
         <RateLimitAlert
@@ -142,29 +143,7 @@ export function RegisterForm({ locale, onSuccess }: RegisterFormProps) {
             {...form.register("name")}
           />
         </Field>
-        <Field
-          label={t("auth.email")}
-          error={
-            emailTaken ? (
-              <span>
-                {t.rich("auth.register.emailTaken", {
-                  signIn: (chunks) => (
-                    <Link href={LOGIN_PATH} onClick={carryTyped} className="font-medium underline">
-                      {chunks}
-                    </Link>
-                  ),
-                  reset: (chunks) => (
-                    <Link href={FORGOT_PATH} onClick={carryTyped} className="font-medium underline">
-                      {chunks}
-                    </Link>
-                  ),
-                })}
-              </span>
-            ) : (
-              validationMessage(t, errors.email?.message)
-            )
-          }
-        >
+        <Field label={t("auth.email")} error={validationMessage(t, errors.email?.message)}>
           <Input
             type="email"
             autoComplete="email"

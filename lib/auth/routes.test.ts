@@ -41,7 +41,7 @@ describe("route rules", () => {
   });
 
   it("asks for a session on the question after a reset, never on the reset itself", () => {
-    expect(isProtectedPath("/keep-or-start-fresh")).toBe(true);
+    expect(isProtectedPath("/confirm-to-continue")).toBe(true);
     for (const path of ["/forgot", "/reset"]) {
       expect(isProtectedPath(path)).toBe(false);
       expect(isGuestOnlyPath(path)).toBe(false);

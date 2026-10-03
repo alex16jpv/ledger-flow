@@ -5,6 +5,48 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-03 · The account exists once its email is confirmed, and a deleted one is kept 30 days (T-239)
+
+- **The sign-up's token stays in the BFF's cookie** (`__Secure-sign-up`, httpOnly, path
+  `/api/auth/sign-up`, until its 24 hours end), with the address it went to and when Resend may go
+  again. The page never sees the token: the code alone must not create an account anywhere but in the
+  browser where the password was typed, and an httpOnly cookie is the one place a script cannot read.
+  The address rides along because the code step has to say where the email went after a reload, and
+  nothing else knows it without spending the token. Alternatives: the token in `sessionStorage` (a
+  script could read it, and a new tab would lose it) or a server-side lookup by token (a request to the
+  backend on every visit to Create account).
+- **"Restore your account?" keeps what was typed in memory**, and Restore account sends it again to
+  `/api/auth/login/restore`: the backend gives the step no ticket of its own (its decision in T-238), so
+  the step holds nothing that outlives the page. Not now drops it.
+- **Confirm your email to continue is a page of the access frame** (`/confirm-to-continue`), where
+  "Keep what's in this account?" was: the app frame, when `/me` says the deadline passed, starts no
+  mirror and sends the visit there, and Sign in goes there directly. **Any request answered
+  `EMAIL_CONFIRMATION_REQUIRED` has `/me` read again** (`setConfirmationRequiredHandler` in `lib/api`),
+  so a deadline that passes with the app open closes the door at the next request instead of at the
+  next `/me`. The step reuses the code form of the confirm sheet, split out of it
+  (`ConfirmEmailForm`).
+- **The outbox holds its queue on `EMAIL_CONFIRMATION_REQUIRED`** as it does on a dead session: paused,
+  nothing undone and nothing retried. On the ordinary routes any other 4xx undoes the write, and the
+  owner's decision 17 is that the device's changes wait and sync once the email is confirmed.
+- **A dead `/verify` link offers both ways on.** The links of `sign-up` and `verify-email` cannot be told
+  apart (same token shape, same `LINK_INVALID`); a deadline email's token is 64 characters and keeps its
+  own line. The spec said a line per origin; it now says this (`#link-no-longer-works-verify`).
+- **Dates the server sends as a calendar day** (`keptUntil`, `deletedOn`, `confirmBy`) are formatted at
+  noon UTC (`formatCalendarDay`), so no device zone moves them a day. The Delete account sheet computes
+  its own date the way the server does — today in the account's zone plus 30 days — and Sign in shows
+  the one the server answered.
+- **No deadline yet keeps the old words.** `confirmBy` is null while deadlines are off and until the
+  email that starts them goes: the stripe and Settings say what they said before deadlines existed
+  (`#confirm-your-email-undated`), which is true in both cases.
+- **Found on the way: a notice nobody asked for waits for the toast on screen** (`polite` in
+  `ToastProvider`). After another account signed in, the tab that moved showed "Another account signed in
+  on this browser" and, within a tenth of a second, "Ready to use offline" replaced it — the new account's
+  copy had just become ready, and a purge forgets that it was announced. The e2e of T-167 failed on `main`
+  too, every run. A save's toast still replaces whatever is on screen; only the offline-ready one waits.
+- **The e2e suite's accounts are made by the new sign-up** (`signUpWithCode` in `tests/mailpit.ts`), and the
+  specs that need an account from before email turn a fresh one into one in the test database
+  (`tests/legacy-account.ts`), since nothing in the API makes one any more.
+
 ## 2026-10-03 · Writing off somebody you also owe squares the group with a crossing (T-244)
 
 - **Decision:** the owner's: a write-off leaves nobody owing in that group, and only that group. What
@@ -213,6 +255,8 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **The e2e suite runs with `EMAIL_VERIFICATION_REQUIRED` on**, as production will, so the shared specs
   register with Cloudflare's dummy token and confirm through Mailpit. The seed user stays unconfirmed, as
   every account from before email is: the stripe shows in the suite as it will in production.
+  _Superseded by T-239: the seed is confirmed, and the specs that need an account from before email make
+  one in the test database._
 
 ## 2026-09-26 · Forgot your password?, its captcha and "Keep what's in this account?" (T-208)
 
@@ -241,7 +285,8 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   address again after typing.
 - **The question after the reset is a page of the access frame** (`/keep-or-start-fresh`), and the app
   frame, when `/me` says it is open, starts no mirror, renders no screen and sends the visit there; Sign
-  in and the reset go there directly. Its steps are in the query (`?step=confirm|details`) so Back and
+  in and the reset go there directly. _Reversed by T-239 (the owner's decision 18): the question and
+  Start fresh are gone; Confirm your email to continue takes the same place in the frame._ Its steps are in the query (`?step=confirm|details`) so Back and
   the language chip keep them. When `/me` cannot answer, the pull refuses a feed whose profile carries
   the open question (`QuestionOpenError`) and writes nothing. Start fresh is **one request** with the new details, as the backend
   expects; Delete everything and start only opens Your details. The access frame has no session

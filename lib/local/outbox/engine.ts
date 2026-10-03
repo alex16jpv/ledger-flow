@@ -56,12 +56,20 @@ export type DrainReport = Map<number, DrainOutcome>;
 
 export const EMPTY_REPORT: DrainReport = new Map();
 
+// T-239: past the deadline the server says no to the account, not to the write, and the queue waits.
+const isConfirmationRequired = (error: unknown): boolean =>
+  error instanceof ApiError && error.code === "EMAIL_CONFIRMATION_REQUIRED";
+
 // Anything else in the 4xx range is the server saying no for good, and the write is undone.
 function retryable(error: unknown): boolean {
   if (error instanceof NetworkError) return true;
   if (!(error instanceof ApiError)) return false;
   return (
-    error.status >= 500 || error.status === 429 || error.status === 408 || error.status === 401
+    error.status >= 500 ||
+    error.status === 429 ||
+    error.status === 408 ||
+    error.status === 401 ||
+    isConfirmationRequired(error)
   );
 }
 
@@ -82,6 +90,10 @@ const isIdTaken = (error: unknown): boolean =>
 // F-26: the refresh already had its turn in `lib/api`, so a 401 here is a dead session.
 const isUnauthorized = (error: unknown): boolean =>
   error instanceof ApiError && error.status === 401;
+
+// Neither a dead session nor a closed door is a slow network: retrying would only knock again.
+const holdsTheQueue = (error: unknown): boolean =>
+  isUnauthorized(error) || isConfirmationRequired(error);
 
 // One answer settles it for the session and the queue leaves by the ordinary routes (2026-09-06).
 const isBatchMissing = (error: unknown): boolean =>
@@ -192,8 +204,8 @@ interface PassResult {
   stopped: boolean;
   // F-32: the server said something about the data, so the round ends with a pull.
   answered: boolean;
-  // The session died under the queue: the pass stops and nothing is scheduled (F-26).
-  unauthorized: boolean;
+  // The session died under the queue, or its email has to be confirmed: nothing is scheduled (F-26).
+  held: boolean;
   // Another user signed in on the device: the pass stops and nothing is scheduled (T-152).
   moved: boolean;
   retryAfterMs: number;
@@ -205,7 +217,7 @@ const emptyPass = (): PassResult => ({
   progressed: false,
   stopped: false,
   answered: false,
-  unauthorized: false,
+  held: false,
   moved: false,
   retryAfterMs: 0,
   rewrote: false,
@@ -352,7 +364,7 @@ async function sendPlanned(
         await markOperation(db, seq, "pending", codeOf(error));
         report.set(seq, { kind: "queued", code: codeOf(error) });
         result.stopped = true;
-        result.unauthorized = isUnauthorized(error);
+        result.held = holdsTheQueue(error);
         if (error instanceof ApiError && error.retryAfterSeconds) {
           result.retryAfterMs = error.retryAfterSeconds * 1_000;
         }
@@ -672,7 +684,7 @@ async function sendBatch(
       await requeueOperations(db, seqs, codeOf(error));
       for (const seq of seqs) report.set(seq, { kind: "queued", code: codeOf(error) });
       result.stopped = true;
-      result.unauthorized = isUnauthorized(error);
+      result.held = holdsTheQueue(error);
       if (error instanceof ApiError && error.retryAfterSeconds) {
         result.retryAfterMs = error.retryAfterSeconds * 1_000;
       }
@@ -778,7 +790,7 @@ async function pass(db: VaultDb, owner: string): Promise<DrainReport> {
       rewrote ||= outcome.rewrote;
       if (outcome.stopped) {
         // F-26: a dead session is not a slow network, so the queue holds until `resumeSyncEngine`.
-        if (outcome.unauthorized) {
+        if (outcome.held) {
           state.paused = true;
           clearRetry();
           return report;

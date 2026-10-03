@@ -20,6 +20,7 @@ function renderSheet(props: Partial<Parameters<typeof DeleteAccountSheet>[0]> = 
       open
       onClose={vi.fn()}
       pending={false}
+      keptUntil="October 28, 2026"
       error={null}
       onConfirm={onConfirm}
       {...props}
@@ -29,6 +30,13 @@ function renderSheet(props: Partial<Parameters<typeof DeleteAccountSheet>[0]> = 
 }
 
 describe("DeleteAccountSheet", () => {
+  it("says until when the account is kept, and that it is erased after", () => {
+    const { dialog } = renderSheet();
+    expect(dialog).toHaveTextContent(
+      "Your account and everything in it are kept for 30 days, until October 28, 2026, and then erased for good.",
+    );
+  });
+
   it("asks for the current password and sends it, from the button or with Enter", async () => {
     const user = userEvent.setup();
     const { onConfirm } = renderSheet();

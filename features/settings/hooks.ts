@@ -123,7 +123,7 @@ export function useDeleteAccount() {
   return useMutation({
     mutationFn: async (currentPassword: string) => {
       if (!user) throw new Error("No session");
-      await deleteUser(user.id, { currentPassword });
+      return deleteUser(user.id, { currentPassword });
     },
   });
 }

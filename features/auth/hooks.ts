@@ -1,36 +1,41 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
 import { ApiError, type ErrorMessageKey, presentError } from "@/lib/api/errors";
 import { noteSessionStarted, withFreshSession } from "@/lib/api/refresh";
 import { readSessionMarker } from "@/lib/auth/marker";
-import { APP_HOME_PATH, KEEP_OR_START_FRESH_PATH } from "@/lib/auth/routes";
+import { APP_HOME_PATH, CONFIRM_TO_CONTINUE_PATH } from "@/lib/auth/routes";
 import { useRouter } from "@/lib/i18n/navigation";
 import { readVaultProfile } from "@/lib/local/db";
 import { pullNow } from "@/lib/local/mirror";
-import { purgeOtherVaults, purgeVault } from "@/lib/local/purge";
+import { purgeOtherVaults } from "@/lib/local/purge";
 import { reportOnline } from "@/lib/network/connectivity";
 import { setLocalOnly } from "@/lib/network/local-only";
 import { reportError } from "@/lib/observability/reporter";
-import { fetchCurrentUser, type SessionUser } from "@/lib/session/api";
+import { fetchCurrentUser, type SessionProfile, type SessionUser } from "@/lib/session/api";
 import { tabChannel } from "@/lib/session/channel";
 import { confirmEmailChangeWithLink } from "@/lib/session/email-change";
 import { sessionKeys } from "@/lib/session/keys";
-import type { KeepOrStartFreshInput } from "@/types/api";
 
 import {
-  answerKeepOrStartFresh,
   confirmEmailWithCode,
   confirmEmailWithLink,
-  deleteAccountThatUsedMyEmail,
+  confirmSignUp,
+  forgetPendingSignUp,
   login,
-  register,
+  readPendingSignUp,
   requestResetCode,
+  resendSignUpCode,
   resetPassword,
+  type ResetSession,
+  restoreDeletedAccount,
+  restoreFromLink,
   sendVerificationCode,
+  startSignUp,
 } from "./api";
+import { authKeys } from "./keys";
 
 export const RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
 
@@ -63,8 +68,40 @@ export function useLogin() {
   return useMutation({ mutationFn: login, onSuccess: syncFromNowOn });
 }
 
-export function useRegister() {
-  return useMutation({ mutationFn: register, onSuccess: syncFromNowOn });
+export function useRestoreDeletedAccount() {
+  return useMutation({ mutationFn: restoreDeletedAccount, onSuccess: syncFromNowOn });
+}
+
+// An account past its deadline signs in as ever, and the frame's step is the only door it has.
+export function pathAfterSignIn(user: SessionProfile, next: string): string {
+  return user.emailConfirmationRequired ? CONFIRM_TO_CONTINUE_PATH : next;
+}
+
+export function usePendingSignUp() {
+  return useQuery({
+    queryKey: authKeys.pendingSignUp(),
+    queryFn: readPendingSignUp,
+    retry: false,
+    staleTime: Infinity,
+    gcTime: 0,
+    networkMode: "always",
+  });
+}
+
+export function useStartSignUp() {
+  return useMutation({ mutationFn: startSignUp });
+}
+
+export function useResendSignUpCode() {
+  return useMutation({ mutationFn: resendSignUpCode });
+}
+
+export function useForgetPendingSignUp() {
+  return useMutation({ mutationFn: forgetPendingSignUp });
+}
+
+export function useConfirmSignUp() {
+  return useMutation({ mutationFn: confirmSignUp, onSuccess: syncFromNowOn });
 }
 
 export function useRequestResetCode() {
@@ -82,32 +119,17 @@ export function fetchSessionUser(): Promise<SessionUser> {
   return withFreshSession(fetchCurrentUser);
 }
 
-export function useFinishReset(): (session: SessionUser) => void {
+export function useFinishReset(): (session: ResetSession) => void {
   const router = useRouter();
   return useCallback(
-    ({ user }: SessionUser) => {
-      if (user.keepOrStartFresh) router.replace(KEEP_OR_START_FRESH_PATH);
-      else router.replace({ pathname: APP_HOME_PATH, query: { passwordChanged: "1" } });
+    ({ restored }: ResetSession) => {
+      router.replace({
+        pathname: APP_HOME_PATH,
+        query: restored ? { passwordChanged: "1", restored: "1" } : { passwordChanged: "1" },
+      });
     },
     [router],
   );
-}
-
-export async function dropThisCopy(userId: string): Promise<void> {
-  await purgeVault(userId, { discardPendingWork: false }).catch((error: unknown) => {
-    reportError(error, "vault");
-  });
-}
-
-export function useKeepOrStartFresh(userId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (answer: KeepOrStartFreshInput) => answerKeepOrStartFresh(userId, answer),
-    onSuccess: async (user, answer) => {
-      queryClient.setQueryData(sessionKeys.me(), { user });
-      if (answer.choice === "start-fresh") await dropThisCopy(user.id);
-    },
-  });
 }
 
 export function useDeviceEmail(): string | null {
@@ -164,6 +186,6 @@ export function useConfirmEmailChangeLink() {
   return useMutation({ mutationFn: confirmEmailChangeWithLink, onSuccess: confirmed });
 }
 
-export function useDeleteAccountThatUsedMyEmail() {
-  return useMutation({ mutationFn: deleteAccountThatUsedMyEmail });
+export function useRestoreFromLink() {
+  return useMutation({ mutationFn: restoreFromLink });
 }

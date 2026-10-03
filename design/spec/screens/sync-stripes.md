@@ -54,7 +54,10 @@ the user.
    changes.", with **"Confirm"**, which opens the code sheet, and a ✕ that puts it away until the app is
    next loaded from scratch. ES «**Confirma tu correo a más tardar el 12 de octubre.**» + «Después, para entrar te
    pediremos primero un código. En tu cuenta no cambia nada.» + «Confirmar». It is amber because something about the account is
-   incomplete, which is what amber says everywhere else.
+   incomplete, which is what amber says everywhere else. **With no deadline yet** (`#confirm-your-email-undated`)
+   it keeps the words it had before deadlines existed: "**Confirm your email.**" plus "You need it to invite
+   people to Shared and to be invited." · ES «**Confirma tu correo.**» + «Lo necesitas para invitar a gente en
+   Shared y para que te inviten.».
 
 **Priority when several apply** — only one is painted:
 

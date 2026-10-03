@@ -16,6 +16,7 @@ import { Link } from "@/lib/i18n/navigation";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
 import type { SessionUser } from "@/lib/session/api";
+import type { DeletedAccount } from "@/types/api";
 
 import { carriedEmail, carryEmail } from "../carry";
 import { retryAfterOf, useLogin } from "../hooks";
@@ -24,11 +25,17 @@ import { PasswordInput } from "./PasswordInput";
 
 interface LoginFormProps {
   onSuccess: (session: SessionUser) => void;
+  onDeleted: (credentials: LoginValues, deleted: DeletedAccount) => void;
   forgotPasswordEnabled: boolean;
   knownEmail?: string | null;
 }
 
-export function LoginForm({ onSuccess, forgotPasswordEnabled, knownEmail }: LoginFormProps) {
+export function LoginForm({
+  onSuccess,
+  onDeleted,
+  forgotPasswordEnabled,
+  knownEmail,
+}: LoginFormProps) {
   const t = useTranslations();
   const login = useLogin();
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
@@ -50,14 +57,21 @@ export function LoginForm({ onSuccess, forgotPasswordEnabled, knownEmail }: Logi
     try {
       onSuccess(await login.mutateAsync(values));
     } catch (error) {
+      if (error instanceof ApiError && error.code === "ACCOUNT_DELETED" && error.deletedAccount) {
+        onDeleted(values, error.deletedAccount);
+        return;
+      }
       setRetryAfter(retryAfterOf(error));
     }
   });
 
   const failure = login.error;
   const invalidCredentials = failure instanceof ApiError && failure.status === 401;
+  const deleted = failure instanceof ApiError && failure.code === "ACCOUNT_DELETED";
   const otherFailure =
-    failure && !invalidCredentials && retryAfter === null ? presentError(failure) : null;
+    failure && !invalidCredentials && !deleted && retryAfter === null
+      ? presentError(failure)
+      : null;
   const blocked = retryAfter !== null;
 
   return (

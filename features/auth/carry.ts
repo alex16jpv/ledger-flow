@@ -28,7 +28,7 @@ export function lastSentCode(): SentCode | null {
   return sentCode && { email: sentCode.email, resendAt: sentCode.resendAt };
 }
 
-export type LinkPurpose = "reset" | "verify" | "not-me" | "confirm-email";
+export type LinkPurpose = "reset" | "verify" | "confirm-email" | "restore";
 
 const linkTokens = new Map<LinkPurpose, string>();
 

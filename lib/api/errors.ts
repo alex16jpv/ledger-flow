@@ -1,5 +1,5 @@
 import type en from "@/messages/en.json";
-import type { ErrorResponse } from "@/types/api";
+import type { DeletedAccount, ErrorResponse } from "@/types/api";
 
 export type ErrorMessageKey = `errors.${keyof typeof en.errors}`;
 
@@ -57,8 +57,10 @@ export const ERROR_CODES = [
   "LINK_INVALID",
   "CAPTCHA_INVALID",
   "CAPTCHA_UNAVAILABLE",
-  "KEEP_OR_START_FRESH_CLOSED",
-  "START_FRESH_IN_PROGRESS",
+  "SIGN_UP_CODE_INVALID",
+  "SIGN_UP_EXPIRED",
+  "ACCOUNT_DELETED",
+  "EMAIL_CONFIRMATION_REQUIRED",
   "EMAIL_NOT_VERIFIED",
   "EMAIL_ALREADY_VERIFIED",
   "EMAIL_CODE_INVALID",
@@ -142,8 +144,10 @@ const SHOWN: Readonly<Record<ErrorCode, readonly [ErrorScope, string?]>> = {
   LINK_INVALID: ["screen"],
   CAPTCHA_INVALID: ["form"],
   CAPTCHA_UNAVAILABLE: ["form"],
-  KEEP_OR_START_FRESH_CLOSED: ["form"],
-  START_FRESH_IN_PROGRESS: ["form"],
+  SIGN_UP_CODE_INVALID: ["field", "code"],
+  SIGN_UP_EXPIRED: ["form"],
+  ACCOUNT_DELETED: ["form"],
+  EMAIL_CONFIRMATION_REQUIRED: ["session"],
   EMAIL_NOT_VERIFIED: ["form"],
   EMAIL_ALREADY_VERIFIED: ["form"],
   EMAIL_CODE_INVALID: ["field", "code"],
@@ -185,6 +189,7 @@ export interface ApiErrorInit {
   requestId: string;
   retryAfterSeconds?: number;
   current?: unknown;
+  deletedAccount?: DeletedAccount;
 }
 
 export class ApiError extends Error {
@@ -195,6 +200,7 @@ export class ApiError extends Error {
   readonly retryAfterSeconds: number | undefined;
   // O-B2: what `409 STALE_UPDATE` carries — the server's row. Absent on every other error.
   readonly current: unknown;
+  readonly deletedAccount: DeletedAccount | undefined;
 
   constructor(init: ApiErrorInit) {
     super(init.message);
@@ -205,6 +211,7 @@ export class ApiError extends Error {
     this.requestId = init.requestId;
     this.retryAfterSeconds = init.retryAfterSeconds;
     this.current = init.current;
+    this.deletedAccount = init.deletedAccount;
   }
 }
 

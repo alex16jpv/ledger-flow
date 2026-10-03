@@ -1,5 +1,5 @@
 import { expect, test, uniqueEmail } from "../fixtures";
-import { TEST_CAPTCHA } from "../mailpit";
+import { signUpWithCode, TEST_CAPTCHA } from "../mailpit";
 import { SW_PATH } from "../sw-path";
 
 test("the app is installable: manifest, icons and the service worker are served", async ({
@@ -41,15 +41,12 @@ test("an install offer made before Settings opens is still there when it does", 
   request,
 }) => {
   const email = uniqueEmail("install");
-  const registered = await request.post("/api/auth/register", {
-    headers: { origin: process.env.E2E_APP_URL ?? "http://localhost:3002" },
-    data: {
-      captcha: TEST_CAPTCHA,
-      name: "Install E2E",
-      email,
-      password: "LedgerFlow!2026",
-      locale: "en",
-    },
+  const registered = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: "Install E2E",
+    email,
+    password: "LedgerFlow!2026",
+    locale: "en",
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
@@ -101,15 +98,12 @@ test.describe("in Samsung Internet", () => {
     request,
   }) => {
     const email = uniqueEmail("samsung");
-    const registered = await request.post("/api/auth/register", {
-      headers: { origin: process.env.E2E_APP_URL ?? "http://localhost:3002" },
-      data: {
-        captcha: TEST_CAPTCHA,
-        name: "Samsung E2E",
-        email,
-        password: "LedgerFlow!2026",
-        locale: "en",
-      },
+    const registered = await signUpWithCode(request, {
+      captcha: TEST_CAPTCHA,
+      name: "Samsung E2E",
+      email,
+      password: "LedgerFlow!2026",
+      locale: "en",
     });
     expect(registered.ok(), await registered.text()).toBe(true);
     await page.context().addCookies((await request.storageState()).cookies);

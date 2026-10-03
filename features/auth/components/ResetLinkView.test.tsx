@@ -62,7 +62,7 @@ describe("ResetLinkView", () => {
 
   it("redeems the token only with the new password, asking for no email", async () => {
     renderView();
-    fetchMock.mockResolvedValueOnce(json({ user: { id: "u1", keepOrStartFresh: null } }));
+    fetchMock.mockResolvedValueOnce(json({ user: { id: "u1" }, restored: false }));
     await save();
     await waitFor(() => {
       expect(replace).toHaveBeenCalledWith({ pathname: "/home", query: { passwordChanged: "1" } });
@@ -96,7 +96,7 @@ describe("ResetLinkView", () => {
       await screen.findByText("Something went wrong on our side. Nothing changed: try again."),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("New password")).toHaveValue("LedgerFlow!2027");
-    fetchMock.mockResolvedValueOnce(json({ user: { id: "u1", keepOrStartFresh: null } }));
+    fetchMock.mockResolvedValueOnce(json({ user: { id: "u1" }, restored: false }));
     await userEvent.click(screen.getByRole("button", { name: "Save password and sign in" }));
     await waitFor(() => {
       expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toMatchObject({

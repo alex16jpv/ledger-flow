@@ -46,11 +46,13 @@ function renderForm(
   onSuccess = vi.fn(),
   knownEmail?: string | null,
   forgotPasswordEnabled = false,
+  onDeleted = vi.fn(),
 ) {
   renderWithProviders(
     <QueryProvider>
       <LoginForm
         onSuccess={onSuccess}
+        onDeleted={onDeleted}
         forgotPasswordEnabled={forgotPasswordEnabled}
         knownEmail={knownEmail}
       />
@@ -62,6 +64,29 @@ function renderForm(
 describe("LoginForm", () => {
   beforeEach(() => {
     carryEmail("");
+  });
+
+  it("hands over what was typed and the two dates when the account was deleted", async () => {
+    const onDeleted = vi.fn();
+    const deletedAccount = { deletedOn: "2026-09-28", keptUntil: "2026-10-28" };
+    fetchMock.mockResolvedValue(
+      json(
+        { error: "Conflict", message: "deleted", code: "ACCOUNT_DELETED", deletedAccount },
+        { status: 409 },
+      ),
+    );
+    const onSuccess = renderForm(vi.fn(), null, false, onDeleted);
+    await userEvent.type(screen.getByLabelText("Email"), "ada@ledgerflow.test");
+    await userEvent.type(screen.getByLabelText("Password"), "LedgerFlow!2026");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await waitFor(() => {
+      expect(onDeleted).toHaveBeenCalledWith(
+        { email: "ada@ledgerflow.test", password: "LedgerFlow!2026" },
+        deletedAccount,
+      );
+    });
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("opens Forgot your password? with the email typed so far", async () => {

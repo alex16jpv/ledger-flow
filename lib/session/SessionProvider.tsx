@@ -12,12 +12,10 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { setUnauthorizedHandler } from "@/lib/api/client";
+import { setConfirmationRequiredHandler, setUnauthorizedHandler } from "@/lib/api/client";
 import { noteRefreshedElsewhere, noteSessionEnded, refreshSession } from "@/lib/api/refresh";
 import { resumeSyncEngine } from "@/lib/local/outbox/engine";
-import { purgeVault } from "@/lib/local/purge";
 import { localOnlyStore } from "@/lib/network/local-only";
-import { purgePersistedCaches } from "@/lib/query/purge";
 import { themeStore } from "@/lib/theme/store";
 import type { User } from "@/types/api";
 
@@ -30,6 +28,7 @@ import {
 } from "./api";
 import { tabChannel } from "./channel";
 import { sessionKeys } from "./keys";
+import { forgetSessionHere, type SignOutOptions } from "./sign-out";
 
 export type SessionStatus = "loading" | "authenticated" | "expired" | "error";
 
@@ -41,11 +40,6 @@ interface SessionContextValue {
   logoutAll: (options?: SignOutOptions) => Promise<void>;
   refetch: () => Promise<{ data?: SessionUser }>;
   setUser: (user: User) => void;
-}
-
-export interface SignOutOptions {
-  // The user's answer to the sheet of F-34. Left out, the queue survives the logout.
-  discardPendingWork?: boolean;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -90,16 +84,20 @@ export function SessionProvider({
     };
   }, []);
 
+  // The deadline can pass with the app open: any request that meets it has the profile read again.
+  useEffect(() => {
+    setConfirmationRequiredHandler(() => {
+      void queryClient.invalidateQueries({ queryKey: sessionKeys.me() });
+    });
+    return () => {
+      setConfirmationRequiredHandler(null);
+    };
+  }, [queryClient]);
+
   const userId = query.data?.user.id ?? null;
 
-  // D-7, invariant 7, F-34: the mirror always goes; the queue only if the user said so.
   const endLocalSession = useCallback(
-    async ({ discardPendingWork = false }: SignOutOptions = {}) => {
-      queryClient.clear();
-      await purgePersistedCaches();
-      if (!userId) return;
-      await purgeVault(userId, { discardPendingWork });
-    },
+    (options: SignOutOptions = {}) => forgetSessionHere(queryClient, userId, options),
     [queryClient, userId],
   );
 

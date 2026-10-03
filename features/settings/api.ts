@@ -3,6 +3,7 @@ import { noteSessionStarted } from "@/lib/api/refresh";
 import { pullAfterDirectSend } from "@/lib/local/outbox";
 import { readAccounts, readCategoriesPage } from "@/lib/local/repository";
 import type {
+  AccountDeleted,
   AccountList,
   AuthTokens,
   DeleteUserInput,
@@ -18,8 +19,8 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
   return answer;
 }
 
-export function deleteUser(id: string, input: DeleteUserInput): Promise<unknown> {
-  return api<unknown>(`/users/${id}`, { method: "DELETE", body: input });
+export function deleteUser(id: string, input: DeleteUserInput): Promise<AccountDeleted> {
+  return api<AccountDeleted>(`/users/${id}`, { method: "DELETE", body: input });
 }
 
 export interface CategorySummary {

@@ -1,17 +1,18 @@
 import { expect, test, uniqueEmail } from "../fixtures";
-import { TEST_CAPTCHA } from "../mailpit";
+import { signUpWithCode, TEST_CAPTCHA } from "../mailpit";
 import { expectNoAxeViolations } from "./axe";
-
-const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
 async function signUp(
   request: Parameters<Parameters<typeof test>[2]>[0]["request"],
   name = "John Doe",
 ) {
   const email = uniqueEmail("shell");
-  const response = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { captcha: TEST_CAPTCHA, name, email, password: "LedgerFlow!2026", locale: "en" },
+  const response = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name,
+    email,
+    password: "LedgerFlow!2026",
+    locale: "en",
   });
   expect(response.status()).toBe(201);
 }

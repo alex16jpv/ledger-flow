@@ -14,14 +14,15 @@ import { RateLimitAlert } from "@/components/ui/RateLimitAlert";
 import { ApiError, fieldErrors } from "@/lib/api/errors";
 import { HumanCheckSlot, useHumanCheck } from "@/lib/captcha/useHumanCheck";
 import { isEnabled } from "@/lib/flags";
+import { useCalendarDay } from "@/lib/i18n/useCalendarDay";
 import { validationMessage } from "@/lib/i18n/validation";
 import { serverNow } from "@/lib/local/clock";
 import { useOffline } from "@/lib/network/useOffline";
 import type { SessionProfile } from "@/lib/session/api";
 import { emailUnconfirmed, openConfirmEmail } from "@/lib/session/confirm-email";
 import { useRequestEmailChange } from "@/lib/session/email-change";
+import { emailFailure, RETRY_AFTER_FALLBACK_SECONDS } from "@/lib/session/email-failure";
 
-import { emailFailure, RETRY_AFTER_FALLBACK_SECONDS } from "../email-failure";
 import { type ProfileChange, useUpdateProfile } from "../hooks";
 import { profileSchema, type ProfileValues } from "../schemas";
 import { PendingEmailCard } from "./PendingEmailCard";
@@ -40,6 +41,7 @@ const sameEmail = (a: string, b: string) => a.trim().toLowerCase() === b.trim().
 
 export function ProfileView({ user, onSaved }: ProfileViewProps) {
   const t = useTranslations();
+  const calendarDay = useCalendarDay();
   const update = useUpdateProfile();
   const request = useRequestEmailChange();
   const offline = useOffline();
@@ -66,12 +68,7 @@ export function ProfileView({ user, onSaved }: ProfileViewProps) {
   const currentPasswordError =
     code === "CURRENT_PASSWORD_INVALID" ? t("errors.CURRENT_PASSWORD_INVALID") : undefined;
   const sent = failure ? emailFailure(failure) : null;
-  const emailError =
-    code === "EMAIL_TAKEN"
-      ? t("errors.EMAIL_TAKEN")
-      : sent === "settings.credentials.emailUndeliverable"
-        ? t(sent)
-        : undefined;
+  const emailError = sent === "settings.credentials.emailUndeliverable" ? t(sent) : undefined;
   const formError =
     failure &&
     retryAfter === null &&
@@ -181,17 +178,23 @@ export function ProfileView({ user, onSaved }: ProfileViewProps) {
             !emailFlow
               ? t("settings.credentials.emailLocked")
               : unconfirmed
-                ? t.rich("settings.credentials.notConfirmedHelp", {
-                    confirm: (chunks) => (
-                      <button
-                        type="button"
-                        onClick={openConfirmEmail}
-                        className="font-medium text-brand-text"
-                      >
-                        {chunks}
-                      </button>
-                    ),
-                  })
+                ? t.rich(
+                    user.confirmBy
+                      ? "settings.credentials.notConfirmedByHelp"
+                      : "settings.credentials.notConfirmedHelp",
+                    {
+                      date: user.confirmBy ? calendarDay(user.confirmBy, false) : "",
+                      confirm: (chunks) => (
+                        <button
+                          type="button"
+                          onClick={openConfirmEmail}
+                          className="font-medium text-brand-text"
+                        >
+                          {chunks}
+                        </button>
+                      ),
+                    },
+                  )
                 : t("settings.credentials.emailHelp")
           }
           error={emailError ?? validationMessage(t, errors.email?.message ?? serverFields.email)}

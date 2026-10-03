@@ -1,5 +1,5 @@
 import { expect, test, uniqueEmail } from "../fixtures";
-import { TEST_CAPTCHA } from "../mailpit";
+import { signUpWithCode, TEST_CAPTCHA } from "../mailpit";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
@@ -8,9 +8,11 @@ test("onboarding creates the first account and the global budget, then lands on 
   request,
 }) => {
   const email = uniqueEmail("onboarding");
-  const registered = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { captcha: TEST_CAPTCHA, name: "Onboarding E2E", email, password: "LedgerFlow!2026" },
+  const registered = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: "Onboarding E2E",
+    email,
+    password: "LedgerFlow!2026",
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);

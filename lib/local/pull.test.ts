@@ -19,7 +19,6 @@ import {
   pullChanges,
   type PullPageQuery,
   PullSupersededError,
-  QuestionOpenError,
   SessionChangedError,
   SyncFeedStalledError,
 } from "./pull";
@@ -601,22 +600,6 @@ describe("a copy from before a Start fresh (T-207)", () => {
     expect(await vault.db.count("outbox")).toBe(1);
     expect(result).toMatchObject({ changed: true, epoch: before + 1, cursor: "v2|after|" });
     expect((await vault.db.get("meta", "mirrorEpoch"))?.value).toBe(before + 1);
-  });
-
-  it("downloads nothing of an account whose Keep what's in this account? is open", async () => {
-    const vault = await openTestVault("u1");
-    const facts = { createdAt: "2026-03-12T00:00:00.000Z", accounts: 1, transactions: 0 };
-    const { fetchPage } = feed([
-      page(
-        { user: profile({ keepOrStartFresh: facts }), accounts: [account({ id: "a1" })] },
-        { count: 2, hasMore: false, nextCursor: "c1" },
-      ),
-    ]);
-
-    await expect(pullChanges(vault, { fetchPage })).rejects.toBeInstanceOf(QuestionOpenError);
-    expect(await vault.db.get("accounts", "a1")).toBeUndefined();
-    expect(await vault.db.get("meta", "syncCursor")).toBeUndefined();
-    expect(await vault.db.get("meta", "syncedAt")).toBeUndefined();
   });
 
   it("gives up rather than loop when a snapshot is refused too", async () => {

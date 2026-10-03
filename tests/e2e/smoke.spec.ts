@@ -1,5 +1,5 @@
 import { expect, test, uniqueEmail } from "../fixtures";
-import { TEST_CAPTCHA } from "../mailpit";
+import { signUpWithCode, TEST_CAPTCHA } from "../mailpit";
 import { expectNoAxeViolations } from "./axe";
 
 test("the root page responds and has no accessibility violations", async ({ page }) => {
@@ -15,15 +15,12 @@ test("an address that cannot name a row answers 404, not a rendered screen", asy
   request,
 }) => {
   const email = uniqueEmail("404");
-  await request.post("/api/auth/register", {
-    headers: { origin: process.env.E2E_APP_URL ?? "http://localhost:3002" },
-    data: {
-      captcha: TEST_CAPTCHA,
-      name: "Not Found E2E",
-      email,
-      password: "LedgerFlow!2026",
-      locale: "en",
-    },
+  await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: "Not Found E2E",
+    email,
+    password: "LedgerFlow!2026",
+    locale: "en",
   });
   await page.context().addCookies((await request.storageState()).cookies);
 

@@ -18,6 +18,7 @@ const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const BLOCKED_PREFIXES = [
   "auth/login",
   "auth/register",
+  "auth/sign-up",
   "auth/refresh",
   "auth/logout",
   "auth/me",

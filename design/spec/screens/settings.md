@@ -15,7 +15,8 @@ eyebrows:
   (`#settings-email-not-confirmed`) — only an account from before email existed, until its deadline —,
   Password & email reads "Confirm your email by October 12" with a
   `warning` badge, "Not confirmed". This row is where the confirmation is never hidden: the stripe's ✕
-  puts that one away ([states.md](states.md) `#confirm-your-email`).
+  puts that one away ([states.md](states.md) `#confirm-your-email`). With no deadline yet it reads "Your
+  email isn't confirmed yet", as before deadlines existed.
 - **Your data** — the user's rights: access, rectification, erasure and withdrawal of consent; the
   version of the policy accepted and its date; the contact address `ledgerflow@alexpiral.com`; and a
   link to the policy.
@@ -223,7 +224,8 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
   **An email not confirmed** (`#profile-and-security-not-confirmed`) carries a `warning` badge, "Not
   confirmed", beside the field's label — inside the field it would collide with a long address —, and
   the help "Confirm it by October 12 to keep signing in as usual, and to invite people to Shared and be
-  invited. **Confirm it**", which opens the code sheet of [states.md](states.md).
+  invited. **Confirm it**", which opens the code sheet of [states.md](states.md). With no deadline yet the
+  help is "Confirm it to invite people to Shared and to be invited. **Confirm it**".
 
   **A new address counts only once it is confirmed** (`#profile-and-security-pending-email`, T-222).
   The field's help is "A new address gets a code first: the change happens once you confirm it, and then

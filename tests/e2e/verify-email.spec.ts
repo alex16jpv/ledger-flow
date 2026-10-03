@@ -1,98 +1,87 @@
 import { type APIRequestContext, expect, type Page, test, uniqueEmail } from "../fixtures";
-import { readVerifyEmail, TEST_CAPTCHA } from "../mailpit";
+import { type Deadline, makeAccountFromBeforeEmail } from "../legacy-account";
+import { readVerifyEmail, signUpWithCode, TEST_CAPTCHA } from "../mailpit";
 import { APP } from "../offline";
 import { expectNoAxeViolations } from "./axe";
 
 const PASSWORD = "LedgerFlow!2026";
 
-const CODE_TRIES = 5;
+interface Legacy {
+  email: string;
+  signUpCode: string;
+  confirmBy: string | null;
+}
 
-async function registered(request: APIRequestContext, tag: string): Promise<string> {
+// Signs in again after the change, so the session carries the deadline as the server would give it.
+async function fromBeforeEmail(
+  request: APIRequestContext,
+  tag: string,
+  deadline: Deadline = "none",
+): Promise<Legacy> {
   const email = uniqueEmail(tag);
-  const response = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { name: "Verify E2E", email, password: PASSWORD, captcha: TEST_CAPTCHA },
-  });
+  const response = await signUpWithCode(request, { name: "Verify E2E", email, password: PASSWORD });
   expect(response.ok(), await response.text()).toBe(true);
-  return email;
+  const { code: signUpCode } = await readVerifyEmail(request, email);
+  const { confirmBy } = await makeAccountFromBeforeEmail(email, deadline);
+  const login = await request.post("/api/auth/login", {
+    headers: { origin: APP },
+    data: { email, password: PASSWORD },
+  });
+  expect(login.ok(), await login.text()).toBe(true);
+  return { email, signUpCode, confirmBy };
+}
+
+async function newCode(request: APIRequestContext, email: string, before: string) {
+  let code = before;
+  await expect
+    .poll(async () => (code = (await readVerifyEmail(request, email)).code))
+    .not.toBe(before);
+  return code;
 }
 
 async function signedIn(page: Page, request: APIRequestContext): Promise<void> {
   await page.context().addCookies((await request.storageState()).cookies);
 }
 
-const stripe = (page: Page) => page.getByRole("status").filter({ hasText: "Confirm your email." });
+const stripe = (page: Page) => page.getByRole("status").filter({ hasText: /^Confirm your email/ });
 
-test("a new account confirms its email with the code its sign-up sent", async ({
+test("an account from before email confirms from the stripe's sheet, with Cloudflare's check", async ({
   page,
   request,
 }) => {
-  const email = uniqueEmail("verify-code");
-  await page.goto("/register");
-  await page.getByRole("textbox", { name: "Name" }).fill("Verify E2E");
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await page.getByRole("checkbox").check({ force: true });
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(`${APP}/onboarding`, { timeout: 15_000 });
-
-  await page.goto("/home");
-  await expect(stripe(page)).toBeVisible();
-  await expectNoAxeViolations(page);
-  await stripe(page).getByRole("button", { name: "Confirm" }).click();
-  const sheet = page.getByRole("dialog", { name: "Confirm your email" });
-  await expect(sheet.getByText(`We sent a 6-digit code to ${email}`)).toBeVisible();
-  await expect(sheet.getByText(/You can resend it in \d:\d\d/)).toBeVisible();
-  await expectNoAxeViolations(page);
-
-  const { code } = await readVerifyEmail(request, email);
-  await sheet.getByLabel("6-digit code").fill(code);
-  await sheet.getByRole("button", { name: "Confirm" }).click();
-
-  await expect(page.getByText("Email confirmed")).toBeVisible();
-  await expect(sheet).toBeHidden();
-  await expect(stripe(page)).toHaveCount(0);
-  await page.goto("/settings");
-  await expect(page.getByText("Requires your current password")).toBeVisible();
-  await expect(page.getByText("Not confirmed")).toHaveCount(0);
-});
-
-test("an account whose code is used up sends another from the sheet, with Cloudflare's check", async ({
-  page,
-  request,
-}) => {
-  test.setTimeout(120_000);
-  const email = await registered(request, "verify-send");
-  const { code: first } = await readVerifyEmail(request, email);
-  const wrong = first === "000000" ? "111111" : "000000";
-  for (let tries = 0; tries < CODE_TRIES; tries += 1) {
-    const response = await request.post("/api/auth/verify", {
-      headers: { origin: APP },
-      data: { code: wrong },
-    });
-    expect(response.status()).toBe(400);
-  }
+  const { email, signUpCode } = await fromBeforeEmail(request, "verify-send");
   await signedIn(page, request);
   await page.goto("/settings");
   await expect(page.getByText("Your email isn’t confirmed yet")).toBeVisible();
+  await expect(stripe(page)).toContainText("Confirm your email.");
+  await expectNoAxeViolations(page);
 
   await stripe(page).getByRole("button", { name: "Confirm" }).click();
   const sheet = page.getByRole("dialog", { name: "Confirm your email" });
   await expect(sheet.getByText(`We’ll send a 6-digit code to ${email}`)).toBeVisible();
-  await expect(sheet.getByText(/You can resend it in \d:\d\d/)).toBeVisible();
-  const send = sheet.getByRole("button", { name: "Send code" });
-  await expect(send).toBeEnabled({ timeout: 75_000 });
-  await send.click();
+  await sheet.getByRole("button", { name: "Send code" }).click();
   await expect(sheet.getByText(`We sent a 6-digit code to ${email}`)).toBeVisible();
+  await expectNoAxeViolations(page);
 
-  let code = first;
-  await expect
-    .poll(async () => (code = (await readVerifyEmail(request, email)).code))
-    .not.toBe(first);
-  await sheet.getByLabel("6-digit code").fill(code);
+  await sheet.getByLabel("6-digit code").fill(await newCode(request, email, signUpCode));
   await sheet.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText("Email confirmed")).toBeVisible();
+  await expect(stripe(page)).toHaveCount(0);
   await expect(page.getByText("Requires your current password")).toBeVisible();
+});
+
+test("the stripe names the deadline once the account has one", async ({ page, request }) => {
+  const { confirmBy } = await fromBeforeEmail(request, "verify-dated", "ahead");
+  const [year, month, day] = (confirmBy ?? "").split("-").map(Number);
+  const date = new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "long",
+    day: "numeric",
+  }).format(new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day)));
+  await signedIn(page, request);
+  await page.goto("/home");
+  await expect(stripe(page)).toContainText(`Confirm your email by ${date}.`);
+  await expect(stripe(page)).toContainText("After that, signing in asks for a code first.");
 });
 
 test("the email's link confirms from a browser with no session, after one tap", async ({
@@ -100,7 +89,13 @@ test("the email's link confirms from a browser with no session, after one tap", 
   request,
   browser,
 }) => {
-  const email = await registered(request, "verify-link");
+  const { email, signUpCode } = await fromBeforeEmail(request, "verify-link");
+  const sent = await request.post("/api/auth/resend", {
+    headers: { origin: APP },
+    data: { captcha: TEST_CAPTCHA },
+  });
+  expect(sent.status(), await sent.text()).toBe(202);
+  await newCode(request, email, signUpCode);
   const { link } = await readVerifyEmail(request, email);
 
   const elsewhere = await browser.newContext({ baseURL: APP });
@@ -111,6 +106,7 @@ test("the email's link confirms from a browser with no session, after one tap", 
   await expectNoAxeViolations(other);
   await other.getByRole("button", { name: "Confirm email" }).click();
   await expect(other.getByRole("heading", { name: "Email confirmed" })).toBeVisible();
+  await expect(other.getByText("Nothing else changes in your account.")).toBeVisible();
   await other.goto(link.replace(/#.*$/, ""));
   await expect(other.getByText(/This page lost its link/)).toBeVisible();
   await elsewhere.close();
@@ -121,30 +117,62 @@ test("the email's link confirms from a browser with no session, after one tap", 
   await expect(stripe(page)).toHaveCount(0);
 });
 
-test("It wasn't me erases the account that used the address, and frees it", async ({
+test("a sign-up's link creates the account in another browser without signing anybody in", async ({
   browser,
+}) => {
+  const email = uniqueEmail("verify-ready");
+  const inbox = await browser.newContext({ baseURL: APP });
+  const started = await inbox.request.post("/api/auth/sign-up", {
+    headers: { origin: APP },
+    data: { name: "Ready E2E", email, password: PASSWORD, captcha: TEST_CAPTCHA },
+  });
+  expect(started.status(), await started.text()).toBe(202);
+  const { link } = await readVerifyEmail(inbox.request, email);
+
+  const elsewhere = await browser.newContext({ baseURL: APP });
+  const other = await elsewhere.newPage();
+  await other.goto(link);
+  await other.getByRole("button", { name: "Confirm email" }).click();
+  await expect(other.getByRole("heading", { name: "Your account is ready" })).toBeVisible();
+  await other.getByRole("link", { name: "Sign in" }).click();
+  await expect(other).toHaveURL(/\/login$/);
+  await elsewhere.close();
+
+  const login = await inbox.request.post("/api/auth/login", {
+    headers: { origin: APP },
+    data: { email, password: PASSWORD },
+  });
+  expect(login.ok(), await login.text()).toBe(true);
+  await inbox.close();
+});
+
+test("past its deadline the account opens nothing until its email is confirmed", async ({
+  page,
   request,
 }) => {
-  const email = await registered(request, "verify-not-me");
-  const { notMe } = await readVerifyEmail(request, email);
-  expect(notMe).not.toBeNull();
+  const { email, signUpCode } = await fromBeforeEmail(request, "verify-door", "passed");
+  const blocked = await request.get("/api/accounts", { headers: { origin: APP } });
+  expect(blocked.status()).toBe(403);
+  expect(((await blocked.json()) as { code: string }).code).toBe("EMAIL_CONFIRMATION_REQUIRED");
 
-  const inbox = await browser.newContext({ baseURL: APP });
-  const page = await inbox.newPage();
-  await page.goto(notMe ?? "");
-  await expect(page.getByText("If you signed up yourself, don’t.")).toBeVisible();
+  await page.goto("/login");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(`${APP}/confirm-to-continue`, { timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: "Confirm your email to continue" })).toBeVisible();
   await expectNoAxeViolations(page);
-  await page.getByRole("button", { name: "Delete that account" }).click();
-  await expect(page.getByRole("heading", { name: "That account is gone" })).toBeVisible();
 
-  const again = await inbox.request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { name: "The owner", email, password: "Another!2026", captcha: TEST_CAPTCHA },
-  });
-  expect(again.status(), await again.text()).toBe(201);
+  await page.goto("/home");
+  await expect(page).toHaveURL(`${APP}/confirm-to-continue`, { timeout: 15_000 });
 
-  await page.goto(notMe ?? "");
-  await page.getByRole("button", { name: "Delete that account" }).click();
-  await expect(page.getByRole("heading", { name: "This link no longer works" })).toBeVisible();
-  await inbox.close();
+  await page.getByRole("button", { name: "Send code" }).click();
+  await expect(page.getByText(`We sent a 6-digit code to ${email}`)).toBeVisible();
+  await page.getByLabel("6-digit code").fill(await newCode(request, email, signUpCode));
+  await page.getByRole("button", { name: "Confirm" }).click();
+  await expect(page).toHaveURL(`${APP}/home`, { timeout: 15_000 });
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  expect((await page.request.get("/api/accounts", { headers: { origin: APP } })).status()).toBe(
+    200,
+  );
 });
