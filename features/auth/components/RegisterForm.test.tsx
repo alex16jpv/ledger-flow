@@ -90,6 +90,18 @@ describe("RegisterForm", () => {
     expect(screen.getByRole("button", { name: "Create account" })).toBeEnabled();
   });
 
+  it("asks to accept both the terms and the privacy policy, linking each", async () => {
+    renderForm();
+    await screen.findByRole("button", { name: /COP · / });
+    expect(screen.getByRole("link", { name: /^Terms\s?\(opens in a new tab\)$/ })).toHaveAttribute(
+      "href",
+      "/terms",
+    );
+    expect(
+      screen.getByRole("link", { name: /^Privacy policy\s?\(opens in a new tab\)$/ }),
+    ).toHaveAttribute("href", "/privacy");
+  });
+
   it("sends the detected settings, the UI locale and Cloudflare's token, and creates nothing yet", async () => {
     const pending = {
       email: "john.doe@example.com",
@@ -139,7 +151,9 @@ describe("RegisterForm", () => {
     if (!form) throw new Error("no form");
     fireEvent.submit(form);
     await waitFor(() => {
-      expect(screen.queryByText("You need to accept the privacy policy to continue.")).toBeNull();
+      expect(
+        screen.queryByText("You need to accept the terms and the privacy policy to continue."),
+      ).toBeNull();
     });
     expect(token).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();

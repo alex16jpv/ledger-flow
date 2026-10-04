@@ -185,9 +185,16 @@ export function RegisterForm({ locale, typed, notice, onSent }: RegisterFormProp
       </div>
       <Checkbox {...form.register("consent")} error={validationMessage(t, errors.consent?.message)}>
         {t.rich("auth.register.consent", {
+          terms: (chunks) => (
+            <Link href="/terms" className="font-medium text-brand-text" target="_blank">
+              {chunks}
+              <span className="sr-only"> {t("auth.register.newTab")}</span>
+            </Link>
+          ),
           privacy: (chunks) => (
             <Link href="/privacy" className="font-medium text-brand-text" target="_blank">
               {chunks}
+              <span className="sr-only"> {t("auth.register.newTab")}</span>
             </Link>
           ),
         })}

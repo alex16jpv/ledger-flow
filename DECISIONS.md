@@ -5,6 +5,36 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-03 · One privacy policy for everyone, under alexpiral, that names every provider (T-253, T-220, T-201)
+
+- **Context:** the legal pages were the drafts of W-31 plus the Shared lines of T-199. They promised
+  a permanent removal on request that the 30-day erasure replaced, named no provider (Cloudflare's
+  invisible Turnstile requires linking its privacy addendum), left out the IP kept by the rate
+  limiter, the user agent of each session and the inviter's email an invitee sees, said "Ledger Flow
+  is the controller" (Ledger Flow is no person), and lacked what Colombia's Decreto 1377 asks of a
+  data processing policy (controller, who answers requests, procedure, response times, effective
+  date). Sign-up asked to accept the policy but never showed the terms, which say creating an account
+  accepts them, and Settings showed "v1" as the accepted version for every account.
+- **Decision (the owner's, 2026-10-03):** one policy for anyone anywhere, with no section per
+  country, because the app is not aimed at any country; it names only Colombian law. The controller is
+  **alexpiral**, the brand that runs Ledger Flow, reached at the contact address: no personal data of
+  the owner is published, accepting that Decreto 1377 asks for the controller's name, address and
+  phone. No minimum age and no promise of an immediate removal on request: neither is required, and a
+  removal request is answered within the legal times (the 30-day erasure fits them). Every provider is
+  named with what it does: AWS (us-east-1), MongoDB Atlas (AWS us-east-1, read from the cluster's
+  public DNS), Vercel, Sentry (US region, from the public DSN) and Cloudflare Turnstile.
+  - The sign-up checkbox links the terms and the policy.
+  - The policy's version and effective date, and the terms' date, live in `lib/legal.ts`. Each page's
+    "updated" date comes from there (it was one string in `messages/` for both), and Settings shows the version that was in force when
+    the account was created (`acceptedPolicyVersion`) until the backend stores the acceptance.
+- **Alternatives (not taken):** a GDPR-style policy with an annex per country (only Colombian law
+  applies for sure, and naming countries reads as aiming at them); publishing the owner's name and
+  address (the owner's safety and the owner's call); an EU representative (the app is not offered to the EU).
+- **Consequence:** a change to the policy adds a row to `POLICY_VERSIONS` and moves `CURRENT_POLICY`,
+  and a change to the terms moves `TERMS_UPDATED`; if these are published later, the dates move to the day it goes live. The
+  backend still erases a deleted account's invitations only partly and does not store the acceptance:
+  both are tasks of its own.
+
 ## 2026-10-03 · A failed sign-out everywhere keeps this device signed in and says so (T-252)
 
 - **Context:** since T-235 the BFF tells the truth about `/api/auth/logout-all` — `200` only when the

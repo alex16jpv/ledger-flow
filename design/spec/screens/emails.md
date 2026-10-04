@@ -486,8 +486,8 @@ No box (the owner's approval F): it is only sent when someone signed in to the a
 | Lead    | Every device was signed out. Your account and everything in it are kept until **{date}**, and then erased for good. If you change your mind, sign in with this email and your password before then.            | Se cerró la sesión en todos los dispositivos. Tu cuenta y todo lo que tiene se conservan hasta el **{date}**, y después se borran para siempre. Si cambias de idea, entra con este correo y tu contraseña antes de esa fecha.                 |
 | Box     | **Didn't delete it?** Restore it now: every device is signed out and you choose a new password. This link works for 7 days; after that, Forgot your password? also restores it until {date}. · Restore account | **¿No la eliminaste?** Restáurala ya: se cierra la sesión en todos los dispositivos y eliges una contraseña nueva. El enlace vale por 7 días; después, «¿Olvidaste tu contraseña?» también la restaura hasta el {date}. · Restaurar la cuenta |
 
-The line that sent the owner to support for a permanent removal is gone: the erasure is automatic now.
-The privacy policy still promises that removal on request in 15 business days; T-220 brings it in line.
+The line that sent the owner to support for a permanent removal is gone: the erasure is automatic now,
+and the privacy policy says the same (T-220).
 
 **`account-restored`**
 

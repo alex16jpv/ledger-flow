@@ -1092,7 +1092,7 @@ const register = (state = "") => {
 <div class="field"><span class="label">Language</span><button class="picker">${tile("globe", "TEAL", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">English</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">The language of your account. You can change it any time in Settings.</span></div>
 <div class="field"><span class="label">Currency</span><button class="picker">${tile("coins", "GREEN", "sm")}<span class="body"><span class="lbl">Detected from your region</span><span class="val">COP · Colombian peso</span></span>${iconSvg("chevron-down", "sm")}</button><span class="help">Used for all your accounts. It locks once you create your first account.</span></div>
 <div class="field"><span class="label">Time zone</span><button class="picker">${tile("globe", "BLUE", "sm")}<span class="body"><span class="lbl">Detected from your device</span><span class="val">America/Bogota · GMT−5</span></span>${iconSvg("chevron-down", "sm")}</button></div></div>
-<label class="check"><span class="box on">${iconSvg("check", "sm")}</span><span>I agree to the <a href="#">Privacy policy</a> and to the processing of my personal data (Ley 1581).</span></label>${check}
+<label class="check"><span class="box on">${iconSvg("check", "sm")}</span><span>I agree to the <a href="#">Terms</a> and the <a href="#">Privacy policy</a>, and to the processing of my personal data (Ley 1581).</span></label>${check}
 <button class="btn primary lg block"${blocked ? " disabled" : ""}>Create account</button>
 <p class="small muted" style="text-align:center;margin:0">Already have an account? <a href="#" style="color:var(--brand-text);font-weight:500">Sign in</a></p></div>`);
 };
@@ -3531,14 +3531,31 @@ const notFound = () => {
   return publicShell(inner);
 };
 
-const legal = () => {
-  const inner = `<article class="legal"><span class="eyebrow">Legal &middot; updated Sep 25, 2026</span><h1 class="h1">Privacy policy</h1>
-<p>Ledger Flow stores the financial records you enter so you can see them on any device. This page explains what we keep, why, and how you control it. It also serves as our data processing policy under Colombia&rsquo;s Ley 1581 de 2012.</p>
-<h2>What we store</h2><ul><li>Your name, email, language, time zone and currency.</li><li>Accounts, categories, transactions and budgets you create, including notes and tags.</li><li>Device sessions (browser type, time of sign-in) so you can review and revoke them.</li><li>People you add (a name, a colour and, if you give one, an email) and the shared groups you create, with their expenses and payments.</li><li>If you join a group someone shares with you, its owner and the others in it see the name on your profile.</li></ul>
-<h2>Why</h2><p>Only to run the service: showing your data back to you, keeping balances right and securing your account. We do not sell data and we do not use it for advertising.</p>
-<h2>Your rights</h2><p>You can read, correct and delete your data from Settings at any time. Deleting your account keeps the records so you can reactivate later; ask us for permanent removal and we will do it within 15 business days.</p>
-<h2>Contact</h2><p>ledgerflow@alexpiral.com</p></article>`;
-  return publicShell(inner);
+const legal = (kind) => {
+  const privacy = `<span class="eyebrow">Legal &middot; updated Oct 3, 2026</span><h1 class="h1">Privacy policy</h1>
+<p>Ledger Flow is a free personal finance app. This page explains what we keep about you, why, who helps us run the service, how long we keep it and what you can do about it. It is also our data processing policy under Colombia&rsquo;s Ley 1581 de 2012.</p>
+<h2>Who is responsible</h2><p>Ledger Flow is run by alexpiral, which decides how your data is used and answers for it.</p>
+<h2>What we store</h2><ul><li>Your account: your name, email, language, time zone and currency, and whether you confirmed your email. Your password is kept only as a one-way hash that nobody can read back.</li><li>What you record: accounts, categories, transactions (with their descriptions, notes and tags) and budgets.</li><li>Shared expenses: the people you add (a name, a color and, if you give one, an email), the groups you create with their expenses and payments, and the invitations you send or receive.</li><li>Your sessions: for each device you sign in on, its browser&rsquo;s identification and when it was last used.</li><li>Protection against abuse: your IP address and the email you sign in with, with the number of attempts, for one hour at most.</li><li>The emails we send you, for 30 days, recorded with a fingerprint of your address.</li></ul>
+<h2>Who sees what</h2><ul><li>Your records are yours alone, except what you record in a shared group.</li><li>A group&rsquo;s owner and members see the name on your profile and the expenses and payments recorded in it; someone you invite sees your name and your email.</li><li>Only you see the details of the people you add. We never write to them.</li></ul>
+<h2>Why we use it</h2><p>Only to run the service you sign up for. We do not sell data, we do not use it for advertising, and nothing about you is decided automatically.</p>
+<h2>Who helps us run it</h2><ul><li>Amazon Web Services runs our server and sends our emails (Amazon SES).</li><li>MongoDB Atlas hosts the database.</li><li>Vercel hosts the website and counts page visits without cookies.</li><li>Sentry receives error reports, without your name, email or IP address.</li><li>Cloudflare runs Turnstile, the check that you are a person, as its <a href="#">Turnstile privacy addendum</a> explains.</li></ul><p>They keep the data in the United States; Vercel and Cloudflare also handle each visit at their servers closest to you.</p>
+<h2>Cookies and your device</h2><p>Only what the app needs to work, and nothing that tracks you or shows ads.</p>
+<h2>How long we keep it</h2><ul><li>Your data, for as long as you have an account.</li><li>A deleted account is kept for 30 days in case you change your mind, then erased for good.</li></ul>
+<h2>Your rights</h2><p>Know, access, update, correct and delete your data, and withdraw your authorization. We answer questions within 10 business days and requests within 15. You can complain to the <a href="#">Superintendencia de Industria y Comercio</a>.</p>
+<h2>Security</h2><p>Connections are encrypted and passwords are kept as one-way hashes.</p>
+<h2>Changes to this policy</h2><p>If a change affects who is responsible for your data or what it is used for, we tell you before it applies.</p>
+<h2>Data processing (Ley 1581 de 2012)</h2><p>The controller is alexpiral, reached at ledgerflow@alexpiral.com. It applies from October 3, 2026.</p>
+<h2>Contact</h2><p>ledgerflow@alexpiral.com</p>`;
+  const terms = `<span class="eyebrow">Legal &middot; updated Oct 3, 2026</span><h1 class="h1">Terms of service</h1>
+<p>Ledger Flow is a free personal finance tool run by alexpiral. By creating an account you agree to these terms and to the <a href="#">privacy policy</a>.</p>
+<h2>The service</h2><p>Ledger Flow lets you record accounts, movements, categories and budgets, split expenses with other people and see summaries of them. It is not financial advice and it does not connect to your bank: the figures are the ones you enter.</p>
+<h2>Your account</h2><p>You confirm your email with a code to create your account. Keep your password private: you answer for what is recorded under your account. You can delete it at any time from Settings; it is kept for 30 days in case you change your mind, and then erased for good.</p>
+<h2>Sharing with other people</h2><p>Only add the names and emails of people who are fine with it, and keep in mind that the members of a group you share see what is recorded in it.</p>
+<h2>Acceptable use</h2><p>Use the service for your own personal records. Do not try to access other people&rsquo;s data, disrupt the service or automate abusive traffic.</p>
+<h2>Availability</h2><p>The service is offered free of charge and as it is, without a guarantee of uninterrupted availability, as far as the law allows. We may change or discontinue features; we will announce important changes in the app.</p>
+<h2>Changes to these terms</h2><p>We may update these terms. The date at the top tells you when. Continuing to use the service after a change means you accept it.</p>
+<h2>Contact</h2><p>Questions about these terms: ledgerflow@alexpiral.com.</p>`;
+  return publicShell(`<article class="legal">${kind === "terms" ? terms : privacy}</article>`);
 };
 
 const compareCard = (title, side) => {
@@ -7031,7 +7048,7 @@ const PAGES = [
         "Create account",
         "With currency and time zone. It creates nothing yet: it sends the code, and the account exists once the code is typed (the owner's decision 16).",
         register(),
-        { added: "2026-09-01", updated: "2026-09-28" },
+        { added: "2026-09-01", updated: "2026-10-03" },
       ),
       plate(
         "create-account-code",
@@ -8563,9 +8580,18 @@ const PAGES = [
       plate(
         "privacy-policy",
         "Privacy policy",
-        "Doubles as the data processing policy under Ley 1581.",
-        legal(),
-        { added: "2026-09-01", updated: "2026-09-25" },
+        "Doubles as the data processing policy under Ley 1581. The live page carries every line in full; the plate shortens the long ones.",
+        legal("privacy"),
+        { added: "2026-09-01", updated: "2026-10-03" },
+      ),
+      plate(
+        "terms",
+        "Terms of service",
+        "The same template as the privacy policy.",
+        legal("terms"),
+        {
+          added: "2026-10-03",
+        },
       ),
       plate("not-found", "404", "", notFound(), { added: "2026-09-01" }),
     ],
