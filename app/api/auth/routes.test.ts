@@ -2,6 +2,7 @@
 import { NextRequest } from "next/server";
 
 import { POST as logout } from "@/app/api/auth/logout/route";
+import { POST as logoutAll } from "@/app/api/auth/logout-all/route";
 import { POST as refresh } from "@/app/api/auth/refresh/route";
 import { POST as undo } from "@/app/api/auth/undo/route";
 import {
@@ -736,5 +737,103 @@ describe("logout handler", () => {
     const cookies = setCookies(response);
     expect(cookies.filter((c) => /Max-Age=0/i.test(c))).toHaveLength(3);
     expect(cookies.some((c) => c.startsWith("__Secure-device="))).toBe(false);
+  });
+});
+
+describe("logout-all handler", () => {
+  const logoutAllRequest = (
+    cookie = "__Secure-refresh=ref; __Host-access=acc; __Secure-device=old",
+  ) =>
+    new NextRequest(`${APP}/api/auth/logout-all`, {
+      method: "POST",
+      headers: { origin: APP, cookie },
+    });
+  const bearerOf = (call: number) =>
+    (fetchMock.mock.calls[call]?.[1]?.headers as Record<string, string>).authorization;
+  const deviceSet = (response: Response) =>
+    setCookies(response).find((c) => c.startsWith("__Secure-device="));
+
+  it("ends the session and keeps the device token the backend issued after forgetting the rest", async () => {
+    fetchMock.mockResolvedValue(json({ message: "ok", deviceToken: "dev2" }));
+    const response = await logoutAll(logoutAllRequest());
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://backend.test/auth/logout-all");
+    expect(setCookies(response).filter((c) => /Max-Age=0/i.test(c))).toHaveLength(3);
+    const device = deviceSet(response) ?? "";
+    expect(device).toMatch(/^__Secure-device=dev2/);
+    expect(device).toMatch(/Path=\/api\/auth/i);
+    expect(device).toMatch(/Max-Age=31536000/i);
+    expect(device).toMatch(/HttpOnly/i);
+  });
+
+  it("leaves the device cookie alone when the account is gone", async () => {
+    fetchMock.mockResolvedValue(json({ message: "ok" }));
+    const response = await logoutAll(logoutAllRequest());
+    expect(response.status).toBe(200);
+    expect(deviceSet(response)).toBeUndefined();
+  });
+
+  it.each([
+    ["the access cookie expired", "__Secure-refresh=ref"],
+    ["the backend no longer takes the access token", undefined],
+  ])("renews the session to revoke everything when %s", async (_, cookie) => {
+    if (cookie === undefined) {
+      fetchMock.mockResolvedValueOnce(json({ code: "UNAUTHORIZED" }, { status: 401 }));
+    }
+    fetchMock
+      .mockResolvedValueOnce(json({ accessToken: "acc2", refreshToken: "ref2" }))
+      .mockResolvedValueOnce(json({ message: "ok", deviceToken: "dev2" }));
+    const response = await logoutAll(logoutAllRequest(cookie));
+    const urls = fetchMock.mock.calls.map(([url]) => url);
+    expect(urls.slice(-2)).toEqual([
+      "http://backend.test/auth/refresh",
+      "http://backend.test/auth/logout-all",
+    ]);
+    expect(JSON.parse(fetchMock.mock.calls.at(-2)?.[1]?.body as string)).toEqual({
+      refreshToken: "ref",
+    });
+    expect(bearerOf(fetchMock.mock.calls.length - 1)).toBe("Bearer acc2");
+    expect(response.status).toBe(200);
+    expect(deviceSet(response)).toMatch(/^__Secure-device=dev2/);
+  });
+
+  it("answers 401 and ends the session when there is no session left to revoke with", async () => {
+    const response = await logoutAll(logoutAllRequest("__Secure-device=old"));
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({ code: "REFRESH_INVALID" });
+    expect(setCookies(response).filter((c) => /Max-Age=0/i.test(c))).toHaveLength(3);
+    expect(deviceSet(response)).toBeUndefined();
+  });
+
+  it("answers the backend's 401 and ends the session when the refresh token is dead too", async () => {
+    fetchMock.mockResolvedValue(json({ code: "REFRESH_REVOKED" }, { status: 401 }));
+    const response = await logoutAll(logoutAllRequest("__Secure-refresh=ref"));
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({ code: "REFRESH_REVOKED" });
+    expect(setCookies(response).filter((c) => /Max-Age=0/i.test(c))).toHaveLength(3);
+  });
+
+  it("passes a failure through and keeps the session, so nothing claims it worked", async () => {
+    fetchMock.mockResolvedValue(
+      json({ code: "RATE_LIMITED" }, { status: 429, headers: { "retry-after": "30" } }),
+    );
+    const response = await logoutAll(logoutAllRequest());
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("30");
+    expect(setCookies(response)).toEqual([]);
+  });
+
+  it("hands the renewed session back when the revoke fails after a renewal", async () => {
+    fetchMock
+      .mockResolvedValueOnce(json({ accessToken: "acc2", refreshToken: "ref2" }))
+      .mockResolvedValueOnce(json({ code: "INTERNAL" }, { status: 503 }));
+    const response = await logoutAll(logoutAllRequest("__Secure-refresh=ref"));
+    expect(response.status).toBe(503);
+    const cookies = setCookies(response);
+    expect(cookies.some((c) => c.startsWith("__Host-access=acc2"))).toBe(true);
+    expect(cookies.some((c) => c.startsWith("__Secure-refresh=ref2"))).toBe(true);
+    expect(cookies.some((c) => /Max-Age=0/i.test(c))).toBe(false);
   });
 });

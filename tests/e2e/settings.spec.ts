@@ -1,5 +1,5 @@
 import { expect, test, uniqueEmail } from "../fixtures";
-import { signUpWithCode, TEST_CAPTCHA } from "../mailpit";
+import { signUpWithCode, subjectsSince, TEST_CAPTCHA } from "../mailpit";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
@@ -8,15 +8,17 @@ async function signedInPage(
   request: Parameters<Parameters<typeof test>[2]>[0]["request"],
 ) {
   const email = uniqueEmail("settings");
+  const password = "LedgerFlow!2026";
   const registered = await signUpWithCode(request, {
     captcha: TEST_CAPTCHA,
     name: "Settings E2E",
     email,
-    password: "LedgerFlow!2026",
+    password,
     locale: "en",
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
+  return { email, password };
 }
 
 test("theme changes apply without reload and survive one", async ({ page, request }) => {
@@ -61,6 +63,63 @@ test("sign out clears the session and returns to login", async ({ page, request 
   await expect(page).toHaveURL(/\/login/);
   const home = await page.goto("/home");
   expect(home?.url()).toContain("/login");
+});
+
+async function signOutEverywhere(page: Parameters<Parameters<typeof test>[2]>[0]["page"]) {
+  await page.goto("/settings/sessions");
+  await page.getByRole("button", { name: "Sign out all other sessions" }).click();
+  await page.getByRole("button", { name: "Sign out everywhere" }).click();
+  await expect(page).toHaveURL(/\/login/);
+}
+
+test("signing back in where every session was signed out sends no new sign-in about it", async ({
+  page,
+  request,
+  browser,
+}) => {
+  const { email, password } = await signedInPage(page, request);
+  await signOutEverywhere(page);
+
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/home$/, { timeout: 15_000 });
+
+  const newSignIns = async () =>
+    (await subjectsSince(request, email, 0)).filter((subject) => subject.startsWith("New sign-in"));
+  // The backend sends new-sign-in before it answers the login, so one would already be in Mailpit.
+  expect(await newSignIns()).toEqual([]);
+
+  // A browser that never signed in does get one, so the check above is not passing for want of email.
+  const stranger = await browser.newContext();
+  const login = await stranger.request.post(`${APP}/api/auth/login`, {
+    headers: { origin: APP },
+    data: { email, password },
+  });
+  expect(login.ok(), await login.text()).toBe(true);
+  await expect.poll(newSignIns).toHaveLength(1);
+  await stranger.close();
+});
+
+test("signing out everywhere still revokes the other sessions once the access cookie has expired", async ({
+  page,
+  request,
+  browser,
+}) => {
+  const { email, password } = await signedInPage(page, request);
+  const other = await browser.newContext();
+  const login = await other.request.post(`${APP}/api/auth/login`, {
+    headers: { origin: APP },
+    data: { email, password },
+  });
+  expect(login.ok(), await login.text()).toBe(true);
+
+  await page.context().clearCookies({ name: "__Host-access" });
+  await signOutEverywhere(page);
+
+  const refresh = await other.request.post(`${APP}/api/auth/refresh`, { headers: { origin: APP } });
+  expect(refresh.status(), await refresh.text()).toBe(401);
+  await other.close();
 });
 
 // W-30: profile, currency, time zone, sessions and account deletion on a throwaway user.
