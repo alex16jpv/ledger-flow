@@ -71,6 +71,40 @@ test("the landing is static, bilingual and links to sign-up, sign-in and the leg
   await expectNoAxeViolations(page);
 });
 
+test("the privacy policy names its controller and every provider, and the terms link it", async ({
+  page,
+}) => {
+  await page.goto("/privacy");
+  await expect(page.getByText(/Ledger Flow is run by alexpiral/)).toBeVisible();
+  for (const provider of [
+    "Amazon Web Services",
+    "MongoDB Atlas",
+    "Vercel",
+    "Sentry",
+    "Cloudflare",
+  ]) {
+    await expect(page.getByText(new RegExp(`^${provider} `))).toBeVisible();
+  }
+  await expect(page.getByRole("link", { name: "Turnstile privacy addendum" })).toHaveAttribute(
+    "href",
+    "https://www.cloudflare.com/turnstile-privacy-policy/",
+  );
+  await expect(page.getByRole("link", { name: "sic.gov.co" })).toHaveAttribute(
+    "href",
+    "https://www.sic.gov.co",
+  );
+  await expect(page.locator("#data-processing")).toContainText("It applies from October 3, 2026");
+  await expectNoAxeViolations(page);
+
+  await page.goto("/es/terms");
+  const policy = page.getByRole("link", { name: "política de privacidad", exact: true });
+  await expect(policy).toHaveAttribute("href", "/es/privacy");
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Compartir con otras personas" }),
+  ).toBeVisible();
+  await expectNoAxeViolations(page);
+});
+
 test("the public header fits a 390px phone and its links work from every public page", async ({
   page,
 }) => {

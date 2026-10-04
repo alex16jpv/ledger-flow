@@ -40,6 +40,7 @@ import { useRouter } from "@/lib/i18n/navigation";
 import { useCalendarDay } from "@/lib/i18n/useCalendarDay";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
+import { acceptedPolicyVersion } from "@/lib/legal";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { useOffline } from "@/lib/network/useOffline";
 import { shortRelease } from "@/lib/observability/release";
@@ -283,7 +284,7 @@ export function SettingsHub() {
               <RowMeta
                 items={[
                   t("settings.yourData.policyVersion", {
-                    version: "1",
+                    version: acceptedPolicyVersion(new Date(user.createdAt)),
                     date: dates.formatDay(new Date(user.createdAt)),
                   }),
                 ]}

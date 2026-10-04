@@ -45,10 +45,20 @@
   language at the plain path: a link that only redirects back to the page it sits on is a link a
   crawler follows for nothing.
 
-- **Legal** (`#privacy-policy`): a 720px column, an eyebrow with the date of the last update, an `h1`
-  and `h2` sections (what we store, why, your rights, contact). What we store names every kind of record the server keeps — the people you add, with their email if you give one, and your shared groups included — and who sees your profile name when you join someone else's group: a policy that forgets a feature is a policy that is wrong about it. The privacy policy doubles as the data
-  processing policy under Ley 1581: purpose, the rights of access, correction and erasure, the contact
-  channel (`ledgerflow@alexpiral.com`) and the response time. Terms use the same template.
+- **Legal** (`#privacy-policy`, `#terms`): a 720px column, an eyebrow with the date of the last update,
+  an `h1` and `h2` sections. The privacy policy has: who is responsible, what we store, who sees what,
+  why we use it, who helps us run it, cookies and your device, how long we keep it, your rights,
+  security, changes, data processing (Ley 1581) and contact. It names every kind of record the server
+  keeps (shared groups, the people you add and invitations included), the IP and user agent it keeps,
+  every company that processes data with what it does and where (the data is kept in the United States; Vercel and Cloudflare also answer each visit near the visitor), the
+  retention of each kind and the legal response times. A policy that forgets a feature or a provider is
+  wrong about it. The controller is **alexpiral**, the brand that runs Ledger Flow, reached at
+  `ledgerflow@alexpiral.com`: no personal data of the owner is published (the owner's decision of 2026-10-03).
+  The policy is written for anyone anywhere and names only Colombian law, because the app is not aimed
+  at any country. Turnstile's privacy addendum is linked, as Cloudflare requires for its invisible mode.
+  Terms (the service, your account, sharing with other people, acceptable use, availability, changes,
+  contact) link the policy from their intro. The plates shorten the long lines; the copy is in
+  `messages/*.json` (`public.privacy`, `public.terms`).
 - **404** (`#not-found`): an `Empty` with a `search` tile, a title, a reassuring line ("Your money is
   where you left it"), a call to action to Home and "Back". Home is `/`, not `/home`: the proxy already sends a device that
   carries the session marker from `/` to the app, and a visitor lands on the landing instead of on a

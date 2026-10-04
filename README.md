@@ -214,7 +214,7 @@ Accounts, Stats, Categories, Settings and the user (T-72). From 900px up the sid
 | `/budgets/past`                                                | Ended and archived budgets with "Create again"                                                                                                |
 | `/stats`                                                       | Monthly stats by category, day or tag (`?reference&type&groupBy`) with drill-down                                                             |
 | `/stats/trends`                                                | Six or twelve months ending on the month Stats was showing (`?reference&range`)                                                               |
-| `/privacy`, `/terms`                                           | Privacy policy and terms of service (static, legal drafts pending the owner's review)                                                         |
+| `/privacy`, `/terms`                                           | Privacy policy (also the Ley 1581 data processing policy) and terms of service (static)                                                       |
 | `/dev/ui`                                                      | Component catalog (development only)                                                                                                          |
 | `/dev/pickers`                                                 | Category, account and date pickers against the real API (development only)                                                                    |
 | `/dev/frame?w=390&url=…`, `/api/dev/login?email&password&next` | Screenshot helpers (development only)                                                                                                         |

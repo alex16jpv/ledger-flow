@@ -4,7 +4,9 @@ import { getTranslations } from "next-intl/server";
 import { LegalPage } from "@/components/public/LegalPage";
 import { PublicFrame } from "@/components/public/PublicFrame";
 import { env } from "@/lib/env";
+import { Link } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
+import { TERMS_UPDATED } from "@/lib/legal";
 import { publicMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
@@ -23,16 +25,30 @@ export async function generateMetadata({
 export default async function TermsPage() {
   const t = await getTranslations("public.terms");
   const plain = (
-    key: "serviceBody" | "accountBody" | "useBody" | "availabilityBody" | "changesBody",
+    key:
+      | "serviceBody"
+      | "accountBody"
+      | "sharingBody"
+      | "useBody"
+      | "availabilityBody"
+      | "changesBody",
   ) => <p>{t(key)}</p>;
   return (
     <PublicFrame path="/terms">
       <LegalPage
         title={t("title")}
-        intro={t("intro")}
+        updated={TERMS_UPDATED}
+        intro={t.rich("intro", {
+          privacy: (chunks) => (
+            <Link href="/privacy" className="font-medium text-brand-text">
+              {chunks}
+            </Link>
+          ),
+        })}
         sections={[
           { title: t("serviceTitle"), body: plain("serviceBody") },
           { title: t("accountTitle"), body: plain("accountBody") },
+          { title: t("sharingTitle"), body: plain("sharingBody") },
           { title: t("useTitle"), body: plain("useBody") },
           { title: t("availabilityTitle"), body: plain("availabilityBody") },
           { title: t("changesTitle"), body: plain("changesBody") },

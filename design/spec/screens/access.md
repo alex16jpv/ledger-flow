@@ -35,8 +35,8 @@
   device" — gets the empty field. Nothing else about the screen changes: the plate above is that state.
 
 - **Sign up** (`#create-account`): name, email, password (help: "between 8 and 128"), a **required
-  consent checkbox** ("I agree to the Privacy policy and to the processing of my personal data (Ley
-  1581)", with links; the button is disabled until it is ticked), **language** (a "Language" picker row
+  consent checkbox** ("I agree to the Terms and the Privacy policy, and to the processing of my personal
+  data (Ley 1581)", each a link opening in a new tab; the button is disabled until it is ticked), **language** (a "Language" picker row
   showing what `navigator.language` detected: "Detected from your device" and "English"; help: "The
   language of your account. You can change it any time in Settings."; it opens a sheet with **English**
   and **Español**, without "Follow device" — that is a local mode of Settings, not a value of the
