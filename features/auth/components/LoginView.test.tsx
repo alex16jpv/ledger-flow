@@ -81,6 +81,13 @@ describe("LoginView", () => {
     ).toBeInTheDocument();
   });
 
+  it("says the other devices may still be in, where a sign-out everywhere with no session lands [T-252]", () => {
+    search = new URLSearchParams({ notEverywhere: "1" });
+    renderView();
+    expect(screen.getByText("Your other devices may still be signed in.")).toBeInTheDocument();
+    expect(screen.getByText(/already ended, so they couldn’t be signed out/)).toBeInTheDocument();
+  });
+
   it("asks before restoring a deleted account, with both dates, and restores with what was typed", async () => {
     await signInToDeletedAccount(() => json({ user: { id: "u1", name: "Ana" } }));
     expect(screen.getByText("September 28, 2026")).toBeInTheDocument();

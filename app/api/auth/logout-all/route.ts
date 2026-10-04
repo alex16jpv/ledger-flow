@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
     }
     if (!upstream.ok) {
       const failed = await passThroughError(upstream, requestId);
+      if (upstream.status === 401) return applyCookies(failed, expiredSessionCookies());
       return renewed ? applyCookies(failed, sessionCookies(renewed)) : failed;
     }
     const answer = await readBackendJson<LoggedOutEverywhere>(upstream);

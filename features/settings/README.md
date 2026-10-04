@@ -37,7 +37,10 @@ server mints those ids and there is nothing the queue could project (F-20).
 
 Signing out — the hub's button and «Sign out all other sessions» — is disabled with no network and
 says why: the session lives on the server, and an offline sign-out could only clear this device while
-the account stayed signed in (R-3b). Restore-defaults follows the same rule (F-20).
+the account stayed signed in (R-3b). Restore-defaults follows the same rule (F-20). Online, «Sign out
+all other sessions» signs this device out only when the server signed every device out, or when there
+was no session left to do it with (Sign in then says the others may still be in); any other failure
+keeps the confirmation open with "Nothing was signed out." and Retry (T-252).
 
 Sync status opens with three rows the offline phase added. **Session** is first (F-41): with no
 session nothing below it reaches the server, so it says `Active` or `Signed out` and carries the way

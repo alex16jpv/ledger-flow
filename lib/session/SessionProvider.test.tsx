@@ -17,6 +17,7 @@ const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { headers: { "content-type": "application/json" }, ...init });
 const fetchMock = vi.fn<typeof fetch>();
 const statuses: string[] = [];
+const everywhere: unknown[] = [];
 
 function Probe() {
   const session = useSession();
@@ -28,6 +29,20 @@ function Probe() {
       <output data-testid="name">{session.user?.name ?? ""}</output>
       <button onClick={() => void session.logout()}>logout</button>
       <button onClick={() => void session.logout({ discardPendingWork: true })}>discard</button>
+      <button
+        onClick={() => {
+          session.logoutAll().then(
+            (result) => {
+              everywhere.push(result);
+            },
+            (error: unknown) => {
+              everywhere.push(error);
+            },
+          );
+        }}
+      >
+        everywhere
+      </button>
     </div>
   );
 }
@@ -37,6 +52,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   tabChannel.reset();
   resetRefreshState();
+  everywhere.length = 0;
 });
 
 afterEach(async () => {
@@ -160,6 +176,103 @@ describe("SessionProvider", () => {
     fetchMock.mockClear();
     await expect(refreshSession()).resolves.toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  describe("signing out everywhere [T-252]", () => {
+    const user = { user: { id: "u1", name: "A" } };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    async function signedIn() {
+      fetchMock.mockResolvedValue(json(user));
+      const onSignedOut = renderSession();
+      await waitFor(() => {
+        expect(screen.getByTestId("status")).toHaveTextContent("authenticated");
+      });
+      return onSignedOut;
+    }
+
+    async function signOutEverywhere(answer: () => Promise<Response>) {
+      const onSignedOut = await signedIn();
+      const posted = vi.spyOn(tabChannel, "post");
+      fetchMock.mockImplementation((input) =>
+        urlOf(input) === "/api/auth/logout-all" ? answer() : Promise.resolve(json(user)),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "everywhere" }));
+      await waitFor(() => {
+        expect(everywhere).toHaveLength(1);
+      });
+      // The sessions page navigates with what the sign-out returned, not the provider.
+      expect(onSignedOut).not.toHaveBeenCalled();
+      return posted;
+    }
+
+    it("signs this device out once the server signed every device out", async () => {
+      const posted = await signOutEverywhere(() => Promise.resolve(json({ message: "ok" })));
+      expect(everywhere).toEqual(["everywhere"]);
+      expect(posted).toHaveBeenCalledWith({ type: "session:logout" });
+      await expect(refreshSession()).resolves.toBe(false);
+    });
+
+    it("signs this device out and says only here when no session was left to do it with", async () => {
+      const posted = await signOutEverywhere(() =>
+        Promise.resolve(json({ code: "REFRESH_INVALID" }, { status: 401 })),
+      );
+      expect(everywhere).toEqual(["hereOnly"]);
+      expect(posted).toHaveBeenCalledWith({ type: "session:logout" });
+    });
+
+    it.each([
+      ["the server is down", { code: "DB_UNAVAILABLE" }, 503],
+      ["there were too many attempts", { code: "RATE_LIMITED" }, 429],
+      ["a 401 the BFF did not sign answers", {}, 401],
+    ])("keeps the session and fails loudly when %s", async (_, body, status) => {
+      const posted = await signOutEverywhere(() => Promise.resolve(json(body, { status })));
+      expect(everywhere[0]).toBeInstanceOf(Error);
+      expect(posted).not.toHaveBeenCalledWith({ type: "session:logout" });
+      expect(screen.getByTestId("status")).toHaveTextContent("authenticated");
+
+      fetchMock.mockResolvedValue(json({ ok: true }));
+      await expect(refreshSession()).resolves.toBe(true);
+    });
+
+    it("keeps the session and fails loudly when there is no network", async () => {
+      await signOutEverywhere(() => Promise.reject(new TypeError("Failed to fetch")));
+      expect(everywhere[0]).toBeInstanceOf(Error);
+      fetchMock.mockResolvedValue(json({ ok: true }));
+      await expect(refreshSession()).resolves.toBe(true);
+    });
+
+    it("leaves the session over when another tab ended it while the sign-out failed [H-61]", async () => {
+      await signedIn();
+      let answer: (response: Response) => void = () => undefined;
+      fetchMock.mockImplementation((input) =>
+        urlOf(input) === "/api/auth/logout-all"
+          ? new Promise<Response>((resolve) => {
+              answer = resolve;
+            })
+          : Promise.resolve(json(user)),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "everywhere" }));
+      await waitFor(() => {
+        expect(
+          fetchMock.mock.calls.some(([input]) => urlOf(input) === "/api/auth/logout-all"),
+        ).toBe(true);
+      });
+      act(() => {
+        tabChannel.emitLocal({ type: "session:expired" });
+      });
+      answer(json({ code: "DB_UNAVAILABLE" }, { status: 503 }));
+      await waitFor(() => {
+        expect(everywhere).toHaveLength(1);
+      });
+
+      fetchMock.mockClear();
+      await expect(refreshSession()).resolves.toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
   });
 
   it("marks the session expired when the channel says so", async () => {

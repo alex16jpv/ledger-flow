@@ -5,6 +5,33 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-03 · A failed sign-out everywhere keeps this device signed in and says so (T-252)
+
+- **Context:** since T-235 the BFF tells the truth about `/api/auth/logout-all` — `200` only when the
+  backend revoked everything, `401` with the session ended when nothing was left to revoke with, and any
+  other failure passed through with the session kept. The app ignored it: the mutation ended the local
+  session in `onSettled`, and the sessions page went to Sign in, so a `503` or a lost connection signed
+  this device out and left every other device signed in behind a sign-out that looked done.
+- **Decision:** the owner's choice of 2026-10-03. Only the two answers that ended the session end it
+  here: `logoutAll()` resolves `"everywhere"` or `"hereOnly"` (the `401`) after the local sign-out, and
+  Sign in says for the second that the other devices may still be in (`?notEverywhere=1`). Any other
+  failure — and a `401` with no `code`, which the BFF never sends (H-10) — rejects, posts nothing to the
+  other tabs, and the confirmation sheet stays open with "Nothing was signed out." and the failure's own
+  message, its button reading "Retry" (disabled offline). The H-61 flag goes back down only if nothing
+  else raised it meanwhile: `noteSessionEnded()` returns a count and `noteSessionKept(count)` lowers it
+  only for that one, so a session another tab ended during the request stays ended. The request holds
+  the refresh lock (`withRefreshLock`), because the route may renew the session itself and another tab
+  must not rotate the same refresh token at once. The sessions page navigates with the result; the
+  provider does not call `onSignedOut` here, so no second navigation races it. The BFF also ends the
+  session on a `401` to the revoke made with a just-renewed token, so a `401` from this route always
+  means the session is over.
+- **Alternatives:** signing out anyway and saying it on Sign in (the owner turned it down: from there
+  nothing could be retried without signing in again); a toast over the sessions page (it closes the
+  sheet the user would retry from).
+- **Consequence:** the design has `#sign-out-everywhere-failed` (settings) and
+  `#sign-in-after-signing-out-everywhere-failed` (access). The plain «Sign out» still clears this device
+  whatever the backend answers: that is T-174, its own task.
+
 ## 2026-10-03 · Signing out everywhere renews the session itself and keeps the new device token (T-235)
 
 - **Context:** "Sign out all other sessions" calls `POST /auth/logout-all` with the access cookie. That
@@ -23,7 +50,7 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   sessions page (a timer that wakes the backend for nothing, and the gap is still there).
 - **Consequence:** the backend now knows when a sign-out everywhere did not happen. The app still signs
   this browser out whatever the answer: showing that failure needs its own state in the design, a task
-  of its own.
+  of its own. _(Superseded by T-252, above: a failure now keeps the session and says so.)_
 
 ## 2026-10-03 · `/undo`, and the new address asked for after the password (T-219)
 

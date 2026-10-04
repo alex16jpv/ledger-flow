@@ -38,6 +38,7 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
   const revoke = useRevokeSession();
   const [confirming, setConfirming] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<unknown>(null);
   const [now] = useState(() => Date.now());
 
   return (
@@ -138,6 +139,7 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
         block
         disabled={offline}
         onClick={() => {
+          setSignOutError(null);
           setConfirming(true);
         }}
       >
@@ -154,6 +156,7 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
         open={confirming}
         onClose={() => {
           setConfirming(false);
+          setSignOutError(null);
         }}
         title={t("settings.sessions.signOutOthersTitle")}
         footer={
@@ -163,18 +166,33 @@ export function SessionsView({ onSignOutAll }: { onSignOutAll: () => Promise<voi
               size="lg"
               block
               loading={signingOut}
+              disabled={offline}
               onClick={() => {
                 setSigningOut(true);
-                void onSignOutAll();
+                setSignOutError(null);
+                onSignOutAll().catch((error: unknown) => {
+                  setSignOutError(error);
+                  setSigningOut(false);
+                });
               }}
             >
-              {t("settings.sessions.signOutOthersConfirm")}
+              {signOutError !== null
+                ? t("common.retry")
+                : t("settings.sessions.signOutOthersConfirm")}
             </Button>
             <SheetCancel />
           </>
         }
       >
-        <Alert tone="warning">{t("settings.sessions.signOutOthersBody")}</Alert>
+        <div className="flex flex-col gap-3">
+          {offline && <Alert tone="warning">{t("settings.signOutOffline")}</Alert>}
+          {signOutError !== null && (
+            <Alert tone="danger" title={t("settings.sessions.signOutOthersFailed")}>
+              {t(presentError(signOutError).messageKey)}
+            </Alert>
+          )}
+          <Alert tone="warning">{t("settings.sessions.signOutOthersBody")}</Alert>
+        </div>
       </Sheet>
     </div>
   );

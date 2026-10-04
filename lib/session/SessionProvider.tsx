@@ -13,7 +13,14 @@ import {
 } from "react";
 
 import { setConfirmationRequiredHandler, setUnauthorizedHandler } from "@/lib/api/client";
-import { noteRefreshedElsewhere, noteSessionEnded, refreshSession } from "@/lib/api/refresh";
+import { ApiError } from "@/lib/api/errors";
+import {
+  noteRefreshedElsewhere,
+  noteSessionEnded,
+  noteSessionKept,
+  refreshSession,
+  withRefreshLock,
+} from "@/lib/api/refresh";
 import { resumeSyncEngine } from "@/lib/local/outbox/engine";
 import { localOnlyStore } from "@/lib/network/local-only";
 import { themeStore } from "@/lib/theme/store";
@@ -32,12 +39,14 @@ import { forgetSessionHere, type SignOutOptions } from "./sign-out";
 
 export type SessionStatus = "loading" | "authenticated" | "expired" | "error";
 
+export type SignedOutEverywhere = "everywhere" | "hereOnly";
+
 interface SessionContextValue {
   status: SessionStatus;
   user: SessionProfile | null;
   expired: boolean;
   logout: (options?: SignOutOptions) => Promise<void>;
-  logoutAll: (options?: SignOutOptions) => Promise<void>;
+  logoutAll: (options?: SignOutOptions) => Promise<SignedOutEverywhere>;
   refetch: () => Promise<{ data?: SessionUser }>;
   setUser: (user: User) => void;
 }
@@ -147,14 +156,21 @@ export function SessionProvider({
   });
 
   const logoutAllMutation = useMutation({
-    mutationFn: ({ options }: { options: SignOutOptions }) => {
-      noteSessionEnded();
-      return requestLogoutAll().then(() => options);
-    },
-    onSettled: async (_data, _error, variables) => {
-      await endLocalSession(variables.options);
+    mutationFn: async ({ options }: { options: SignOutOptions }) => {
+      const ending = noteSessionEnded();
+      // The route may renew the session itself, so no other tab may rotate the refresh token meanwhile.
+      const result = await withRefreshLock(requestLogoutAll).then(
+        (): SignedOutEverywhere => "everywhere",
+        (error: unknown): SignedOutEverywhere => {
+          // The BFF answers 401, always with a code, only after ending a session it could not use.
+          if (error instanceof ApiError && error.status === 401 && error.code) return "hereOnly";
+          noteSessionKept(ending);
+          throw error;
+        },
+      );
+      await endLocalSession(options);
       tabChannel.post({ type: "session:logout" });
-      onSignedOut();
+      return result;
     },
   });
 
@@ -190,9 +206,7 @@ export function SessionProvider({
       logout: async (options = {}) => {
         await logoutMutation.mutateAsync({ options }).catch(() => undefined);
       },
-      logoutAll: async (options = {}) => {
-        await logoutAllMutation.mutateAsync({ options }).catch(() => undefined);
-      },
+      logoutAll: (options = {}) => logoutAllMutation.mutateAsync({ options }),
       refetch: query.refetch,
       setUser,
     }),

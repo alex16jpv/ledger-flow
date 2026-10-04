@@ -145,7 +145,9 @@
         "notNow": "Not now",
         "offline": "Restoring needs a connection.",
         "failed": "Something went wrong on our side. Nothing was restored: try again."
-      }
+      },
+      "notEverywhereTitle": "Your other devices may still be signed in.",
+      "notEverywhere": "Your session here had already ended, so they couldn’t be signed out. Sign in and try again from Active sessions."
     },
     "register": {
       "title": "Create account",
@@ -447,7 +449,8 @@
       "signOutOthersBody": "This also signs out this device: you’ll need to sign in again here. Every device is forgotten too, so each one gets a “New sign-in” email the next time it signs in.",
       "signOutOthersConfirm": "Sign out everywhere",
       "unknownDevice": "Unknown device",
-      "empty": "No other sessions"
+      "empty": "No other sessions",
+      "signOutOthersFailed": "Nothing was signed out."
     },
     "data": "Data",
     "export": "Export transactions",

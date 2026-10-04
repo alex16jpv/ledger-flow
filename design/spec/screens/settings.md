@@ -47,7 +47,9 @@ and sign out" (`danger`).
 
 **Sheets that write to the server, offline** (`#language-offline`; the same for currency, time zone,
 profile and security, and delete account): a `warning` alert on top, "Changing this needs a connection:
-it is saved on the server.", and the save control disabled. The sheet can be read, not changed.
+it is saved on the server.", and the save control disabled. The sheet can be read, not changed. The
+confirmation of "Sign out all other sessions" does the same with the page's own words, "Signing out
+needs a connection: your session lives on the server.", when the connection drops with it open.
 
 ## Sync status (`/settings/sync`, `#sync-status`)
 
@@ -213,7 +215,14 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
   button (`DELETE /auth/sessions/:id`, idempotent), last activity and expiry; and "Sign out all other
   sessions" (`POST /auth/logout-all`) — the confirmation warns that this device will have to sign in
   again too, and that every device is forgotten: each one gets one `new-sign-in` email the next time it
-  signs in ([emails.md](emails.md)). **Below 600px the row's three facts do not fit on one line**, so the activity takes its
+  signs in ([emails.md](emails.md)). **Only a sign-out the server confirmed signs this device out.**
+  When it fails — no server, no network, too many attempts — the sheet stays open and nothing changes
+  (`#sign-out-everywhere-failed`, the owner's choice of 2026-10-03, T-252): a `danger` alert on top,
+  "**Nothing was signed out.**" followed by the failure's own message, and the button reads "Retry".
+  Signing this device out anyway would leave every other device signed in behind a sign-out that looked
+  done, and there would be nowhere left to retry from. When the session here had already ended (a
+  `401`: nothing left to sign the others out with), this device is signed out and Sign in says so
+  ([access.md](access.md) `#sign-in-after-signing-out-everywhere-failed`). **Below 600px the row's three facts do not fit on one line**, so the activity takes its
   own line and the two dates share the next one, with no dot between them and the row's own dot only
   from 600px up; and "Sign out" becomes icon-only, keeping the device in its accessible name. Nothing
   in the row is ever truncated: measured at 375px, the three facts on one line showed 73% of their

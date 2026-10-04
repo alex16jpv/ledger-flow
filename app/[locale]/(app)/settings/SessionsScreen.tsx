@@ -24,8 +24,12 @@ export function SessionsScreen() {
       />
       <SessionsView
         onSignOutAll={async () => {
-          await session.logoutAll();
-          router.replace(LOGIN_PATH);
+          const signedOut = await session.logoutAll();
+          router.replace(
+            signedOut === "everywhere"
+              ? LOGIN_PATH
+              : { pathname: LOGIN_PATH, query: { notEverywhere: "1" } },
+          );
         }}
       />
     </div>

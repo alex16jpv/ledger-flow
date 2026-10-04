@@ -145,7 +145,9 @@
         "notNow": "Ahora no",
         "offline": "Restaurar necesita conexión.",
         "failed": "Algo falló de nuestro lado. No se restauró nada: inténtalo de nuevo."
-      }
+      },
+      "notEverywhereTitle": "Puede que tus otros dispositivos sigan con la sesión iniciada.",
+      "notEverywhere": "Tu sesión aquí ya había terminado, así que no se pudieron cerrar. Inicia sesión y vuelve a intentarlo desde Sesiones activas."
     },
     "register": {
       "title": "Crear cuenta",
@@ -447,7 +449,8 @@
       "signOutOthersBody": "También cierra este dispositivo: tendrás que iniciar sesión de nuevo aquí. Además, todos los dispositivos se olvidan, así que cada uno recibirá un correo de «Nuevo inicio de sesión» la próxima vez que entre.",
       "signOutOthersConfirm": "Cerrar en todos",
       "unknownDevice": "Dispositivo desconocido",
-      "empty": "No hay otras sesiones"
+      "empty": "No hay otras sesiones",
+      "signOutOthersFailed": "No se cerró ninguna sesión."
     },
     "data": "Datos",
     "export": "Exportar movimientos",
