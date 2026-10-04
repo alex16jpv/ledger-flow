@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { ApiError } from "@/lib/api/errors";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
@@ -73,6 +74,34 @@ describe("SessionsView", () => {
     expect(dialog).toHaveTextContent(/also signs out this device/);
     await userEvent.click(within(dialog).getByRole("button", { name: "Sign out everywhere" }));
     expect(onSignOutAll).toHaveBeenCalled();
+  });
+
+  it("keeps the sheet open and says nothing was signed out when signing out everywhere fails [T-252]", async () => {
+    fetchMock.mockResolvedValue(json({ data: sessions }));
+    const onSignOutAll = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(
+        new ApiError({ status: 503, code: "DB_UNAVAILABLE", message: "down", requestId: "r1" }),
+      )
+      .mockResolvedValueOnce(undefined);
+    renderWithProviders(
+      <QueryProvider>
+        <ToastProvider>
+          <SessionsView onSignOutAll={onSignOutAll} />
+        </ToastProvider>
+      </QueryProvider>,
+    );
+    await screen.findAllByRole("button", { name: /^Sign out (Android|Windows)/ });
+    await userEvent.click(screen.getByRole("button", { name: "Sign out all other sessions" }));
+    const dialog = screen.getByRole("dialog", { name: "Sign out every device?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Sign out everywhere" }));
+
+    const alert = await within(dialog).findByRole("alert");
+    expect(alert).toHaveTextContent("Nothing was signed out.");
+    expect(alert).toHaveTextContent("The server didn’t respond.");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Retry" }));
+    expect(onSignOutAll).toHaveBeenCalledTimes(2);
+    expect(within(dialog).queryByRole("alert")).not.toBeInTheDocument();
   });
 
   // R-3b §C: with no network the sign-out would clear this device and leave the account in.

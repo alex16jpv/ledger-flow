@@ -63,6 +63,11 @@ export function LoginView() {
       )}
       {/* P-32: the third exit lands here, and the account is untouched — say both things. */}
       {params.get("wiped") === "1" && <Alert tone="info">{t("wiped")}</Alert>}
+      {params.get("notEverywhere") === "1" && (
+        <Alert tone="warning" title={t("notEverywhereTitle")}>
+          {t("notEverywhere")}
+        </Alert>
+      )}
       <LoginForm
         forgotPasswordEnabled={isEnabled("forgotPassword")}
         knownEmail={knownEmail}

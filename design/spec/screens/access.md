@@ -21,7 +21,11 @@
   "Wrong email or password" whatever the account is: nothing on this screen says that an address has an
   account, a deleted one or none. **After Delete my account** the app lands here with an `info` alert
   (`#sign-in-after-deleting`), "**Your account was deleted.** It's kept until October 28, 2026: signing in
-  before then restores it."
+  before then restores it." **When Sign out all other sessions found the session here already over**
+  (a `401`, [settings.md](settings.md) `#active-sessions`), the app lands here with a `warning` alert
+  (`#sign-in-after-signing-out-everywhere-failed`), "**Your other devices may still be signed in.**
+  Your session here had already ended, so they couldn't be signed out. Sign in and try again from
+  Active sessions."
 
   **On a device that already holds someone's data the email arrives written** and the focus goes to the
   password, which is the only thing missing (P-37): coming back to sync is not a first sign-in, and the

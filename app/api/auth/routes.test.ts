@@ -836,4 +836,15 @@ describe("logout-all handler", () => {
     expect(cookies.some((c) => c.startsWith("__Secure-refresh=ref2"))).toBe(true);
     expect(cookies.some((c) => /Max-Age=0/i.test(c))).toBe(false);
   });
+
+  it("ends the session when the backend refuses even the renewed token, as every 401 here does", async () => {
+    fetchMock
+      .mockResolvedValueOnce(json({ accessToken: "acc2", refreshToken: "ref2" }))
+      .mockResolvedValueOnce(json({ code: "UNAUTHORIZED" }, { status: 401 }));
+    const response = await logoutAll(logoutAllRequest("__Secure-refresh=ref"));
+    expect(response.status).toBe(401);
+    const cookies = setCookies(response);
+    expect(cookies.filter((c) => /Max-Age=0/i.test(c))).toHaveLength(3);
+    expect(cookies.some((c) => c.startsWith("__Host-access=acc2"))).toBe(false);
+  });
 });

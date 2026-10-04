@@ -122,6 +122,55 @@ test("signing out everywhere still revokes the other sessions once the access co
   await other.close();
 });
 
+test("a sign-out everywhere the server did not do keeps this device in, says so, and retries [T-252]", async ({
+  page,
+  request,
+  browser,
+}) => {
+  const { email, password } = await signedInPage(page, request);
+  const other = await browser.newContext();
+  const login = await other.request.post(`${APP}/api/auth/login`, {
+    headers: { origin: APP },
+    data: { email, password },
+  });
+  expect(login.ok(), await login.text()).toBe(true);
+
+  await page.route("**/api/auth/logout-all", (route) =>
+    route.fulfill({
+      status: 503,
+      json: { error: "ServiceUnavailable", message: "down", code: "DB_UNAVAILABLE" },
+    }),
+  );
+  await page.goto("/settings/sessions");
+  await page.getByRole("button", { name: "Sign out all other sessions" }).click();
+  const sheet = page.getByRole("dialog", { name: "Sign out every device?" });
+  await sheet.getByRole("button", { name: "Sign out everywhere" }).click();
+  await expect(sheet.getByRole("alert")).toContainText("Nothing was signed out.");
+  await expect(sheet.getByRole("alert")).toContainText("The server didn’t respond.");
+  await expect(page).toHaveURL(/\/settings\/sessions$/);
+
+  await page.unroute("**/api/auth/logout-all");
+  await sheet.getByRole("button", { name: "Retry" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  const refresh = await other.request.post(`${APP}/api/auth/refresh`, { headers: { origin: APP } });
+  expect(refresh.status(), await refresh.text()).toBe(401);
+  await other.close();
+});
+
+test("a sign-out everywhere with no session left lands on Sign in saying the others may be in [T-252]", async ({
+  page,
+  request,
+}) => {
+  await signedInPage(page, request);
+  await page.goto("/settings/sessions");
+  await expect(page.getByText("This device", { exact: true })).toBeVisible();
+  await page.context().clearCookies({ name: /^(__Host-access|__Secure-refresh)$/ });
+  await page.getByRole("button", { name: "Sign out all other sessions" }).click();
+  await page.getByRole("button", { name: "Sign out everywhere" }).click();
+  await expect(page).toHaveURL(/\/login\?notEverywhere=1$/);
+  await expect(page.getByText("Your other devices may still be signed in.")).toBeVisible();
+});
+
 // W-30: profile, currency, time zone, sessions and account deletion on a throwaway user.
 test("a new user edits the profile, changes currency and time zone, reviews sessions and deletes the account", async ({
   page,

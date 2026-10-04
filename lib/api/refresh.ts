@@ -21,6 +21,7 @@ const RETRY_DELAY_MS = 500;
 let inFlight: Promise<boolean> | null = null;
 let lastRefreshAt = 0;
 let sessionOver = false;
+let endings = 0;
 
 interface RefreshOptions {
   since?: number;
@@ -68,7 +69,7 @@ async function requestRefresh(): Promise<boolean> {
   }
   const by = endedBy(response);
   if (by && response) {
-    sessionOver = true;
+    noteSessionEnded();
     // Which side ended it is the difference between a token that is over and a bad minute.
     reportError(new SessionEndedError(by, await codeOf(response)), "session");
     tabChannel.emitLocal({ type: "session:expired" });
@@ -80,7 +81,7 @@ async function requestRefresh(): Promise<boolean> {
   return false;
 }
 
-async function withLock<T>(run: () => Promise<T>): Promise<T> {
+export async function withRefreshLock<T>(run: () => Promise<T>): Promise<T> {
   const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
   if (!locks) return run();
   return locks.request(REFRESH_LOCK, run);
@@ -91,7 +92,7 @@ export function refreshSession({ since = Date.now() }: RefreshOptions = {}): Pro
   // H-61: a session that is over does not come back by asking again, and each ask is a false alarm.
   if (sessionOver) return Promise.resolve(false);
   if (lastRefreshAt > since) return Promise.resolve(true);
-  inFlight ??= withLock(async () => {
+  inFlight ??= withRefreshLock(async () => {
     // The lock is shared between tabs: another one may have ended the session while this waited.
     if (sessionOver) return false;
     if (lastRefreshAt > since) return true;
@@ -107,8 +108,15 @@ export function noteRefreshedElsewhere(at: number): void {
   lastRefreshAt = Math.max(lastRefreshAt, at);
 }
 
-export function noteSessionEnded(): void {
+export function noteSessionEnded(): number {
   sessionOver = true;
+  endings += 1;
+  return endings;
+}
+
+// Only the ending it was handed: one that came meanwhile, from this tab or another, still stands.
+export function noteSessionKept(ending: number): void {
+  if (ending === endings) sessionOver = false;
 }
 
 export function noteSessionStarted(): void {

@@ -1065,6 +1065,8 @@ const login = (state = "") => {
     err = `<div class="alert warning">${iconSvg("clock")}<span><b>Too many attempts.</b> You can try again in 12:40.</span></div>`;
   if (state == "deleted")
     err = `<div class="alert info">${iconSvg("info")}<span><b>Your account was deleted.</b> It’s kept until October 28, 2026: signing in before then restores it.</span></div>`;
+  if (state == "not-everywhere")
+    err = `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>Your other devices may still be signed in.</b> Your session here had already ended, so they couldn’t be signed out. Sign in and try again from Active sessions.</span></div>`;
   return authFrame(`<div class="stack" style="gap:20px">
 <div class="stack-sm" style="text-align:center"><h1 class="h1">Welcome back</h1><p class="muted" style="margin:0">Sign in to keep tracking your spending.</p></div>${err}
 <div class="stack">${field("Email", "john@example.com", null, { icon: "user" })}${field("Password", "••••••••••", null, { icon: "lock", cls: "focus" })}</div>
@@ -2920,7 +2922,7 @@ const appearance = () => {
   return screen(body, { tab: "", side: "ajustes", back: true, title: "Appearance", narrow: true });
 };
 
-const sessions = () => {
+const sessions = (state = "") => {
   const sess = (icon, name, activity, since, expires, current = false) => {
     const r = current
       ? '<span class="badge success">This device</span>'
@@ -2931,12 +2933,16 @@ const sessions = () => {
   const body = `<div class="alert neutral">${iconSvg("info")}<span>Each sign-in opens a session of up to 30 days. Signing out a session forces that device to sign in again.</span></div>
 <div class="list card flush">${sess("smartphone", "Android · Chrome", "Active now", "Mar 12", "Oct 12", true)}${sess("laptop", "Windows · Edge", "2 hours ago", "Sep 18", "Oct 18", false)}${sess("smartphone", "iPhone · Safari", "12 days ago", "Aug 31", "Sep 30", false)}</div>
 <button class="btn danger block">${iconSvg("log-out", "sm")}Sign out all other sessions</button>`;
+  const failed = `<div class="alert danger">${iconSvg("circle-alert")}<span><b>Nothing was signed out.</b> The server didn’t respond. Your data is safe; try again in a few seconds.</span></div>
+<div class="alert warning">${iconSvg("triangle-alert")}<span>This also signs out this device: you’ll need to sign in again here. Every device is forgotten too, so each one gets a “New sign-in” email the next time it signs in.</span></div>
+<div class="stack-sm"><button class="btn danger solid lg block">Retry</button><button class="btn ghost lg block">Cancel</button></div>`;
   return screen(body, {
     tab: "",
     side: "ajustes",
     back: true,
     title: "Active sessions",
     narrow: true,
+    sheet: state == "failed" ? sheetWrap(failed, "Sign out every device?") : "",
   });
 };
 
@@ -6930,6 +6936,13 @@ const PAGES = [
         { added: "2026-09-28" },
       ),
       plate(
+        "sign-in-after-signing-out-everywhere-failed",
+        "Sign in · after signing out everywhere failed",
+        "Where Sign out all other sessions lands when the session here had already ended (a 401): nothing was left to sign the others out with, so they may still be in (T-252).",
+        login("not-everywhere"),
+        { added: "2026-10-03" },
+      ),
+      plate(
         "restore-your-account",
         "Restore your account?",
         "The right password of an account deleted in the last 30 days (the owner's decision 20). Not now leaves it deleted; Restore account signs in and tells the inbox.",
@@ -8315,6 +8328,13 @@ const PAGES = [
         added: "2026-09-01",
       }),
       plate("active-sessions", "Active sessions", "", sessions(), { added: "2026-09-01" }),
+      plate(
+        "sign-out-everywhere-failed",
+        "Active sessions · signing out everywhere failed",
+        "Only a sign-out the server confirmed signs this device out (the owner’s choice, T-252). With no server, no network or too many attempts the sheet stays, says nothing changed with the failure’s own message, and Retry tries again.",
+        sessions("failed"),
+        { added: "2026-10-03" },
+      ),
       plate(
         "profile-and-security",
         "Profile & security",
