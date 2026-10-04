@@ -8,7 +8,12 @@ import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
 
 import { carriedEmail, carryEmail, keepLinkToken, lastSentCode, rememberSentCode } from "../carry";
-import { ConfirmNewEmailLinkView, RestoreLinkView, VerifyLinkView } from "./EmailLinkView";
+import {
+  ConfirmNewEmailLinkView,
+  RestoreLinkView,
+  UndoLinkView,
+  VerifyLinkView,
+} from "./EmailLinkView";
 
 vi.mock("@/lib/i18n/navigation", () => ({
   Link: ({
@@ -55,6 +60,7 @@ beforeEach(() => {
   reportOnline(true);
   keepLinkToken("verify", null);
   keepLinkToken("restore", null);
+  keepLinkToken("undo", null);
   keepLinkToken("confirm-email", null);
   rememberSentCode(null);
   carryEmail("");
@@ -231,6 +237,78 @@ describe("RestoreLinkView", () => {
       "href",
       "/forgot",
     );
+  });
+});
+
+describe("UndoLinkView", () => {
+  it("undoes nothing on opening, and opens the code screen for the original address", async () => {
+    arriveWith("/undo", TOKEN);
+    fetchMock.mockResolvedValue(json({ email: "ana@example.co", codeSent: true }));
+    renderPage(<UndoLinkView />);
+
+    expect(await screen.findByRole("heading", { name: "Undo the change?" })).toBeInTheDocument();
+    expect(screen.getByText(/your current password stops working/)).toBeInTheDocument();
+    expect(window.location.hash).toBe("");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo the change" }));
+
+    expect(await screen.findByRole("heading", { name: "Change undone" })).toBeInTheDocument();
+    expect(sentTo("/api/auth/undo")).toEqual([{ token: TOKEN }]);
+    expect(screen.getByText(/We sent a code to this address/)).toBeInTheDocument();
+    const enter = screen.getByRole("link", { name: "Enter the code" });
+    expect(enter).toHaveAttribute("href", "/forgot");
+    await userEvent.click(enter);
+    expect(lastSentCode()?.email).toBe("ana@example.co");
+  });
+
+  it("does not promise a code that could not go, and carries the address to Forgot your password?", async () => {
+    arriveWith("/undo", TOKEN);
+    fetchMock.mockResolvedValue(json({ email: "ana@example.co", codeSent: false }));
+    renderPage(<UndoLinkView />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Undo the change" }));
+
+    expect(await screen.findByRole("heading", { name: "Change undone" })).toBeInTheDocument();
+    expect(screen.getByText(/We couldn’t send the code/)).toBeInTheDocument();
+    expect(screen.queryByText(/We sent a code/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("link", { name: "Forgot your password?" }));
+    expect(lastSentCode()).toBeNull();
+    expect(carriedEmail()).toBe("ana@example.co");
+  });
+
+  it("says a used, old or overtaken undo link no longer works, with Forgot your password? as the way on", async () => {
+    arriveWith("/undo", TOKEN);
+    fetchMock.mockResolvedValue(
+      json({ error: "Bad", message: "gone", code: "LINK_INVALID" }, { status: 400 }),
+    );
+    renderPage(<UndoLinkView />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Undo the change" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "This link no longer works" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/An undo link works for 7 days and only once/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("link", { name: "Forgot your password?" }));
+    expect(carriedEmail()).toBe("");
+  });
+
+  it("keeps the token after a failure on our side, so the tap can be tried again", async () => {
+    arriveWith("/undo", TOKEN);
+    fetchMock
+      .mockResolvedValueOnce(
+        json({ error: "Down", message: "x", code: "INTERNAL" }, { status: 503 }),
+      )
+      .mockResolvedValueOnce(json({ email: "ana@example.co", codeSent: true }));
+    renderPage(<UndoLinkView />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Undo the change" }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Undo the change" }));
+
+    expect(await screen.findByRole("heading", { name: "Change undone" })).toBeInTheDocument();
+    expect(sentTo("/api/auth/undo")).toEqual([{ token: TOKEN }, { token: TOKEN }]);
   });
 });
 

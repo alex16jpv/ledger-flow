@@ -26,10 +26,11 @@ export function ProfileScreen() {
         <ProfileView
           key={`${user.id}:${user.email}`}
           user={user}
-          onSaved={({ reauthenticated, newEmail }) => {
+          onSaved={({ reauthenticated, newEmail, emailRefused }) => {
             toast.show({
-              message:
-                newEmail !== null
+              message: emailRefused
+                ? t("settings.credentials.savedExceptEmail")
+                : newEmail !== null
                   ? t("settings.credentials.savedNewEmail", { email: newEmail })
                   : reauthenticated
                     ? t("settings.credentials.savedReauth")

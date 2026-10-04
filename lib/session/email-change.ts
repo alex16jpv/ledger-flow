@@ -44,7 +44,7 @@ export function changeNoLongerWaits(error: unknown): boolean {
   );
 }
 
-function useSetEmailChange(): (emailChange: EmailChange | null) => void {
+export function useSetEmailChange(): (emailChange: EmailChange | null) => void {
   const queryClient = useQueryClient();
   return useCallback(
     (emailChange: EmailChange | null) => {

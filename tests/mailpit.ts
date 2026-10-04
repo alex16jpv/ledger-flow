@@ -92,6 +92,12 @@ export async function readRestoreLink(request: APIRequestContext, to: string): P
   return link;
 }
 
+export async function readUndoLink(request: APIRequestContext, to: string): Promise<string> {
+  const link = linkIn(await readLatestText(request, to, "undo"), "undo");
+  if (!link) throw new Error(`no undo link in the email to ${to}`);
+  return link;
+}
+
 export interface SignUpData {
   name: string;
   email: string;

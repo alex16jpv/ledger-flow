@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 
 import { POST as logout } from "@/app/api/auth/logout/route";
 import { POST as refresh } from "@/app/api/auth/refresh/route";
+import { POST as undo } from "@/app/api/auth/undo/route";
 import {
   authenticate,
   cancelEmailChange,
@@ -421,6 +422,18 @@ describe("email confirmation handlers", () => {
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("http://backend.test/auth/email/restore");
     expect(new Headers(init?.headers).get("authorization")).toBeNull();
+  });
+
+  it("sends an undo link to its own route without any session, whatever this browser holds", async () => {
+    fetchMock.mockResolvedValue(json({ email: "a@b.co", codeSent: false }));
+    const response = await undo(
+      post("/api/auth/undo", { token: "t".repeat(64) }, { cookie: "__Host-access=acc" }),
+    );
+    await expect(response.json()).resolves.toEqual({ email: "a@b.co", codeSent: false });
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://backend.test/auth/email/undo");
+    expect(new Headers(init?.headers).get("authorization")).toBeNull();
+    expect(JSON.parse(init?.body as string)).toEqual({ token: "t".repeat(64) });
   });
 
   it("rejects another origin before touching the backend", async () => {

@@ -5,6 +5,20 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-03 · `/undo`, and the new address asked for after the password (T-219)
+
+- **`/undo` and `/restore` are one component** (`PasswordStoppingLink`): the same warning, the same
+  answer (`{ email, codeSent }`) and the same two endings, so only their title, button, icon and dead-link
+  line are their own, and the shared lines live once in `auth.link`. The BFF route is a named one,
+  `/api/auth/undo`, with no session and no device cookie: the generic proxy already refuses `auth/email/*`.
+- **Save changes sends the name or the password first, and the new address after**, with the new password
+  when there is one (the owner's call). Since T-211 the API cancels a change of email that waits when the
+  password changes, so the order of T-222 left the new address waiting for a code that no longer worked.
+  Cloudflare's token is taken before either, so a refused check saves nothing; an address refused after
+  the password keeps the password saved, and the toast "Saved, but your email didn't change." says so.
+  Rejected: one change at a time (it keeps "a refused address saves nothing" but blocks a common save).
+- **`auth/register` left the generic proxy's list**: the backend has no such route since its T-248.
+
 ## 2026-10-03 · The account exists once its email is confirmed, and a deleted one is kept 30 days (T-239)
 
 - **The sign-up's token stays in the BFF's cookie** (`__Secure-sign-up`, httpOnly, path
@@ -173,7 +187,8 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **The email leaves `PUT /users/:id`.** Save changes with a new address asks `POST
 /users/:id/email-change` first, with the current password and an `email-change` token, and only then
   sends the name or the new password: a refused address saves nothing. The password never has to be
-  given twice, since the pending change does not bump `tokenVersion`. Once this shipped, the backend
+  given twice, since the pending change does not bump `tokenVersion`. (Reversed by T-219 on 2026-10-03:
+  the name and the password go first, below.) Once this shipped, the backend
   closed `email` on the `PUT` (its T-232): `UpdateUserInput` has no `email` any more, and a body that
   still carries one reads `400 EMAIL_CHANGE_REQUIRES_VERIFICATION` (T-234). No build that knows the code
   sends `email` there, and one cached from before T-222 reads it as an unknown 400: its text exists

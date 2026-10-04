@@ -1281,6 +1281,9 @@ const emailLinkPage = (kind) => {
   if (kind == "restore-done")
     return authPage(`${authOutcome("archive-restore", "NONE", "Account restored", "Every device was signed out. We sent a code to this address so you can choose a new password: it works for 30 minutes.")}
 <button class="btn primary lg block">Enter the code</button>`);
+  if (kind == "undo-done-no-code")
+    return authPage(`${authOutcome("undo-2", "NONE", "Change undone", "Every device was signed out, and your old password no longer works. We couldn’t send the code to choose a new one: ask for it from Forgot your password?.")}
+<button class="btn primary lg block">Forgot your password?</button>`);
   if (kind == "undo")
     return authPage(`${authTitle("Undo the change?", "Your account’s email goes back to this address, even if the change was already confirmed.")}
 <div class="alert warning">${iconSvg("triangle-alert")}<span>Every device is signed out and <b>your current password stops working</b>. We’ll email you a code to choose a new one.</span></div>
@@ -2952,7 +2955,7 @@ const profileSecurity = (email = "", { sheet = "" } = {}) => {
             cls: "disabled",
             help: "Changing the email needs Cloudflare’s check, which isn’t set up here.",
           })
-        : email == "refused"
+        : email == "refused" || email == "refused-after-save"
           ? field("Email", "new@example", null, {
               icon: "user",
               help: NEW_EMAIL_HELP,
@@ -2960,11 +2963,15 @@ const profileSecurity = (email = "", { sheet = "" } = {}) => {
             })
           : field("Email", "john@example.com", null, { icon: "user", help: NEW_EMAIL_HELP });
   const pending = email == "pending" || email == "new-sheet";
+  const afterSave = email == "refused-after-save";
+  const toast = afterSave
+    ? `<div class="toast">${iconSvg("check")}Saved, but your email didn’t change.</div>`
+    : "";
   const body = `${field("Name", "John Doe", null, { icon: "user" })}${emailField}${pending ? PENDING_EMAIL : ""}
 <div class="divider"></div><span class="eyebrow">Change password</span>${field("New password", null, "At least 8 characters", { icon: "lock" })}
 <div class="alert warning">${iconSvg("lock")}<span>To change your email or password, confirm your <b>current password</b>. For safety, your other devices will need to sign in again.</span></div>
-${field("Current password", "••••••••••", null, { icon: "lock", cls: "focus" })}
-<button class="btn primary lg block">Save changes</button>`;
+${afterSave ? field("Current password", null, "", { icon: "lock" }) : field("Current password", "••••••••••", null, { icon: "lock", cls: "focus" })}
+<button class="btn primary lg block">Save changes</button>${toast}`;
   return screen(body, {
     tab: "",
     side: "ajustes",
@@ -7136,6 +7143,13 @@ const PAGES = [
         { added: "2026-09-26" },
       ),
       plate(
+        "undo-link-done-no-code",
+        "From an email · change undone, no code",
+        "The answer said codeSent: false. The change is undone and the password stopped, so Forgot your password? is the way in, with the address carried over; nothing claims a code is on its way.",
+        emailLinkPage("undo-done-no-code"),
+        { added: "2026-10-03" },
+      ),
+      plate(
         "restore-link",
         "From an email · restore your account",
         "/restore, from Your account was deleted, for whoever did not delete it. It works like an undo: it signs everyone out and stops the password, even if the account was restored meanwhile.",
@@ -8332,9 +8346,16 @@ const PAGES = [
       plate(
         "profile-and-security-new-email-refused",
         "Profile & security · an address that takes no email",
-        "EMAIL_SEND_FAILED with 422: the address bounced or complained before, or the provider refused it. Nothing is saved.",
+        "EMAIL_SEND_FAILED with 422: the address bounced or complained before, or the provider refused it. The address is not saved.",
         profileSecurity("refused"),
-        { added: "2026-09-28" },
+        { added: "2026-09-28", updated: "2026-10-03" },
+      ),
+      plate(
+        "profile-and-security-email-refused-after-save",
+        "Profile & security · saved, except the address",
+        "A new name or password goes before the address, because a password change cancels a change of email that waits. When the address is then refused, what went first stays saved: the toast says so, the password fields are empty, and the field says why. A 503 or a 429 reads as on the plain page, in its alert.",
+        profileSecurity("refused-after-save"),
+        { added: "2026-10-03" },
       ),
       plate(
         "profile-and-security-email-locked",

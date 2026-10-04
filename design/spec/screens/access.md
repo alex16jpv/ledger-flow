@@ -277,7 +277,10 @@ needs a session. The frame's language chip changes only the page, never the acco
 - **`/undo` undoes an email change**, today the only change a notice can undo; when passkeys and two-step
   verification exist, T-214 adds their words. **Enter the code** opens the code screen of Forgot your
   password? for the original address — the undo's answer names it, since whoever tapped holds that inbox
-  — and asks for no new code, which would cancel the one just sent.
+  — and asks for no new code, which would cancel the one just sent. It also brings back an account
+  deleted after the change (the owner's decision 13); the page says nothing of it (the owner's call in
+  T-219): it cannot know before the tap, the answer does not say, and whoever taps never got
+  `account-deleted`, which went to the new address.
 - **`/confirm-email` when the address was taken meanwhile** (`EMAIL_TAKEN`,
   `#confirm-new-email-link-taken`): a neutral `circle-alert` tile, "That address now belongs to another
   account", "Your account keeps its current email." · **Open Ledger Flow**.
@@ -306,7 +309,12 @@ are offered: Create account first, since a sign-up is what most of these links a
 back and its password stopped all the same, so the page does not claim a code: "Account restored",
 "Every device was signed out, and your old password no longer works. We couldn't send the code to choose
 a new one: ask for it from Forgot your password?." · **Forgot your password?**, with the address carried
-over. `/undo` gets its words in T-219.
+over.
+
+**`/undo` when the code could not go** (`#undo-link-done-no-code`, `codeSent: false`): the same, in its
+own words: "Change undone", "Every device was signed out, and your old password no longer works. We
+couldn't send the code to choose a new one: ask for it from Forgot your password?." · **Forgot your
+password?**, with the address carried over.
 
 **An account that is already confirmed** is not a dead link on `/verify`: whoever confirmed with the code
 and then taps the link sees "Your account is ready" or "Email confirmed".

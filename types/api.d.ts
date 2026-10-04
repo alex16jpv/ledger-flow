@@ -602,7 +602,7 @@ export type paths = {
         put?: never;
         /**
          * Email a new code to confirm the account's email
-         * @description Send code and Resend code of the sheet that confirms the email. Sends `verify-email` to the account's address, in its language: a 6-digit code and a link, both for 24 hours. The new code replaces the old one only once its email was accepted. Unlike Forgot your password?, a failed send is said: the address is the account's own. `captcha` is a Cloudflare Turnstile token for the action `verify-email`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+         * @description Send code and Resend code of the sheet that confirms the email. Sends `verify-email` to the account's address, in its language: a 6-digit code and a link, both for 24 hours. The new code replaces the old one only once its email was accepted. Unlike Forgot your password?, a failed send is said: the address is the account's own. `captcha` is a Cloudflare Turnstile token for the action `verify-email`; `deviceToken`, from this device's last login or sign-up, lets the limits count this device instead of its IP.
          */
         post: {
             parameters: {
@@ -909,7 +909,7 @@ export type paths = {
         put?: never;
         /**
          * Login and obtain a JWT token
-         * @description Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded. A login whose `deviceToken` is not one this account's email gave since its last undo, restore link or logout-all emails `new-sign-in` to that email, when it is confirmed. The right password of an account deleted in its last 30 days answers 409 ACCOUNT_DELETED with its two days and opens nothing: "Restore your account?" then calls `POST /auth/login/restore`. A wrong password reads the same for every address, deleted or not.
+         * @description Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or sign-up and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded. A login whose `deviceToken` is not one this account's email gave since its last undo, restore link or logout-all emails `new-sign-in` to that email, when it is confirmed. The right password of an account deleted in its last 30 days answers 409 ACCOUNT_DELETED with its two days and opens nothing: "Restore your account?" then calls `POST /auth/login/restore`. A wrong password reads the same for every address, deleted or not.
          */
         post: {
             parameters: {
@@ -1176,7 +1176,7 @@ export type paths = {
         put?: never;
         /**
          * Email a code and a link to choose a new password
-         * @description Always the same answer, in at least the same time, whether the address has a live account, a deleted one or none, and whether the email could be sent: nothing here may tell them apart. A live account and one deleted in its last 30 days are emailed, in their own language: a 6-digit code and a link (`/{locale}/reset#token=…`), both good for 30 minutes and for one reset; the deleted one in its own words, since choosing a password restores it. A new code replaces the previous one only once its email was accepted for delivery. `captcha` is a Cloudflare Turnstile token issued for the action `forgot-password`, asked for when the button is pressed: it works once. `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+         * @description Always the same answer, in at least the same time, whether the address has a live account, a deleted one or none, and whether the email could be sent: nothing here may tell them apart. A live account and one deleted in its last 30 days are emailed, in their own language: a 6-digit code and a link (`/{locale}/reset#token=…`), both good for 30 minutes and for one reset; the deleted one in its own words, since choosing a password restores it. A new code replaces the previous one only once its email was accepted for delivery. `captcha` is a Cloudflare Turnstile token issued for the action `forgot-password`, asked for when the button is pressed: it works once. `deviceToken`, from this device's last login or sign-up, lets the limits count this device instead of its IP.
          */
         post: {
             parameters: {
@@ -1351,86 +1351,6 @@ export type paths = {
                 };
                 /** @description Too many attempts (code RATE_LIMITED) */
                 429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/register": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Register a new user, before its email is confirmed
-         * @deprecated
-         * @description Kept only until the app confirms the email before the account exists (`POST /auth/sign-up`); then it goes. Register acts as login: the response already carries the token pair. Emails are normalized (trim + lowercase). An address with any account, live or deleted and still kept, answers 409 EMAIL_TAKEN: a deleted account comes back by signing in. `captcha` is a Cloudflare Turnstile token for the action `register`. The account is sent `verify-email`; a send that fails does not fail the register.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["RegisterInput"];
-                };
-            };
-            responses: {
-                /** @description User registered and logged in */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuthTokens"];
-                    };
-                };
-                /** @description Validation error, a missing captcha among them (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID). Ask for a new token and try again */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Email is already registered (code EMAIL_TAKEN) */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Too many attempts from this client IP, or too many failed ones for this email, counted with the failed logins (code RATE_LIMITED) */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description The captcha could not be checked (code CAPTCHA_UNAVAILABLE): nothing was created. Try again */
-                503: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -6774,7 +6694,7 @@ export type paths = {
         put?: never;
         /**
          * Ask to move the account to a new email
-         * @description Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION). When the account's email is confirmed, `email-change-requested` goes to it too, naming the new address, with "Undo the change" (`/{locale}/undo#token=…`, POST /auth/email/undo) for 7 days, and the change is saved only once that notice went (an old address that refuses all email does not stop it); while that link works the old address stays the account's. An address another account holds — live, deleted and still kept, or kept by an undo link — answers the same as any other, so nothing here tells whether it has an account: it is sent `email-change-taken` instead, and the change waits and never confirms.
+         * @description Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or sign-up, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION). When the account's email is confirmed, `email-change-requested` goes to it too, naming the new address, with "Undo the change" (`/{locale}/undo#token=…`, POST /auth/email/undo) for 7 days, and the change is saved only once that notice went (an old address that refuses all email does not stop it); while that link works the old address stays the account's. An address another account holds — live, deleted and still kept, or kept by an undo link — answers the same as any other, so nothing here tells whether it has an account: it is sent `email-change-taken` instead, and the change waits and never confirms.
          */
         post: {
             parameters: {
@@ -7124,7 +7044,7 @@ export type components = {
             accessToken: string;
             refreshToken: string;
             user?: components["schemas"]["User"];
-            /** @description Login, sign-up, register, restore and password reset only. Proof that this device already signed in to this email: send it back as `deviceToken` on the next login, register or Forgot your password? and its attempts get a budget of their own, so a stranger's failures cannot lock this device out. Keep it across logouts, and keep the new one each of them answers. A password or email change and a logout-all revoke every device token issued before. */
+            /** @description Login, sign-up, restore and password reset only. Proof that this device already signed in to this email: send it back as `deviceToken` on the next login, sign-up or Forgot your password? and its attempts get a budget of their own, so a stranger's failures cannot lock this device out. Keep it across logouts, and keep the new one each of them answers. A password or email change and a logout-all revoke every device token issued before. */
             deviceToken?: string;
         };
         BatchUpdateFailure: {
@@ -7682,18 +7602,6 @@ export type components = {
         };
         RefreshInput: {
             refreshToken: string;
-        };
-        RegisterInput: {
-            name: string;
-            /** Format: email */
-            email: string;
-            password: string;
-            timezone?: string;
-            currency?: string;
-            /** @enum {string} */
-            locale?: "en" | "es";
-            deviceToken?: string;
-            captcha: string;
         };
         RequestEmailChangeInput: {
             /** Format: email */
@@ -8725,7 +8633,6 @@ export type QuickAddTransactionInput = components['schemas']['QuickAddTransactio
 export type ReceivedInvitation = components['schemas']['ReceivedInvitation'];
 export type ReceivedInvitationList = components['schemas']['ReceivedInvitationList'];
 export type RefreshInput = components['schemas']['RefreshInput'];
-export type RegisterInput = components['schemas']['RegisterInput'];
 export type RequestEmailChangeInput = components['schemas']['RequestEmailChangeInput'];
 export type ResendEmailChangeInput = components['schemas']['ResendEmailChangeInput'];
 export type ResendVerificationInput = components['schemas']['ResendVerificationInput'];
