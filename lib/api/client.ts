@@ -4,7 +4,7 @@ import {
   reportNetworkFailure,
 } from "@/lib/network/connectivity";
 import { isReportable, reportError } from "@/lib/observability/reporter";
-import type { ErrorResponse } from "@/types/api";
+import type { AccountDeletedResponse } from "@/types/api";
 
 import { ApiError, isErrorCode, NetworkError, sessionMayRenew } from "./errors";
 import { IDEMPOTENCY_HEADER, newIdempotencyKey } from "./idempotency";
@@ -41,6 +41,12 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): voi
   unauthorizedHandler = handler;
 }
 
+let confirmationRequiredHandler: (() => void) | null = null;
+
+export function setConfirmationRequiredHandler(handler: (() => void) | null): void {
+  confirmationRequiredHandler = handler;
+}
+
 function combineSignals(signal: AbortSignal | undefined): AbortSignal {
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   return signal ? AbortSignal.any([signal, timeout]) : timeout;
@@ -65,7 +71,7 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 function toApiError(response: Response, payload: unknown, requestId: string): ApiError {
-  const body = (payload ?? {}) as Partial<ErrorResponse> & { current?: unknown };
+  const body = (payload ?? {}) as Partial<AccountDeletedResponse> & { current?: unknown };
   return new ApiError({
     status: response.status,
     code: isErrorCode(body.code) ? body.code : null,
@@ -75,6 +81,7 @@ function toApiError(response: Response, payload: unknown, requestId: string): Ap
     retryAfterSeconds: parseRetryAfter(response.headers.get("retry-after")),
     // O-B2: only `STALE_UPDATE` carries the server's row, and it is not in the OpenAPI schema.
     current: body.current,
+    deletedAccount: body.deletedAccount,
   });
 }
 
@@ -135,6 +142,7 @@ export async function api<T>(path: string, request: ApiRequest = {}): Promise<T>
   if (!response.ok) {
     const error = toApiError(response, payload, requestId);
     if (isReportable(error)) reportError(error, "api");
+    if (error.code === "EMAIL_CONFIRMATION_REQUIRED") confirmationRequiredHandler?.();
     throw error;
   }
   return payload as T;

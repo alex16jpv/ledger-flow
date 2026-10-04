@@ -1,5 +1,5 @@
 import { type APIRequestContext, expect, type Page, test, uniqueEmail } from "../fixtures";
-import { readEmailChangeEmail, TEST_CAPTCHA } from "../mailpit";
+import { readEmailChangeEmail, signUpWithCode, TEST_CAPTCHA } from "../mailpit";
 import { APP } from "../offline";
 import { expectNoAxeViolations } from "./axe";
 
@@ -7,9 +7,11 @@ const PASSWORD = "LedgerFlow!2026";
 
 async function registered(request: APIRequestContext, tag: string): Promise<string> {
   const email = uniqueEmail(tag);
-  const response = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { name: "Email change E2E", email, password: PASSWORD, captcha: TEST_CAPTCHA },
+  const response = await signUpWithCode(request, {
+    name: "Email change E2E",
+    email,
+    password: PASSWORD,
+    captcha: TEST_CAPTCHA,
   });
   expect(response.ok(), await response.text()).toBe(true);
   return email;

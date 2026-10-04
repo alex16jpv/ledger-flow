@@ -133,7 +133,7 @@ describe("ForgotView", () => {
     expect(document.querySelector('input[autocomplete="username"]')).toHaveValue(EMAIL);
     await userEvent.type(screen.getByLabelText("6-digit code"), "482719");
     await userEvent.type(screen.getByLabelText("New password"), "LedgerFlow!2027");
-    fetchMock.mockResolvedValueOnce(json({ user: { id: "u1", keepOrStartFresh: null } }));
+    fetchMock.mockResolvedValueOnce(json({ user: { id: "u1" }, restored: false }));
     await userEvent.click(screen.getByRole("button", { name: "Save password and sign in" }));
     await waitFor(() => {
       expect(replace).toHaveBeenCalledWith({ pathname: "/home", query: { passwordChanged: "1" } });
@@ -145,16 +145,18 @@ describe("ForgotView", () => {
     });
   });
 
-  it("opens the question instead of Home for an account that never confirmed its email", async () => {
+  it("says the account is back when the new password restored a deleted one", async () => {
     renderView();
     await sendCode();
     await userEvent.type(screen.getByLabelText("6-digit code"), "482719");
     await userEvent.type(screen.getByLabelText("New password"), "LedgerFlow!2027");
-    const facts = { createdAt: "2026-03-12T00:00:00Z", accounts: 3, transactions: 214 };
-    fetchMock.mockResolvedValueOnce(json({ user: { id: "u1", keepOrStartFresh: facts } }));
+    fetchMock.mockResolvedValueOnce(json({ user: { id: "u1" }, restored: true }));
     await userEvent.click(screen.getByRole("button", { name: "Save password and sign in" }));
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith("/keep-or-start-fresh");
+      expect(replace).toHaveBeenCalledWith({
+        pathname: "/home",
+        query: { passwordChanged: "1", restored: "1" },
+      });
     });
   });
 

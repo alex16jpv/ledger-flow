@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect } from "./fixtures";
+import { type APIRequestContext, type APIResponse, expect } from "./fixtures";
 
 const MAILPIT = process.env.E2E_MAILPIT_URL ?? "http://localhost:8025";
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -11,11 +11,7 @@ export interface ResetEmail {
   link: string;
 }
 
-export interface VerifyEmail {
-  code: string;
-  link: string;
-  notMe: string | null;
-}
+export type VerifyEmail = ResetEmail;
 
 interface Search {
   messages: { ID: string }[];
@@ -26,7 +22,7 @@ const codeIn = (text: string) => /^\s*(\d{6})\s*$/m.exec(text)?.[1];
 const linkIn = (text: string, page: string) =>
   new RegExp(`https?://[^/\\s]+(/(?:[a-z]{2}/)?${page}#token=[\\w-]+)`).exec(text)?.[1];
 
-// Registering sends verify-email too, so the newest message is read only once it is the one wanted.
+// Other emails reach the same address, so the newest message is read only once it is the one wanted.
 async function readLatestText(
   request: APIRequestContext,
   to: string,
@@ -70,7 +66,54 @@ export async function readVerifyEmail(
   const code = codeIn(text);
   const link = linkIn(text, "verify");
   if (!code || !link) throw new Error(`no code or link in the email to ${to}`);
-  return { code, link, notMe: linkIn(text, "not-me") ?? null };
+  return { code, link };
+}
+
+interface Listed {
+  messages: { Subject: string; Created: string }[];
+}
+
+// The subjects of what reached an address since a moment: other specs email the same addresses.
+export async function subjectsSince(
+  request: APIRequestContext,
+  to: string,
+  since: number,
+): Promise<string[]> {
+  const response = await request.get(
+    `${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`,
+  );
+  const { messages } = (await response.json()) as Listed;
+  return messages.filter((message) => Date.parse(message.Created) >= since).map((m) => m.Subject);
+}
+
+export async function readRestoreLink(request: APIRequestContext, to: string): Promise<string> {
+  const link = linkIn(await readLatestText(request, to, "restore"), "restore");
+  if (!link) throw new Error(`no restore link in the email to ${to}`);
+  return link;
+}
+
+export interface SignUpData {
+  name: string;
+  email: string;
+  password: string;
+  currency?: string;
+  timezone?: string;
+  locale?: "en" | "es";
+  captcha?: string;
+}
+
+// Creating an account takes the code its sign-up email carries; the answer is the session, as a login's.
+export async function signUpWithCode(
+  request: APIRequestContext,
+  data: SignUpData,
+): Promise<APIResponse> {
+  const started = await request.post("/api/auth/sign-up", {
+    headers: { origin: APP },
+    data: { captcha: TEST_CAPTCHA, ...data },
+  });
+  expect(started.status(), await started.text()).toBe(202);
+  const { code } = await readVerifyEmail(request, data.email.trim().toLowerCase());
+  return request.post("/api/auth/sign-up/confirm", { headers: { origin: APP }, data: { code } });
 }
 
 export async function readEmailChangeEmail(
@@ -82,14 +125,4 @@ export async function readEmailChangeEmail(
   const link = linkIn(text, "confirm-email");
   if (!code || !link) throw new Error(`no code or link in the email to ${to}`);
   return { code, link };
-}
-
-// For a session registered with TEST_CAPTCHA: the code its verify-email carries confirms it.
-export async function confirmEmailOf(request: APIRequestContext, email: string): Promise<void> {
-  const { code } = await readVerifyEmail(request, email);
-  const response = await request.post("/api/auth/verify", {
-    headers: { origin: APP },
-    data: { code },
-  });
-  expect(response.ok()).toBe(true);
 }

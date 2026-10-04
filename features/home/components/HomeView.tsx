@@ -6,7 +6,6 @@ import { type ReactNode, useMemo } from "react";
 
 import { InstallNotice } from "@/components/pwa/InstallNotice";
 import { Avatar, PageHeader } from "@/components/shell";
-import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Empty } from "@/components/ui/Empty";
@@ -27,7 +26,6 @@ import { PendingAlert } from "./PendingAlert";
 import { StatsRow } from "./StatsRow";
 
 interface HomeViewProps {
-  reactivated?: boolean;
   onCreateAccount: () => void;
   onCreateBudget: () => void;
   recent?: ReactNode;
@@ -35,13 +33,7 @@ interface HomeViewProps {
   owed?: ReactNode;
 }
 
-export function HomeView({
-  reactivated = false,
-  onCreateAccount,
-  onCreateBudget,
-  recent,
-  owed,
-}: HomeViewProps) {
+export function HomeView({ onCreateAccount, onCreateBudget, recent, owed }: HomeViewProps) {
   const t = useTranslations();
   const user = useAppUser();
   const dates = useDates();
@@ -124,11 +116,6 @@ export function HomeView({
   return (
     <>
       {header}
-      {reactivated && (
-        <Alert tone="info" title={t("auth.register.reactivated.title")}>
-          {t("auth.register.reactivated.body")}
-        </Alert>
-      )}
       {pending && pending.count > 0 && (
         <PendingAlert count={pending.count} expense={pending.expense} income={pending.income} />
       )}

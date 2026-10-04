@@ -32,6 +32,8 @@ const env = {
   TURNSTILE_SECRET: "1x0000000000000000000000000000000AA",
   // Production turns it on once the app can confirm an email: the suite runs as production will.
   EMAIL_VERIFICATION_REQUIRED: "true",
+  // Only accounts the specs give a deadline meet it: nothing runs the nightly pass that hands them out.
+  EMAIL_CONFIRMATION_DEADLINES: "true",
   // Every run is one IP, one device and a new address per test: only the per-address brakes stay real.
   EMAIL_IP_HOURLY_MAX: "100000",
   EMAIL_DEVICE_HOURLY_MAX: "100000",

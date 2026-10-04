@@ -2,11 +2,11 @@
 
 import type { UseMutationResult } from "@tanstack/react-query";
 import {
+  ArchiveRestore,
   CircleAlert,
   type LucideIcon,
   MailCheck,
   TriangleAlert,
-  UserX,
   WifiOff,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -25,41 +25,53 @@ import { iconProps } from "@/lib/icons/sizes";
 import { useOffline } from "@/lib/network/useOffline";
 import type { ColorToken } from "@/lib/theme/feature-color";
 
-import { keepLinkToken, type LinkPurpose } from "../carry";
+import { carryEmail, keepLinkToken, type LinkPurpose, rememberSentCode } from "../carry";
 import {
   type FailureKey,
   failureKey,
   retryAfterOf,
   useConfirmEmailChangeLink,
   useConfirmEmailLink,
-  useDeleteAccountThatUsedMyEmail,
+  useRestoreFromLink,
 } from "../hooks";
 import { useLinkToken } from "../useLinkToken";
 
 type Stage = "ready" | "done" | "dead" | "refused";
+
+interface Way {
+  href: string;
+  label: string;
+  onClick?: () => void;
+}
 
 interface Outcome {
   icon: LucideIcon;
   color: ColorToken | null;
   title: string;
   body: string;
-  action: { href: string; label: string };
+  action: Way;
+  secondary?: Way;
 }
 
-interface EmailLinkPageProps {
+interface DeadLink {
+  body: string;
+  action: Way;
+  secondary?: Way;
+}
+
+interface EmailLinkPageProps<T> {
   purpose: Exclude<LinkPurpose, "reset">;
   title: string;
   body: string;
   warning?: ReactNode;
-  submit: { label: string; danger?: boolean };
-  secondary?: { href: string; label: string };
-  mutation: UseMutationResult<unknown, Error, string>;
-  done: Outcome;
-  dead: { body: string; action: { href: string; label: string } };
+  submit: { label: string };
+  mutation: UseMutationResult<T, Error, string>;
+  done: (answer: T) => Outcome;
+  dead: (token: string) => DeadLink;
   refused?: { code: ErrorCode; outcome: Outcome };
 }
 
-function OutcomeView({ icon: Icon, color, title, body, action }: Outcome) {
+function OutcomeView({ icon: Icon, color, title, body, action, secondary }: Outcome) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col items-center gap-2 text-center">
@@ -68,29 +80,45 @@ function OutcomeView({ icon: Icon, color, title, body, action }: Outcome) {
         </Tile>
         <AuthHeading title={title} subtitle={body} />
       </div>
-      <Link href={action.href} className={buttonClasses({ size: "lg", block: true })}>
-        {action.label}
-      </Link>
+      <div className="flex flex-col gap-2">
+        <Link
+          href={action.href}
+          onClick={action.onClick}
+          className={buttonClasses({ size: "lg", block: true })}
+        >
+          {action.label}
+        </Link>
+        {secondary && (
+          <Link
+            href={secondary.href}
+            onClick={secondary.onClick}
+            className={buttonClasses({ variant: "ghost", size: "lg", block: true })}
+          >
+            {secondary.label}
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
 
-function EmailLinkPage({
+function EmailLinkPage<T>({
   purpose,
   title,
   body,
   warning,
   submit,
-  secondary,
   mutation,
   done,
   dead,
   refused,
-}: EmailLinkPageProps) {
+}: EmailLinkPageProps<T>) {
   const t = useTranslations();
   const offline = useOffline();
   const token = useLinkToken(purpose);
   const [stage, setStage] = useState<Stage>("ready");
+  const [answer, setAnswer] = useState<{ value: T } | null>(null);
+  const [spent, setSpent] = useState("");
   const [failure, setFailure] = useState<FailureKey | null>(null);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
 
@@ -98,7 +126,7 @@ function EmailLinkPage({
     if (!token) return;
     setFailure(null);
     try {
-      await mutation.mutateAsync(token);
+      setAnswer({ value: await mutation.mutateAsync(token) });
       keepLinkToken(purpose, null);
       setStage("done");
     } catch (error) {
@@ -112,12 +140,13 @@ function EmailLinkPage({
         (error.code === "LINK_INVALID" || error.code === "VALIDATION")
       ) {
         keepLinkToken(purpose, null);
+        setSpent(token);
         setStage("dead");
       } else setFailure(failureKey(error));
     }
   };
 
-  if (stage === "done") return <OutcomeView {...done} />;
+  if (stage === "done" && answer) return <OutcomeView {...done(answer.value)} />;
   if (stage === "refused" && refused) return <OutcomeView {...refused.outcome} />;
   if (stage === "dead") {
     return (
@@ -125,8 +154,7 @@ function EmailLinkPage({
         icon={CircleAlert}
         color={null}
         title={t("auth.reset.deadTitle")}
-        body={dead.body}
-        action={dead.action}
+        {...dead(spent)}
       />
     );
   }
@@ -155,33 +183,28 @@ function EmailLinkPage({
               }}
             />
           )}
-          <div className="flex flex-col gap-2">
-            <Button
-              size="lg"
-              block
-              variant={submit.danger ? "dangerSolid" : "primary"}
-              loading={mutation.isPending}
-              disabled={offline || retryAfter !== null}
-              onClick={() => {
-                void tap();
-              }}
-            >
-              {submit.label}
-            </Button>
-            {secondary && (
-              <Link
-                href={secondary.href}
-                className={buttonClasses({ variant: "ghost", size: "lg", block: true })}
-              >
-                {secondary.label}
-              </Link>
-            )}
-          </div>
+          <Button
+            size="lg"
+            block
+            loading={mutation.isPending}
+            disabled={offline || retryAfter !== null}
+            onClick={() => {
+              void tap();
+            }}
+          >
+            {submit.label}
+          </Button>
         </>
       )}
     </div>
   );
 }
+
+// A deadline email's token is the account's id and 32 random bytes; sign-up and verify-email ones are shorter.
+const DEADLINE_TOKEN_LENGTH = 64;
+
+// The code went out with the answer, and asking for another before the address's minute would cancel it.
+const RESEND_AFTER_LINK_SECONDS = 60;
 
 export function VerifyLinkView() {
   const t = useTranslations("auth");
@@ -194,14 +217,32 @@ export function VerifyLinkView() {
       body={t("verify.body")}
       submit={{ label: t("verify.submit") }}
       mutation={confirm}
-      done={{
-        icon: MailCheck,
-        color: "GREEN",
-        title: t("verify.doneTitle"),
-        body: t("verify.doneBody"),
-        action: openApp,
-      }}
-      dead={{ body: t("verify.deadBody"), action: openApp }}
+      done={({ result }) =>
+        result === "account-ready"
+          ? {
+              icon: MailCheck,
+              color: "GREEN",
+              title: t("verify.readyTitle"),
+              body: t("verify.readyBody"),
+              action: { href: LOGIN_PATH, label: t("verify.signIn") },
+            }
+          : {
+              icon: MailCheck,
+              color: "GREEN",
+              title: t("verify.doneTitle"),
+              body: t("verify.doneBody"),
+              action: openApp,
+            }
+      }
+      dead={(token) =>
+        token.length === DEADLINE_TOKEN_LENGTH
+          ? { body: t("verify.deadlineDeadBody"), action: openApp }
+          : {
+              body: t("verify.deadBody"),
+              action: { href: REGISTER_PATH, label: t("verify.createAccount") },
+              secondary: openApp,
+            }
+      }
     />
   );
 }
@@ -217,14 +258,14 @@ export function ConfirmNewEmailLinkView() {
       body={t("confirmNewEmail.body")}
       submit={{ label: t("confirmNewEmail.submit") }}
       mutation={confirm}
-      done={{
+      done={() => ({
         icon: MailCheck,
         color: "GREEN",
         title: t("confirmNewEmail.doneTitle"),
         body: t("confirmNewEmail.doneBody"),
         action: openApp,
-      }}
-      dead={{ body: t("verify.deadBody"), action: openApp }}
+      })}
+      dead={() => ({ body: t("confirmNewEmail.deadBody"), action: openApp })}
       refused={{
         code: "EMAIL_TAKEN",
         outcome: {
@@ -239,30 +280,57 @@ export function ConfirmNewEmailLinkView() {
   );
 }
 
-export function NotMeLinkView() {
+export function RestoreLinkView() {
   const t = useTranslations("auth");
-  const erase = useDeleteAccountThatUsedMyEmail();
+  const restore = useRestoreFromLink();
+  const forgot = (email?: string) => ({
+    href: FORGOT_PATH,
+    label: t("login.forgotPassword"),
+    onClick: () => {
+      carryEmail(email ?? "");
+    },
+  });
   return (
     <EmailLinkPage
-      purpose="not-me"
-      title={t("notMe.title")}
-      body={t("notMe.body")}
+      purpose="restore"
+      title={t("restore.title")}
+      body={t("restore.body")}
       warning={
-        <Alert tone="warning" icon={TriangleAlert} title={t("notMe.warningTitle")}>
-          {t("notMe.warningBody")}
+        <Alert tone="warning" icon={TriangleAlert}>
+          {t.rich("restore.warning", {
+            b: (chunks) => <b className="font-semibold">{chunks}</b>,
+          })}
         </Alert>
       }
-      submit={{ label: t("notMe.submit"), danger: true }}
-      secondary={{ href: LOGIN_PATH, label: t("notMe.keep") }}
-      mutation={erase}
-      done={{
-        icon: UserX,
-        color: null,
-        title: t("notMe.doneTitle"),
-        body: t("notMe.doneBody"),
-        action: { href: REGISTER_PATH, label: t("notMe.createAccount") },
-      }}
-      dead={{ body: t("notMe.deadBody"), action: { href: FORGOT_PATH, label: t("notMe.forgot") } }}
+      submit={{ label: t("restore.submit") }}
+      mutation={restore}
+      done={({ email, codeSent }) =>
+        codeSent
+          ? {
+              icon: ArchiveRestore,
+              color: null,
+              title: t("restore.doneTitle"),
+              body: t("restore.doneBody"),
+              action: {
+                href: FORGOT_PATH,
+                label: t("restore.enterCode"),
+                onClick: () => {
+                  rememberSentCode({
+                    email,
+                    resendAt: Date.now() + RESEND_AFTER_LINK_SECONDS * 1000,
+                  });
+                },
+              },
+            }
+          : {
+              icon: ArchiveRestore,
+              color: null,
+              title: t("restore.doneTitle"),
+              body: t("restore.noCodeBody"),
+              action: forgot(email),
+            }
+      }
+      dead={() => ({ body: t("restore.deadBody"), action: forgot() })}
     />
   );
 }

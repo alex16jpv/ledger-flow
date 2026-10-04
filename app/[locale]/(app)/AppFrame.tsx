@@ -21,7 +21,7 @@ import { useAccountCount, useCategorySummary } from "@/features/settings/hooks";
 import { useSharedSection, useWaitingInvitationCount } from "@/features/shared/hooks";
 import { usePendingCount } from "@/features/transactions/hooks";
 import { readSessionMarker, vaultUserFor } from "@/lib/auth/marker";
-import { KEEP_OR_START_FRESH_PATH, LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
+import { CONFIRM_TO_CONTINUE_PATH, LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
 import { isEnabled } from "@/lib/flags";
 import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { localePrefix } from "@/lib/i18n/locales";
@@ -77,8 +77,8 @@ function Frame({ children }: { children: ReactNode }) {
   const sessionStatus = session.status;
   // Read once per mount: the marker only changes on a sign-in or a sign-out, and both remount this.
   const [marker] = useState(() => readSessionMarker());
-  const questionOpen = Boolean(session.user?.keepOrStartFresh);
-  const localUserId = questionOpen
+  const confirmationRequired = Boolean(session.user?.emailConfirmationRequired);
+  const localUserId = confirmationRequired
     ? undefined
     : vaultUserFor(userId, sessionStatus === "loading" ? "loading" : "resolved", marker);
   // F-63: offline or in local mode (§2.6), the mirror profile carries the currency and the zone.
@@ -118,8 +118,8 @@ function Frame({ children }: { children: ReactNode }) {
   }, [localUserId, locale]);
 
   useEffect(() => {
-    if (questionOpen) router.replace(KEEP_OR_START_FRESH_PATH);
-  }, [questionOpen, router]);
+    if (confirmationRequired) router.replace(CONFIRM_TO_CONTINUE_PATH);
+  }, [confirmationRequired, router]);
 
   // `reauth` is what gets a device with a live marker past the proxy to the login (§2.6).
   const goToLogin = useCallback(() => {
@@ -157,11 +157,11 @@ function Frame({ children }: { children: ReactNode }) {
           <ConnectionBanner
             signedOut={sessionStatus === "expired"}
             onSignIn={goToLogin}
-            unconfirmedEmail={askToConfirm ? session.user?.email : undefined}
+            unconfirmed={askToConfirm ? (session.user ?? undefined) : undefined}
           />
         }
       >
-        {mounted && !questionOpen ? children : null}
+        {mounted && !confirmationRequired ? children : null}
       </AppShell>
       <MoreSheet
         open={moreOpen}

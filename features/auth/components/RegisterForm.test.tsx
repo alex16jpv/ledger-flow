@@ -2,9 +2,9 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { QueryProvider } from "@/lib/query/QueryProvider";
+import { urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
 
-import { carriedEmail, carryEmail } from "../carry";
 import { RegisterForm } from "./RegisterForm";
 
 const replace = vi.fn();
@@ -63,13 +63,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function renderForm(onSuccess = vi.fn()) {
+function renderForm(onSent = vi.fn(), props: Partial<Parameters<typeof RegisterForm>[0]> = {}) {
   renderWithProviders(
     <QueryProvider>
-      <RegisterForm locale="en" onSuccess={onSuccess} />
+      <RegisterForm locale="en" onSent={onSent} {...props} />
     </QueryProvider>,
   );
-  return onSuccess;
+  return onSent;
 }
 
 async function fillValid() {
@@ -90,18 +90,26 @@ describe("RegisterForm", () => {
     expect(screen.getByRole("button", { name: "Create account" })).toBeEnabled();
   });
 
-  it("sends the detected settings, the UI locale and Cloudflare's token", async () => {
-    fetchMock.mockResolvedValue(
-      json({ user: { id: "u1", name: "John", reactivated: false } }, { status: 201 }),
-    );
-    const onSuccess = renderForm();
+  it("sends the detected settings, the UI locale and Cloudflare's token, and creates nothing yet", async () => {
+    const pending = {
+      email: "john.doe@example.com",
+      expiresAt: "2026-10-04T12:00:00.000Z",
+      resendAfterSeconds: 60,
+    };
+    fetchMock.mockResolvedValue(json(pending, { status: 202 }));
+    const onSent = renderForm();
     await screen.findByRole("button", { name: /COP · / });
     await fillValid();
     await userEvent.click(screen.getByRole("checkbox"));
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
     await waitFor(() => {
-      expect(onSuccess).toHaveBeenCalled();
+      expect(onSent).toHaveBeenCalledWith(
+        pending,
+        expect.objectContaining({ name: "John Doe", email: "john.doe@example.com" }),
+      );
     });
+    expect(urlOf(fetchMock.mock.calls[0]?.[0] ?? "")).toBe("/api/auth/sign-up");
+    expect(onSent.mock.calls[0]?.[1]).not.toHaveProperty("password");
     expect(token).toHaveBeenCalledTimes(1);
     const body = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as Record<
       string,
@@ -167,27 +175,20 @@ describe("RegisterForm", () => {
       await screen.findByText("Something went wrong on our side. Nothing changed: try again."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/We couldn’t check that you’re a person/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/may already exist/)).not.toBeInTheDocument();
   });
 
-  it("offers both ways back for a taken address, each carrying it over", async () => {
-    carryEmail("");
-    fetchMock.mockResolvedValue(
-      json({ error: "Conflict", message: "taken", code: "EMAIL_TAKEN" }, { status: 409 }),
-    );
-    renderForm();
-    await screen.findByRole("button", { name: /COP · / });
-    await fillValid();
-    await userEvent.click(screen.getByRole("checkbox"));
-    await userEvent.click(screen.getByRole("button", { name: "Create account" }));
-    const reset = await screen.findByRole("link", { name: "reset your password" });
-    expect(reset).toHaveAttribute("href", "/forgot");
-    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
-    await userEvent.click(reset);
-    expect(carriedEmail()).toBe("john.doe@example.com");
+  it("says a sign-up that is over and comes back with what was typed, but not the password", async () => {
+    renderForm(vi.fn(), {
+      notice: "expired",
+      typed: { name: "John Doe", email: "john.doe@example.com" },
+    });
+    expect(await screen.findByText("That sign-up is over.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toHaveValue("john.doe@example.com");
+    expect(screen.getByLabelText("Name")).toHaveValue("John Doe");
+    expect(screen.getByLabelText("Password")).toHaveValue("");
   });
 
-  it("suggests signing in when the backend answers 500", async () => {
+  it("says nothing was created, keeping what was typed, when the backend answers 500", async () => {
     fetchMock.mockResolvedValue(
       json({ error: "Internal", message: "boom", code: "INTERNAL" }, { status: 500 }),
     );
@@ -196,7 +197,10 @@ describe("RegisterForm", () => {
     await fillValid();
     await userEvent.click(screen.getByRole("checkbox"));
     await userEvent.click(screen.getByRole("button", { name: "Create account" }));
-    expect(await screen.findByText(/Your account may already exist/)).toBeInTheDocument();
+    expect(
+      await screen.findByText("Something went wrong on our side. Nothing was created: try again."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toHaveValue("john.doe@example.com");
   });
 
   // F-02: the account's language was whatever the URL carried, with no way to change it.

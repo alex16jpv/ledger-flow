@@ -1,5 +1,5 @@
 import { expect, test, uniqueEmail } from "../fixtures";
-import { TEST_CAPTCHA } from "../mailpit";
+import { signUpWithCode, TEST_CAPTCHA } from "../mailpit";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
 
@@ -8,15 +8,12 @@ async function signedInPage(
   request: Parameters<Parameters<typeof test>[2]>[0]["request"],
 ) {
   const email = uniqueEmail("settings");
-  const registered = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: {
-      captcha: TEST_CAPTCHA,
-      name: "Settings E2E",
-      email,
-      password: "LedgerFlow!2026",
-      locale: "en",
-    },
+  const registered = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: "Settings E2E",
+    email,
+    password: "LedgerFlow!2026",
+    locale: "en",
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
@@ -75,9 +72,11 @@ test("a new user edits the profile, changes currency and time zone, reviews sess
   test.setTimeout(120_000);
   const email = uniqueEmail("settings");
   const password = "LedgerFlow!2026";
-  const registered = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { captcha: TEST_CAPTCHA, name: "Settings E2E", email, password },
+  const registered = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: "Settings E2E",
+    email,
+    password,
   });
   expect(registered.ok()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);
@@ -127,6 +126,7 @@ test("a new user edits the profile, changes currency and time zone, reviews sess
   await page.getByRole("button", { name: "Delete my account" }).click();
   const remove = page.getByRole("dialog", { name: "Delete my account" });
   await expect(remove.getByRole("button", { name: "Delete account" })).toBeDisabled();
+  await expect(remove.getByText(/kept for 30 days, until/)).toBeVisible();
   await remove.getByLabel("Current password").fill("not-my-password");
   await remove.getByRole("button", { name: "Delete account" }).click();
   await expect(remove.getByText("Your current password is wrong.")).toBeVisible();
@@ -140,8 +140,11 @@ test("a new user edits the profile, changes currency and time zone, reviews sess
   await remove.getByRole("button", { name: "Delete account" }).click();
   const response = await deleted;
   expect(response.status(), await response.text()).toBeLessThan(300);
-  await expect(page).toHaveURL(/\/login\?deleted=1$/, { timeout: 30_000 });
-  await expect(page.getByText(/Your account was deleted/)).toBeVisible();
+  await expect(page).toHaveURL(/\/login\?deleted=\d{4}-\d{2}-\d{2}$/, { timeout: 30_000 });
+  await expect(page.getByText("Your account was deleted.")).toBeVisible();
+  await expect(
+    page.getByText(/It’s kept until .+: signing in before then restores it\./),
+  ).toBeVisible();
 });
 
 // 375px, not the suite's 412px: at 412 the old layout cut only 3–5 px off each fact.

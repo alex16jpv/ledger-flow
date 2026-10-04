@@ -21,6 +21,7 @@ export interface ToastOptions {
   action?: { label: ReactNode; onClick: () => void };
   tone?: "default" | "danger";
   durationMs?: number;
+  polite?: boolean;
 }
 
 interface ToastItem extends ToastOptions {
@@ -38,14 +39,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastItem | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const counter = useRef(0);
+  const showing = useRef(false);
+  const waiting = useRef<ToastItem | null>(null);
 
   const dismiss = useCallback(() => {
-    setToast(null);
+    const next = waiting.current;
+    waiting.current = null;
+    showing.current = next !== null;
+    setToast(next);
   }, []);
 
   const show = useCallback((options: ToastOptions) => {
     counter.current += 1;
-    setToast({ ...options, id: counter.current });
+    const item = { ...options, id: counter.current };
+    if (options.polite && showing.current) {
+      waiting.current = item;
+      return;
+    }
+    showing.current = true;
+    setToast(item);
   }, []);
 
   useEffect(() => {

@@ -78,6 +78,7 @@ export function seedMonth(monthsBefore = 0): SeedMonth {
 
 export {
   type APIRequestContext,
+  type APIResponse,
   type BrowserContext,
   expect,
   type Locator,

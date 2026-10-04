@@ -68,6 +68,12 @@ server fails and when something has to be confirmed.
   screen, as the new-version stripe does: this one asks something of the person, and asking at every
   return would nag. Meanwhile Settings › Password & email always says it ([settings.md](settings.md)).
 
+  **No deadline yet** (`#confirm-your-email-undated`): the server starts an account's 14 days with the
+  email that announces them, so until that email goes — and while deadlines are off — the profile has no
+  date. Then the stripe keeps the words it had before deadlines existed, "**Confirm your email.**" and
+  "You need it to invite people to Shared and to be invited.", which are true either way; the date
+  appears the first time `/me` brings one.
+
   **Confirm opens the sheet "Confirm your email".** Which of its two shapes comes from `/me`, which says
   whether a code is live, when the last one went and when another can go:
   - **A code is live** (`#confirm-email-code`) — sent in the last 24 hours and not used up: "We sent a 6-digit code to **{email}**. It works for 24 hours.", the code field
@@ -112,5 +118,8 @@ server fails and when something has to be confirmed.
       was confirmed, cancelled, or its 24 hours passed." The same when the sheet opens and `/me` says so.
 
 - **Toast:** confirms every save, five seconds, with "Undo" where the backend can revert it (create →
-  `DELETE`; make main → back to the previous one); no undo on deletions.
+  `DELETE`; make main → back to the previous one); no undo on deletions. One toast at a time, and a new
+  one replaces it — except a notice nobody asked for, "Ready to use offline", which waits for the toast
+  on screen to end instead of taking its place: right after another account signs in, it used to wipe
+  "Another account signed in on this browser" within a tenth of a second.
 - **429:** a `warning` alert with a countdown; in sign-in and sign-up it disables the button.

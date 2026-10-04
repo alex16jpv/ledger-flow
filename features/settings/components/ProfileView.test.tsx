@@ -42,7 +42,8 @@ const user: User = {
   currency: "COP",
   locale: "en",
   lastLoginAt: null,
-  keepOrStartFresh: null,
+  confirmBy: null,
+  emailConfirmationRequired: false,
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
 };
@@ -116,6 +117,13 @@ describe("ProfileView", () => {
     expect(confirmEmailStore.getSnapshot().sheetOpen).toBe(true);
   });
 
+  it("names the deadline in the help once the account has one", () => {
+    renderView(vi.fn(), { ...user, emailVerified: false, confirmBy: "2026-10-12" });
+    expect(
+      screen.getByText(/Confirm it by October 12 to keep signing in as usual/),
+    ).toBeInTheDocument();
+  });
+
   it("asks the new address to confirm itself, and changes nothing else", async () => {
     fetchMock.mockImplementation((input) => {
       const url = urlOf(input);
@@ -148,14 +156,17 @@ describe("ProfileView", () => {
     fetchMock.mockImplementation((input, init) => {
       const url = urlOf(input);
       if (url.startsWith("/api/auth/me")) return Promise.resolve(json({ user }));
-      if (url === "/api/auth/change-email") return Promise.resolve(failure("EMAIL_TAKEN", 409));
+      if (url === "/api/auth/change-email")
+        return Promise.resolve(failure("EMAIL_SEND_FAILED", 422));
       if (init?.method === "PUT") return Promise.resolve(json(user));
       return Promise.resolve(json({}));
     });
     const onSaved = renderView();
     await userEvent.type(screen.getByLabelText(/^New password/), "Str0ngPass!");
-    await askForNewEmail("taken@ledgerflow.test");
-    expect(await screen.findByText("This email already has an account.")).toBeInTheDocument();
+    await askForNewEmail("bounced@ledgerflow.test");
+    expect(
+      await screen.findByText("We can’t send email to this address. Check it, or use another one."),
+    ).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
     expect(onSaved).not.toHaveBeenCalled();
   });

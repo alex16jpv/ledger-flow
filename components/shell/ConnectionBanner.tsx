@@ -6,6 +6,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { Banner } from "@/components/ui/Banner";
 import { useRouter } from "@/lib/i18n/navigation";
+import { useCalendarDay } from "@/lib/i18n/useCalendarDay";
 import { syncedStore } from "@/lib/local/outbox/synced";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { connectivityStore } from "@/lib/network/connectivity";
@@ -16,6 +17,7 @@ import {
   openConfirmEmail,
   useConfirmEmail,
 } from "@/lib/session/confirm-email";
+import type { User } from "@/types/api";
 
 import { MAIN_ID } from "./AppShell";
 
@@ -47,15 +49,16 @@ interface ConnectionBannerProps {
   // §2.6: the session died with a vault here, so nothing recorded is reaching the server.
   signedOut?: boolean;
   onSignIn?: () => void;
-  unconfirmedEmail?: string;
+  unconfirmed?: Pick<User, "email" | "confirmBy">;
 }
 
 export function ConnectionBanner({
   signedOut = false,
   onSignIn,
-  unconfirmedEmail,
+  unconfirmed,
 }: ConnectionBannerProps) {
   const t = useTranslations("states");
+  const calendarDay = useCalendarDay();
   const outbox = useOutbox();
   const router = useRouter();
   const [reviewing, setReviewing] = useState<number | null>(null);
@@ -207,17 +210,22 @@ export function ConnectionBanner({
       />
     );
   }
-  if (unconfirmedEmail && stripeDismissedFor !== unconfirmedEmail) {
+  if (unconfirmed && stripeDismissedFor !== unconfirmed.email) {
+    const { email, confirmBy } = unconfirmed;
     return (
       <Banner
         variant="verify"
-        title={t("confirmEmail.title")}
-        body={t("confirmEmail.body")}
+        title={
+          confirmBy
+            ? t("confirmEmail.titleBy", { date: calendarDay(confirmBy, false) })
+            : t("confirmEmail.title")
+        }
+        body={confirmBy ? t("confirmEmail.bodyBy") : t("confirmEmail.body")}
         action={{ label: t("confirmEmail.confirm"), onClick: openConfirmEmail }}
         dismiss={{
           label: t("confirmEmail.dismiss"),
           onClick: () => {
-            dismissConfirmStripe(unconfirmedEmail);
+            dismissConfirmStripe(email);
             document.getElementById(MAIN_ID)?.focus();
           },
         }}

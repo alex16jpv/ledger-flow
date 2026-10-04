@@ -1,5 +1,6 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ComponentProps } from "react";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import {
@@ -66,9 +67,7 @@ afterEach(async () => {
   await wipeVaults();
 });
 
-const render = (
-  props: { signedOut?: boolean; onSignIn?: () => void; unconfirmedEmail?: string } = {},
-) =>
+const render = (props: ComponentProps<typeof ConnectionBanner> = {}) =>
   renderWithProviders(
     <ToastProvider>
       <ConnectionBanner {...props} />
@@ -307,7 +306,7 @@ describe("ConnectionBanner", () => {
       await queueOf([]);
       const { rerender } = renderWithProviders(
         <main id="main" tabIndex={-1}>
-          <ConnectionBanner unconfirmedEmail={EMAIL} />
+          <ConnectionBanner unconfirmed={{ email: EMAIL, confirmBy: null }} />
         </main>,
       );
       const stripe = screen.getByRole("status");
@@ -323,16 +322,26 @@ describe("ConnectionBanner", () => {
 
       rerender(
         <main id="main" tabIndex={-1}>
-          <ConnectionBanner unconfirmedEmail="new@ledgerflow.test" />
+          <ConnectionBanner unconfirmed={{ email: "new@ledgerflow.test", confirmBy: null }} />
         </main>,
       );
       expect(screen.getByRole("status")).toHaveTextContent("Confirm your email.");
     });
 
+    it("names the deadline once the account has one, without the year", async () => {
+      await queueOf([]);
+      render({ unconfirmed: { email: EMAIL, confirmBy: "2026-10-12" } });
+      const stripe = screen.getByRole("status");
+      expect(stripe).toHaveTextContent("Confirm your email by October 12.");
+      expect(stripe).toHaveTextContent(
+        "After that, signing in asks for a code first. Nothing in your account changes.",
+      );
+    });
+
     it("waits behind every other stripe, the new version included", async () => {
       await queueOf([]);
       reportUpdateWaiting();
-      render({ unconfirmedEmail: EMAIL });
+      render({ unconfirmed: { email: EMAIL, confirmBy: null } });
       expect(screen.getByRole("status")).toHaveTextContent(
         "A new version of Ledger Flow is ready.",
       );

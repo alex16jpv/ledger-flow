@@ -7,16 +7,33 @@ import { QueryProvider } from "@/lib/query/QueryProvider";
 import { json, urlOf } from "@/lib/testing/http";
 import { renderWithProviders } from "@/lib/testing/render";
 
-import { keepLinkToken } from "../carry";
-import { ConfirmNewEmailLinkView, NotMeLinkView, VerifyLinkView } from "./EmailLinkView";
+import { carriedEmail, carryEmail, keepLinkToken, lastSentCode, rememberSentCode } from "../carry";
+import { ConfirmNewEmailLinkView, RestoreLinkView, VerifyLinkView } from "./EmailLinkView";
 
 vi.mock("@/lib/i18n/navigation", () => ({
-  Link: ({ children, href }: { children: ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
+  Link: ({
+    children,
+    href,
+    onClick,
+  }: {
+    children: ReactNode;
+    href: string;
+    onClick?: () => void;
+  }) => (
+    <a
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        onClick?.();
+      }}
+    >
+      {children}
+    </a>
   ),
 }));
 
-const TOKEN = "t".repeat(96);
+const TOKEN = "t".repeat(43);
+const DEADLINE_TOKEN = "d".repeat(64);
 const fetchMock = vi.fn<typeof fetch>();
 
 const sentTo = (path: string) =>
@@ -37,8 +54,10 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   reportOnline(true);
   keepLinkToken("verify", null);
-  keepLinkToken("not-me", null);
+  keepLinkToken("restore", null);
   keepLinkToken("confirm-email", null);
+  rememberSentCode(null);
+  carryEmail("");
 });
 
 afterEach(() => {
@@ -49,7 +68,7 @@ afterEach(() => {
 describe("VerifyLinkView", () => {
   it("takes the token out of the address and spends it only on the tap", async () => {
     arriveWith("/verify", TOKEN);
-    fetchMock.mockResolvedValue(json({ message: "Email confirmed" }));
+    fetchMock.mockResolvedValue(json({ message: "Email confirmed", result: "email-confirmed" }));
     renderPage(<VerifyLinkView />);
 
     const button = await screen.findByRole("button", { name: "Confirm email" });
@@ -59,11 +78,28 @@ describe("VerifyLinkView", () => {
     await userEvent.click(button);
 
     expect(await screen.findByRole("heading", { name: "Email confirmed" })).toBeInTheDocument();
+    expect(screen.getByText("Nothing else changes in your account.")).toBeInTheDocument();
     expect(sentTo("/api/auth/verify")).toEqual([{ token: TOKEN }]);
     expect(screen.getByRole("link", { name: "Open Ledger Flow" })).toHaveAttribute("href", "/home");
   });
 
-  it("says a used, expired or replaced link no longer works, and leads to the app", async () => {
+  it("finishes a sign-up without signing in, and sends to Sign in", async () => {
+    arriveWith("/verify", TOKEN);
+    fetchMock.mockResolvedValue(json({ message: "Account created", result: "account-ready" }));
+    renderPage(<VerifyLinkView />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm email" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Your account is ready" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Sign in with this email and the password you chose."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
+  });
+
+  it("offers both ways on for a dead sign-up or confirmation link, which look the same", async () => {
     arriveWith("/verify", TOKEN);
     fetchMock.mockResolvedValue(
       json({ error: "Bad", message: "gone", code: "LINK_INVALID" }, { status: 400 }),
@@ -75,7 +111,29 @@ describe("VerifyLinkView", () => {
     expect(
       await screen.findByRole("heading", { name: "This link no longer works" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/A confirmation link works for 24 hours/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/A link to create an account or to confirm an email works for 24 hours/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create account" })).toHaveAttribute(
+      "href",
+      "/register",
+    );
+    expect(screen.getByRole("link", { name: "Open Ledger Flow" })).toHaveAttribute("href", "/home");
+  });
+
+  it("tells a dead deadline link by its token, and leads only to the app", async () => {
+    arriveWith("/verify", DEADLINE_TOKEN);
+    fetchMock.mockResolvedValue(
+      json({ error: "Bad", message: "gone", code: "LINK_INVALID" }, { status: 400 }),
+    );
+    renderPage(<VerifyLinkView />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm email" }));
+
+    expect(
+      await screen.findByText("This link worked until its deadline, and only once."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Create account" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Ledger Flow" })).toHaveAttribute("href", "/home");
   });
 
@@ -83,7 +141,7 @@ describe("VerifyLinkView", () => {
     arriveWith("/verify", TOKEN);
     fetchMock
       .mockResolvedValueOnce(json({ error: "Oops", code: "INTERNAL" }, { status: 500 }))
-      .mockResolvedValueOnce(json({ message: "Email confirmed" }));
+      .mockResolvedValueOnce(json({ message: "Email confirmed", result: "email-confirmed" }));
     renderPage(<VerifyLinkView />);
 
     await userEvent.click(await screen.findByRole("button", { name: "Confirm email" }));
@@ -125,37 +183,50 @@ describe("VerifyLinkView", () => {
   });
 });
 
-describe("NotMeLinkView", () => {
-  it("warns before it erases, offers not to, and frees the address", async () => {
-    arriveWith("/not-me", TOKEN);
-    fetchMock.mockResolvedValue(json({ message: "Deleted" }));
-    renderPage(<NotMeLinkView />);
+describe("RestoreLinkView", () => {
+  it("warns what the tap does, and opens the code screen for the address the code went to", async () => {
+    arriveWith("/restore", TOKEN);
+    fetchMock.mockResolvedValue(json({ email: "ana@example.co", codeSent: true }));
+    renderPage(<RestoreLinkView />);
 
-    expect(await screen.findByText("If you signed up yourself, don’t.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Don’t delete it" })).toHaveAttribute("href", "/login");
+    expect(await screen.findByText(/your current password stops working/)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: "Delete that account" }));
+    await userEvent.click(screen.getByRole("button", { name: "Restore account" }));
 
-    expect(
-      await screen.findByRole("heading", { name: "That account is gone" }),
-    ).toBeInTheDocument();
-    expect(sentTo("/api/auth/not-me")).toEqual([{ token: TOKEN }]);
-    expect(screen.getByRole("link", { name: "Create account" })).toHaveAttribute(
-      "href",
-      "/register",
-    );
+    expect(await screen.findByRole("heading", { name: "Account restored" })).toBeInTheDocument();
+    expect(sentTo("/api/auth/restore")).toEqual([{ token: TOKEN }]);
+    const enter = screen.getByRole("link", { name: "Enter the code" });
+    expect(enter).toHaveAttribute("href", "/forgot");
+    await userEvent.click(enter);
+    expect(lastSentCode()?.email).toBe("ana@example.co");
   });
 
-  it("sends a link that no longer works to Forgot your password?", async () => {
-    arriveWith("/not-me", TOKEN);
+  it("does not promise a code that could not go, and points to Forgot your password?", async () => {
+    arriveWith("/restore", TOKEN);
+    fetchMock.mockResolvedValue(json({ email: "ana@example.co", codeSent: false }));
+    renderPage(<RestoreLinkView />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Restore account" }));
+
+    expect(await screen.findByText(/We couldn’t send the code/)).toBeInTheDocument();
+    expect(screen.queryByText(/We sent a code/)).not.toBeInTheDocument();
+    const forgot = screen.getByRole("link", { name: "Forgot your password?" });
+    await userEvent.click(forgot);
+    expect(lastSentCode()).toBeNull();
+    expect(carriedEmail()).toBe("ana@example.co");
+  });
+
+  it("says a used or old restore link no longer works", async () => {
+    arriveWith("/restore", TOKEN);
     fetchMock.mockResolvedValue(
       json({ error: "Bad", message: "gone", code: "LINK_INVALID" }, { status: 400 }),
     );
-    renderPage(<NotMeLinkView />);
+    renderPage(<RestoreLinkView />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Delete that account" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Restore account" }));
 
-    expect(await screen.findByText(/It only works while the account is unconfirmed/)).toBeVisible();
+    expect(await screen.findByText(/A restore link works for 7 days/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Forgot your password?" })).toHaveAttribute(
       "href",
       "/forgot",

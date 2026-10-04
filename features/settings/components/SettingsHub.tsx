@@ -33,9 +33,11 @@ import { useToast } from "@/components/ui/Toast";
 import { LOGIN_PATH } from "@/lib/auth/routes";
 import { env } from "@/lib/env";
 import { isEnabled } from "@/lib/flags";
+import { shiftDayKey } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { Link } from "@/lib/i18n/navigation";
 import { useRouter } from "@/lib/i18n/navigation";
+import { useCalendarDay } from "@/lib/i18n/useCalendarDay";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
@@ -61,6 +63,8 @@ import {
 } from "../hooks";
 import { LanguageSheet } from "./LanguageSheet";
 import { CurrencySheet, DeleteAccountSheet, SignOutSheet, TimeZoneSheet } from "./SettingsSheets";
+
+const DELETED_ACCOUNT_KEPT_DAYS = 30;
 
 interface SettingsRowProps {
   icon: ReactNode;
@@ -130,6 +134,7 @@ export function SettingsHub() {
   const session = useSession();
   const theme = useTheme();
   const dates = useDates();
+  const calendarDay = useCalendarDay();
   const { currency, timeZone } = useFormatSettings();
   const categories = useCategorySummary(session.status === "authenticated");
   const sessions = useSessionCount(session.status === "authenticated");
@@ -237,7 +242,11 @@ export function SettingsHub() {
           title={t("settings.credentials.title")}
           meta={
             unconfirmed
-              ? t("settings.credentials.notConfirmedMeta")
+              ? user?.confirmBy
+                ? t("settings.credentials.notConfirmedByMeta", {
+                    date: calendarDay(user.confirmBy, false),
+                  })
+                : t("settings.credentials.notConfirmedMeta")
               : t("settings.credentials.subtitle")
           }
           right={
@@ -436,13 +445,14 @@ export function SettingsHub() {
         open={sheet === "delete"}
         offline={offline}
         pending={deleteAccount.isPending}
+        keptUntil={calendarDay(shiftDayKey(dates.dayKey(new Date()), DELETED_ACCOUNT_KEPT_DAYS))}
         error={deleteAccount.error}
         onConfirm={(currentPassword) => {
           deleteAccount
             .mutateAsync(currentPassword)
-            .then(async () => {
+            .then(async ({ keptUntil }) => {
               await session.logout();
-              router.replace({ pathname: LOGIN_PATH, query: { deleted: "1" } });
+              router.replace({ pathname: LOGIN_PATH, query: { deleted: keptUntil } });
             })
             .catch(() => undefined);
         }}

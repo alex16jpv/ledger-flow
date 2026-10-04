@@ -6,7 +6,7 @@ import {
   test,
   uniqueEmail,
 } from "./fixtures";
-import { TEST_CAPTCHA } from "./mailpit";
+import { signUpWithCode, TEST_CAPTCHA } from "./mailpit";
 import { SW_PATH } from "./sw-path";
 
 // The suite runs on its own port, and a wrong origin is a `403 UNTRUSTED_ORIGIN`.
@@ -62,16 +62,13 @@ export async function freshUser(
 ): Promise<Fixture> {
   const email = uniqueEmail(tag);
   const password = "LedgerFlow!2026";
-  const registered = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: {
-      captcha: TEST_CAPTCHA,
-      name: `Offline ${tag}`,
-      email,
-      password,
-      ...(currency ? { currency } : {}),
-      ...(timezone ? { timezone } : {}),
-    },
+  const registered = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: `Offline ${tag}`,
+    email,
+    password,
+    ...(currency ? { currency } : {}),
+    ...(timezone ? { timezone } : {}),
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   const accountName = "Cash";

@@ -6,6 +6,7 @@ import {
   dayKey,
   daysWindow,
   dayWindow,
+  formatCalendarDay,
   isSameLocalDay,
   localDateTime,
   localNoon,
@@ -210,5 +211,17 @@ describe("local instants", () => {
   it("shifts months in the user's zone", () => {
     const shifted = shiftMonth(new Date("2026-09-22T15:00:00Z"), -1, BOGOTA);
     expect(dayKey(shifted, BOGOTA)).toBe("2026-08-22");
+  });
+});
+
+describe("formatCalendarDay", () => {
+  it("names the day the server sent, in either language, wherever the device is", () => {
+    for (const device of ["Pacific/Kiritimati", "Pacific/Pago_Pago", "UTC"]) {
+      inDeviceZone(device, () => {
+        expect(formatCalendarDay("2026-10-28", "en-US")).toBe("October 28, 2026");
+        expect(formatCalendarDay("2026-10-28", "es-CO")).toBe("28 de octubre de 2026");
+        expect(formatCalendarDay("2026-01-01", "en-US", false)).toBe("January 1");
+      });
+    }
   });
 });

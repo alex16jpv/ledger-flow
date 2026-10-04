@@ -1,5 +1,5 @@
 import { expect, test, uniqueEmail } from "../fixtures";
-import { TEST_CAPTCHA } from "../mailpit";
+import { signUpWithCode, TEST_CAPTCHA } from "../mailpit";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -10,9 +10,11 @@ test("a user can sign in and lands on home; a wrong password shows one message",
 }) => {
   const email = uniqueEmail("login");
   const password = "LedgerFlow!2026";
-  const registered = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { captcha: TEST_CAPTCHA, name: "Login E2E", email, password },
+  const registered = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: "Login E2E",
+    email,
+    password,
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await request.post("/api/auth/logout", { headers: { origin: APP } });
@@ -35,9 +37,11 @@ test("a user can sign in and lands on home; a wrong password shows one message",
 test("a crafted next never takes a fresh sign-in off the app", async ({ page, request }) => {
   const email = uniqueEmail("login-next");
   const password = "LedgerFlow!2026";
-  const registered = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { captcha: TEST_CAPTCHA, name: "Next E2E", email, password },
+  const registered = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: "Next E2E",
+    email,
+    password,
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await request.post("/api/auth/logout", { headers: { origin: APP } });

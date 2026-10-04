@@ -1,5 +1,5 @@
 import { expect, type Page, test, uniqueEmail } from "../fixtures";
-import { TEST_CAPTCHA } from "../mailpit";
+import { signUpWithCode, TEST_CAPTCHA } from "../mailpit";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -15,14 +15,11 @@ async function signIn(page: Page, request: Request) {
 
 // Mutations run on a throwaway user so the parallel specs keep the seed's main account untouched.
 async function signUp(page: Page, request: Request) {
-  const response = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: {
-      captcha: TEST_CAPTCHA,
-      name: "Accounts E2E",
-      email: uniqueEmail("accounts"),
-      password: "LedgerFlow!2026",
-    },
+  const response = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: "Accounts E2E",
+    email: uniqueEmail("accounts"),
+    password: "LedgerFlow!2026",
   });
   expect(response.ok()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);

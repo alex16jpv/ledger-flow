@@ -27,12 +27,21 @@ export function HomeScreen() {
   const router = useRouter();
   const toast = useToast();
   const passwordChanged = params.get("passwordChanged") === "1";
+  const restored = params.get("restored") === "1";
 
   useEffect(() => {
-    if (!passwordChanged) return;
-    toast.show({ message: t("home.passwordChanged") });
+    if (!passwordChanged && !restored) return;
+    toast.show({
+      message: t(
+        restored
+          ? passwordChanged
+            ? "home.accountRestoredByReset"
+            : "home.accountRestored"
+          : "home.passwordChanged",
+      ),
+    });
     router.replace(APP_HOME_PATH);
-  }, [passwordChanged, toast, t, router]);
+  }, [passwordChanged, restored, toast, t, router]);
 
   const close = () => {
     setOpen(null);
@@ -42,7 +51,6 @@ export function HomeScreen() {
   return (
     <>
       <HomeView
-        reactivated={params.get("reactivated") === "1"}
         onCreateAccount={() => {
           setOpen("account");
         }}

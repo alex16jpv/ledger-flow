@@ -2,7 +2,7 @@
 
 # lag-money-manager API endpoints
 
-Version 1.0.0 · 91 operations · 119 schemas.
+Version 1.0.0 · 94 operations · 129 schemas.
 
 Regenerate with `npm run gen:api-types` against a running backend. The client never calls these
 URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), which adds the
@@ -11,7 +11,7 @@ URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), wh
 | Group                           | Operations |
 | ------------------------------- | ---------- |
 | [Accounts](#accounts)           | 7          |
-| [Auth](#auth)                   | 14         |
+| [Auth](#auth)                   | 18         |
 | [Budgets](#budgets)             | 8          |
 | [Categories](#categories)       | 7          |
 | [Contacts](#contacts)           | 6          |
@@ -22,7 +22,7 @@ URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), wh
 | [Stats](#stats)                 | 1          |
 | [Sync](#sync)                   | 2          |
 | [Transactions](#transactions)   | 8          |
-| [Users](#users)                 | 7          |
+| [Users](#users)                 | 6          |
 
 ## Accounts
 
@@ -181,22 +181,26 @@ Idempotent - restoring an already-active account returns it unchanged.
 
 ## Auth
 
-| Endpoint                          | Auth   | Summary                                                        |
-| --------------------------------- | ------ | -------------------------------------------------------------- |
-| `POST /auth/email/confirm-change` | bearer | Move the account to the new email with its code or link        |
-| `POST /auth/email/not-me`         | public | Delete, for good, an account that used somebody else's address |
-| `POST /auth/email/resend`         | bearer | Email a new code to confirm the account's email                |
-| `POST /auth/email/undo`           | public | Undo an email change, from the old address                     |
-| `POST /auth/email/verify`         | bearer | Confirm the account's email with the emailed code or link      |
-| `POST /auth/login`                | public | Login and obtain a JWT token                                   |
-| `POST /auth/logout`               | public | Revoke the refresh token's session family (per-device logout)  |
-| `POST /auth/logout-all`           | bearer | Revoke every session of the authenticated user                 |
-| `POST /auth/password/forgot`      | public | Email a code and a link to choose a new password               |
-| `POST /auth/password/reset`       | public | Choose a new password with the emailed code or link            |
-| `POST /auth/refresh`              | public | Exchange a refresh token for a new access + refresh token pair |
-| `POST /auth/register`             | public | Register a new user                                            |
-| `GET /auth/sessions`              | bearer | List the user's active device sessions                         |
-| `DELETE /auth/sessions/{id}`      | bearer | Revoke one device session by its id                            |
+| Endpoint                          | Auth   | Summary                                                         |
+| --------------------------------- | ------ | --------------------------------------------------------------- |
+| `POST /auth/email/confirm-change` | bearer | Move the account to the new email with its code or link         |
+| `POST /auth/email/resend`         | bearer | Email a new code to confirm the account's email                 |
+| `POST /auth/email/restore`        | public | Restore a deleted account from its email, and stop its password |
+| `POST /auth/email/undo`           | public | Undo an email change, from the old address                      |
+| `POST /auth/email/verify`         | bearer | Confirm an email with the emailed code or link                  |
+| `POST /auth/login`                | public | Login and obtain a JWT token                                    |
+| `POST /auth/login/restore`        | public | Restore a deleted account and sign in                           |
+| `POST /auth/logout`               | public | Revoke the refresh token's session family (per-device logout)   |
+| `POST /auth/logout-all`           | bearer | Revoke every session of the authenticated user                  |
+| `POST /auth/password/forgot`      | public | Email a code and a link to choose a new password                |
+| `POST /auth/password/reset`       | public | Choose a new password with the emailed code or link             |
+| `POST /auth/refresh`              | public | Exchange a refresh token for a new access + refresh token pair  |
+| `POST /auth/register`             | public | Register a new user, before its email is confirmed              |
+| `GET /auth/sessions`              | bearer | List the user's active device sessions                          |
+| `DELETE /auth/sessions/{id}`      | bearer | Revoke one device session by its id                             |
+| `POST /auth/sign-up`              | public | Start creating an account; its emailed code creates it          |
+| `POST /auth/sign-up/confirm`      | public | Create the account with the emailed code, and sign in here      |
+| `POST /auth/sign-up/resend`       | public | Email the sign-up again                                         |
 
 ### `POST /auth/email/confirm-change`
 
@@ -215,25 +219,9 @@ Either `{ code }`, with the session (`Authorization`) of the account that asked 
 | `409`  | `ErrorResponse`        | A code when no new email waits: it was confirmed, cancelled or its 24 hours passed (code EMAIL_CHANGE_NOT_PENDING); or the new address became another account's meanwhile (code EMAIL_TAKEN): the change is dropped and the account keeps its email                                                                                          |
 | `429`  | `ErrorResponse`        | Too many attempts from this IP (code RATE_LIMITED)                                                                                                                                                                                                                                                                                           |
 
-### `POST /auth/email/not-me`
-
-"It wasn't me" of `verify-email` (`/{locale}/not-me#token=…`), for whoever holds the inbox. It works while the account has never confirmed an email — not even an earlier address — and still has the address the link went to, with no change of address since, and does what the owner's decision 11 says: the account and everything in it are erased — not archived, so no register can bring them back — its invitations end as when an account is deleted, and the address is free for a new account at once. No `account-deleted` is sent. Every verification email of such an account carries its own link and all of them work until then; a new code does not cancel them. An account confirmed once gets `verify-email` without it.
-
-No token required.
-
-**Body** `NotMeInput` (required)
-
-**Responses**
-
-| Status | Schema          | Description                                                                                                                                                     |
-| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `Message`       | The account is gone and its address is free                                                                                                                     |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION), or a link that no longer works: the account was confirmed, moved to another address, or is already gone (code LINK_INVALID) |
-| `429`  | `ErrorResponse` | Too many attempts from this IP (code RATE_LIMITED)                                                                                                              |
-
 ### `POST /auth/email/resend`
 
-Send code and Resend code of the sheet that confirms the email. Sends `verify-email` to the account's address, in its language: a 6-digit code and a link, both for 24 hours, and "It wasn't me". The new code replaces the old one only once its email was accepted; the "It wasn't me" of earlier emails keeps working. Unlike Forgot your password?, a failed send is said: the address is the account's own. `captcha` is a Cloudflare Turnstile token for the action `verify-email`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+Send code and Resend code of the sheet that confirms the email. Sends `verify-email` to the account's address, in its language: a 6-digit code and a link, both for 24 hours. The new code replaces the old one only once its email was accepted. Unlike Forgot your password?, a failed send is said: the address is the account's own. `captcha` is a Cloudflare Turnstile token for the action `verify-email`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
 
 **Body** `ResendVerificationInput` (required)
 
@@ -250,9 +238,25 @@ Send code and Resend code of the sheet that confirms the email. Sends `verify-em
 | `429`  | `ErrorResponse`        | Too many requests (code RATE_LIMITED; `Retry-After` in seconds): from this IP, from this device or IP in the hour, for this account (five a day), or for this address — one a minute and five a day |
 | `503`  | `ErrorResponse`        | The email could not be sent, or may not have gone (code EMAIL_SEND_FAILED), or the captcha could not be checked (code CAPTCHA_UNAVAILABLE). A code that was live before still works                 |
 
+### `POST /auth/email/restore`
+
+"Restore account" of `account-deleted` (`/{locale}/restore#token=…`), for whoever did not delete it. It works for 7 days and once, even if the account was restored meanwhile. The account comes back, any change of email waiting is cancelled, every session and device token is revoked, every device is forgotten, and the password stops working: `password-reset-after-undo`, in its restore words, takes a code and a link to the account's address, which `/auth/password/reset` redeems.
+
+No token required.
+
+**Body** `RestoreFromLinkInput` (required)
+
+**Responses**
+
+| Status | Schema            | Description                                                                                                                             |
+| ------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `RestoreLinkUsed` | The account is back, with no usable password                                                                                            |
+| `400`  | `ErrorResponse`   | Validation error (code VALIDATION), or a link that no longer works: used, past its 7 days, or the account is erased (code LINK_INVALID) |
+| `429`  | `ErrorResponse`   | Too many attempts from this IP (code RATE_LIMITED)                                                                                      |
+
 ### `POST /auth/email/undo`
 
-"Undo the change" of `email-change-requested` (`/{locale}/undo#token=…`), for whoever holds the address the account had. It works for 7 days and once, even after the change was confirmed, and brings back an account deleted since. The account goes back to that address (confirmed), any change still waiting is cancelled, every session and device token is revoked, and the password stops working: `password-reset-after-undo` takes a code and a link to that address, which `/auth/password/reset` redeems. The undo links issued after it stop working, with the addresses they kept; an earlier one still works, so the first link an owner received always wins. No `new-sign-in` and no `password-changed` are sent.
+"Undo the change" of `email-change-requested` (`/{locale}/undo#token=…`), for whoever holds the address the account had. It works for 7 days and once, even after the change was confirmed, and brings back an account deleted since and still kept. The account goes back to that address (confirmed), any change still waiting is cancelled, every session and device token is revoked, and the password stops working: `password-reset-after-undo` takes a code and a link to that address, which `/auth/password/reset` redeems. The undo links issued after it stop working, with the addresses they kept; an earlier one still works, so the first link an owner received always wins. No `new-sign-in` and no `password-changed` are sent.
 
 No token required.
 
@@ -268,7 +272,7 @@ No token required.
 
 ### `POST /auth/email/verify`
 
-Either `{ code }`, with the session (`Authorization`) of the account the code went to, or `{ token }` from the email's link (`/{locale}/verify#token=…`) with no session: it names the account. A code takes five tries and works for 24 hours; asking for another cancels it once the new email is accepted. Confirming is not spent: an account already confirmed answers 200 for its code and for its link, so tapping the link after typing the code reads "Email confirmed". A link for an address the account no longer has is LINK_INVALID, and so is one replaced by a newer code, even once the account is confirmed: only the newest email's link answers 200. Confirming ends the wait of the invitations addressed to it: they reach the change feed on the next pull.
+Either `{ code }`, with the session (`Authorization`) of the account the code went to, or `{ token }` from the email's link (`/{locale}/verify#token=…`) with no session: it names the account. The link of `sign-up` creates its account and signs nobody in (`result: account-ready`); the links of `verify-email` and of the deadline emails confirm an account from before email existed (`result: email-confirmed`) — a deadline link until its deadline. A code takes five tries and works for 24 hours; asking for another cancels it once the new email is accepted. Confirming is not spent: an account already confirmed answers 200 for its code and for its link, so tapping the link after typing the code reads "Email confirmed". A link for an address the account no longer has is LINK_INVALID, and so is one replaced by a newer code, even once the account is confirmed: only the newest email's link answers 200. Confirming ends the wait of the invitations addressed to it: they reach the change feed on the next pull.
 
 **Body** `VerifyEmailInput` (required)
 
@@ -276,7 +280,7 @@ Either `{ code }`, with the session (`Authorization`) of the account the code we
 
 | Status | Schema          | Description                                                                                                                                                                                                                                                                                                               |
 | ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `Message`       | The email is confirmed                                                                                                                                                                                                                                                                                                    |
+| `200`  | `EmailVerified` | The email is confirmed, or the sign-up's account exists                                                                                                                                                                                                                                                                   |
 | `400`  | `ErrorResponse` | Validation error (code VALIDATION); a code that is not the one sent (code EMAIL_CODE_INVALID); no code that still works — it expired, it was tried five times, or none was sent (code EMAIL_CODE_EXPIRED: send a new one); or a link that no longer works — expired, replaced, or for another address (code LINK_INVALID) |
 | `401`  | `ErrorResponse` | A code with a missing, invalid or expired access token                                                                                                                                                                                                                                                                    |
 | `404`  | `ErrorResponse` | A code for an account that no longer exists                                                                                                                                                                                                                                                                               |
@@ -284,7 +288,7 @@ Either `{ code }`, with the session (`Authorization`) of the account the code we
 
 ### `POST /auth/login`
 
-Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded. A login whose `deviceToken` is not one this account's email gave since its last password reset, undo or logout-all emails `new-sign-in` to that email, when it is confirmed.
+Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded. A login whose `deviceToken` is not one this account's email gave since its last undo, restore link or logout-all emails `new-sign-in` to that email, when it is confirmed. The right password of an account deleted in its last 30 days answers 409 ACCOUNT_DELETED with its two days and opens nothing: "Restore your account?" then calls `POST /auth/login/restore`. A wrong password reads the same for every address, deleted or not.
 
 No token required.
 
@@ -292,12 +296,30 @@ No token required.
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                                                             |
-| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `AuthTokens`    | Login successful                                                                                                                                                                        |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                                                      |
-| `401`  | `ErrorResponse` | Invalid email or password                                                                                                                                                               |
-| `429`  | `ErrorResponse` | Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total (code RATE_LIMITED) |
+| Status | Schema                   | Description                                                                                                                                                                             |
+| ------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `AuthTokens`             | Login successful                                                                                                                                                                        |
+| `400`  | `ErrorResponse`          | Validation error (code VALIDATION)                                                                                                                                                      |
+| `401`  | `ErrorResponse`          | Invalid email or password                                                                                                                                                               |
+| `409`  | `AccountDeletedResponse` | The right password of a deleted account that is still kept (code ACCOUNT_DELETED): `deletedAccount` says when it was deleted and its last day                                           |
+| `429`  | `ErrorResponse`          | Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total (code RATE_LIMITED) |
+
+### `POST /auth/login/restore`
+
+"Restore account" of "Restore your account?", with the same email and password as the sign-in that answered ACCOUNT_DELETED, under the same limits. Brings the account back with everything it had, except the shared groups it left and the invitations that ended, signs in like a login and emails `account-restored`. An account that is no longer deleted just signs in.
+
+No token required.
+
+**Body** `RestoreAccountInput` (required)
+
+**Responses**
+
+| Status | Schema          | Description                                                    |
+| ------ | --------------- | -------------------------------------------------------------- |
+| `200`  | `AuthTokens`    | Restored and signed in                                         |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                             |
+| `401`  | `ErrorResponse` | Invalid email or password, or the account is no longer kept    |
+| `429`  | `ErrorResponse` | Too many attempts, counted with the logins (code RATE_LIMITED) |
 
 ### `POST /auth/logout`
 
@@ -318,7 +340,7 @@ No token required.
 
 ### `POST /auth/logout-all`
 
-Bumps the user's token version, so every outstanding refresh token stops working (subsequent refreshes fail with 401 REFRESH_REVOKED), and forgets every device: a login with a device token issued before emails `new-sign-in`. The answer's `deviceToken` is this device's new one, issued after that.
+Bumps the user's token version, so every outstanding refresh token stops working (subsequent refreshes fail with 401 REFRESH_REVOKED), and forgets every device (with an undo and a restore link, the only things that do): a login with a device token issued before emails `new-sign-in`. The answer's `deviceToken` is this device's new one, issued after that.
 
 **Responses**
 
@@ -329,7 +351,7 @@ Bumps the user's token version, so every outstanding refresh token stops working
 
 ### `POST /auth/password/forgot`
 
-Always the same answer, in at least the same time, whether the address has a live account, a deleted one or none, and whether the email could be sent: nothing here may tell them apart. Only a live account is emailed, in its own language: a 6-digit code and a link (`/{locale}/reset#token=…`), both good for 30 minutes and for one reset. A new code replaces the previous one only once its email was accepted for delivery. `captcha` is a Cloudflare Turnstile token issued for the action `forgot-password`, asked for when the button is pressed: it works once. `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+Always the same answer, in at least the same time, whether the address has a live account, a deleted one or none, and whether the email could be sent: nothing here may tell them apart. A live account and one deleted in its last 30 days are emailed, in their own language: a 6-digit code and a link (`/{locale}/reset#token=…`), both good for 30 minutes and for one reset; the deleted one in its own words, since choosing a password restores it. A new code replaces the previous one only once its email was accepted for delivery. `captcha` is a Cloudflare Turnstile token issued for the action `forgot-password`, asked for when the button is pressed: it works once. `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
 
 No token required.
 
@@ -346,7 +368,7 @@ No token required.
 
 ### `POST /auth/password/reset`
 
-Either the address and the 6-digit code, or the link's token alone (it names the account). Sets the password, signs out every other device (every refresh and device token issued before stops working), confirms the account's email, and answers a session like a login. Using a code or the link spends every code of that request. A code takes five tries. When the account had never confirmed its email and holds accounts or transactions, the answer's `user.keepOrStartFresh` is set: ask "Keep what's in this account?" before opening anything (`POST /users/{id}/keep-or-start-fresh`). A change of email that was waiting is cancelled, and `password-changed` goes to the address. The code of `password-reset-after-undo` is redeemed here as well.
+Either the address and the 6-digit code, or the link's token alone (it names the account). Sets the password, signs out every other device (every refresh and device token issued before stops working), confirms the account's email, and answers a session like a login. Using a code or the link spends every code of that request. A code takes five tries. A deleted account still kept comes back (`restored`), and `account-restored` goes instead of `password-changed`. A change of email that was waiting is cancelled. Devices are not forgotten: signing in again on one sends no `new-sign-in`. The code of `password-reset-after-undo` is redeemed here as well.
 
 No token required.
 
@@ -354,11 +376,11 @@ No token required.
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                                                                                                                                                                    |
-| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `AuthTokens`    | Password changed and signed in                                                                                                                                                                                                                                                                 |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION); a code that does not work — mistyped, expired, replaced by a newer one, used up by five tries, or for an address with no account, all one answer (code RESET_CODE_INVALID); or a link that no longer works — used, expired or replaced (code LINK_INVALID) |
-| `429`  | `ErrorResponse` | Too many attempts from this IP (code RATE_LIMITED)                                                                                                                                                                                                                                             |
+| Status | Schema              | Description                                                                                                                                                                                                                                                                                    |
+| ------ | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `PasswordResetDone` | Password changed and signed in                                                                                                                                                                                                                                                                 |
+| `400`  | `ErrorResponse`     | Validation error (code VALIDATION); a code that does not work — mistyped, expired, replaced by a newer one, used up by five tries, or for an address with no account, all one answer (code RESET_CODE_INVALID); or a link that no longer works — used, expired or replaced (code LINK_INVALID) |
+| `429`  | `ErrorResponse`     | Too many attempts from this IP (code RATE_LIMITED)                                                                                                                                                                                                                                             |
 
 ### `POST /auth/refresh`
 
@@ -379,7 +401,7 @@ No token required.
 
 ### `POST /auth/register`
 
-Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register. `captcha` is a Cloudflare Turnstile token issued for the action `register`, asked for when the button is pressed: it works once, and nothing is created without one that passes. An account whose email is not confirmed is sent `verify-email` (a 6-digit code and a link, 24 hours). A send that fails does not fail the register: `GET /users/{id}` then shows no live code, so the client offers Send code. The account works before its email is confirmed (`user.emailVerified`); only invitations wait for it.
+Kept only until the app confirms the email before the account exists (`POST /auth/sign-up`); then it goes. Register acts as login: the response already carries the token pair. Emails are normalized (trim + lowercase). An address with any account, live or deleted and still kept, answers 409 EMAIL_TAKEN: a deleted account comes back by signing in. `captcha` is a Cloudflare Turnstile token for the action `register`. The account is sent `verify-email`; a send that fails does not fail the register.
 
 No token required.
 
@@ -387,13 +409,13 @@ No token required.
 
 **Responses**
 
-| Status | Schema          | Description                                                                                                                                                                                                                       |
-| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `201`  | `AuthTokens`    | User registered and logged in                                                                                                                                                                                                     |
-| `400`  | `ErrorResponse` | Validation error, a missing captcha among them (code VALIDATION), or Cloudflare refused the captcha token: spent, expired, forged, or issued for another site or action (code CAPTCHA_INVALID). Ask for a new token and try again |
-| `409`  | `ErrorResponse` | Email is already registered (code EMAIL_TAKEN): a live account, a soft-deleted one registered with a different password, or a concurrent register that reactivated it first                                                       |
-| `429`  | `ErrorResponse` | Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total — counted with the failed logins (code RATE_LIMITED)          |
-| `503`  | `ErrorResponse` | The captcha could not be checked (code CAPTCHA_UNAVAILABLE): nothing was created. Try again                                                                                                                                       |
+| Status | Schema          | Description                                                                                                                                                         |
+| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `201`  | `AuthTokens`    | User registered and logged in                                                                                                                                       |
+| `400`  | `ErrorResponse` | Validation error, a missing captcha among them (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID). Ask for a new token and try again |
+| `409`  | `ErrorResponse` | Email is already registered (code EMAIL_TAKEN)                                                                                                                      |
+| `429`  | `ErrorResponse` | Too many attempts from this client IP, or too many failed ones for this email, counted with the failed logins (code RATE_LIMITED)                                   |
+| `503`  | `ErrorResponse` | The captcha could not be checked (code CAPTCHA_UNAVAILABLE): nothing was created. Try again                                                                         |
 
 ### `GET /auth/sessions`
 
@@ -424,6 +446,58 @@ Idempotent: revoking an own, already-revoked session is a no-op success.
 | `400`  | `ErrorResponse` | Invalid id format (code VALIDATION)      |
 | `401`  | `ErrorResponse` | Missing, invalid or expired access token |
 | `404`  | `ErrorResponse` | Not the user's session                   |
+
+### `POST /auth/sign-up`
+
+Nothing is created yet (the owner's decision 16): what was typed waits 24 hours, and a new sign-up for the address replaces it. The answer, its limits and its time are the same for every address, so it never tells who has an account: an address with no account is sent `sign-up` (a 6-digit code and a link, 24 hours); one with an account — live, deleted and still kept, or kept by an undo link — is sent `account-exists` instead, and its sign-up can never be confirmed. A send that fails is never shown. Keep `signUpToken` for this browser alone: `POST /auth/sign-up/confirm` takes it with the code. `captcha` is a Cloudflare Turnstile token for the action `register`; `deviceToken` lets the limits count this device instead of its IP.
+
+No token required.
+
+**Body** `SignUpInput` (required)
+
+**Responses**
+
+| Status | Schema          | Description                                                                                                                                                                                              |
+| ------ | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `202`  | `SignUpStarted` | Taken, the same for every address                                                                                                                                                                        |
+| `400`  | `ErrorResponse` | Validation error, a missing captcha among them (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID). Ask for a new token and try again                                      |
+| `429`  | `ErrorResponse` | Too many requests (code RATE_LIMITED; `Retry-After` in seconds): from this IP, from this device or IP in the hour, or for this address — one a minute and five a day. Counted the same for every address |
+| `503`  | `ErrorResponse` | The captcha could not be checked (code CAPTCHA_UNAVAILABLE): nothing was sent. Try again                                                                                                                 |
+
+### `POST /auth/sign-up/confirm`
+
+Only with the `signUpToken` of the browser where the password was typed: the code alone never signs anyone in. Creates the account, its email confirmed, and answers a session with its device token, so no `new-sign-in` is sent. If the email's link created the account first, the same code signs in once. A code takes five tries and every bad one gets the same answer.
+
+No token required.
+
+**Body** `SignUpConfirmInput` (required)
+
+**Responses**
+
+| Status | Schema          | Description                                                                                                                                                                                                               |
+| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `201`  | `AuthTokens`    | The account exists and this device is signed in                                                                                                                                                                           |
+| `400`  | `ErrorResponse` | Validation error (code VALIDATION), or a code that does not work — mistyped, expired, replaced, used up by five tries, already used to sign in, or for a sign-up that is over: all one answer (code SIGN_UP_CODE_INVALID) |
+| `409`  | `ErrorResponse` | The address became another account's meanwhile (code EMAIL_TAKEN): only whoever holds the code sees it                                                                                                                    |
+| `429`  | `ErrorResponse` | Too many attempts from this IP (code RATE_LIMITED)                                                                                                                                                                        |
+
+### `POST /auth/sign-up/resend`
+
+Resend code of the sign-up's code step: `sign-up` with a new code, or `account-exists` if the address has an account by now, under the same limits and in the same time either way. A new code replaces the old one only once its email was accepted. A send that fails is never shown. `captcha` is a Cloudflare Turnstile token for the action `register`.
+
+No token required.
+
+**Body** `SignUpResendInput` (required)
+
+**Responses**
+
+| Status | Schema                 | Description                                                                                                                                 |
+| ------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `202`  | `VerificationCodeSent` | Taken                                                                                                                                       |
+| `400`  | `ErrorResponse`        | Validation error (code VALIDATION) or a refused captcha (code CAPTCHA_INVALID)                                                              |
+| `409`  | `ErrorResponse`        | The sign-up is over: its 24 hours passed or a newer one for the address replaced it (code SIGN_UP_EXPIRED). Start again from Create account |
+| `429`  | `ErrorResponse`        | Too many requests (code RATE_LIMITED; `Retry-After` in seconds)                                                                             |
+| `503`  | `ErrorResponse`        | The captcha could not be checked (code CAPTCHA_UNAVAILABLE)                                                                                 |
 
 ## Budgets
 
@@ -1814,12 +1888,13 @@ device, which may resend it once fixed.
 
 **Responses**
 
-| Status | Schema              | Description                                                                                                            |
-| ------ | ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `SyncBatchResponse` | One result per operation, in `seq` order                                                                               |
-| `400`  | `ErrorResponse`     | The envelope is invalid (code VALIDATION): empty or too long, a repeated opId, a malformed field. Nothing was applied. |
-| `401`  | `ErrorResponse`     | Unauthorized                                                                                                           |
-| `413`  | `ErrorResponse`     | Body over 1 MB (code PAYLOAD_TOO_LARGE)                                                                                |
+| Status | Schema              | Description                                                                                                                                                                                              |
+| ------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SyncBatchResponse` | One result per operation, in `seq` order                                                                                                                                                                 |
+| `400`  | `ErrorResponse`     | The envelope is invalid (code VALIDATION): empty or too long, a repeated opId, a malformed field. Nothing was applied.                                                                                   |
+| `401`  | `ErrorResponse`     | Unauthorized                                                                                                                                                                                             |
+| `403`  | `ErrorResponse`     | The account is past its deadline to confirm its email (code EMAIL_CONFIRMATION_REQUIRED): the whole batch, before any operation is applied. Keep the queue and send it again once the email is confirmed |
+| `413`  | `ErrorResponse`     | Body over 1 MB (code PAYLOAD_TOO_LARGE)                                                                                                                                                                  |
 
 ### `GET /sync/changes`
 
@@ -1862,12 +1937,13 @@ stops a write from being missed forever.
 
 **Responses**
 
-| Status | Schema                | Description                                                                                                                                                                             |
-| ------ | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `200`  | `SyncChangesResponse` | One page of changes                                                                                                                                                                     |
-| `400`  | `ErrorResponse`       | Invalid query parameters (code VALIDATION) or an unreadable cursor (code INVALID_CURSOR)                                                                                                |
-| `401`  | `ErrorResponse`       | Unauthorized                                                                                                                                                                            |
-| `409`  | `ErrorResponse`       | The cursor, or `since`, is from before the account's last Start fresh, which erased rows without tombstones (code RESYNC_REQUIRED): drop the local copy and ask again without a cursor. |
+| Status | Schema                | Description                                                                                                                                                                                                |
+| ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `200`  | `SyncChangesResponse` | One page of changes                                                                                                                                                                                        |
+| `400`  | `ErrorResponse`       | Invalid query parameters (code VALIDATION) or an unreadable cursor (code INVALID_CURSOR)                                                                                                                   |
+| `401`  | `ErrorResponse`       | Unauthorized                                                                                                                                                                                               |
+| `403`  | `ErrorResponse`       | The account is past its deadline to confirm its email (code EMAIL_CONFIRMATION_REQUIRED): nothing is read until it is confirmed                                                                            |
+| `409`  | `ErrorResponse`       | The cursor, or `since`, is from before the account's last Start fresh (removed in T-238), which erased rows without tombstones (code RESYNC_REQUIRED): drop the local copy and ask again without a cursor. |
 
 ## Transactions
 
@@ -2123,7 +2199,6 @@ id that belongs to another user is rejected with 409 ID_TAKEN.
 | `POST /users/{id}/email-change`        | bearer | Ask to move the account to a new email     |
 | `DELETE /users/{id}/email-change`      | bearer | Cancel the change that waits for its code  |
 | `POST /users/{id}/email-change/resend` | bearer | Email a new code to the address that waits |
-| `POST /users/{id}/keep-or-start-fresh` | bearer | Answer "Keep what's in this account?"      |
 
 ### `GET /users/{id}`
 
@@ -2168,7 +2243,7 @@ Changing `password` requires `currentPassword` (re-authentication) and revokes e
 
 ### `DELETE /users/{id}`
 
-Requires `currentPassword`: a hijacked 15-minute access token must not be able to delete the account. Soft delete: the account and its financial history are kept, and registering again with the same email and the password it had reactivates it. Emails `account-deleted` when the email is confirmed. An undo link sent before (7 days) still brings the account back, at the address it went to.
+Requires `currentPassword`: a hijacked 15-minute access token must not be able to delete the account. The account and everything in it are kept 30 days — `keptUntil` is the last one, whole, in its time zone — and the first nightly pass after it erases them for good, freeing the address (the owner's decision 19). Until then signing in with its password (`POST /auth/login/restore`), Forgot your password?, and the "Restore account" link of `account-deleted` (7 days) bring it back. Every session ends now, and its shared groups are left now for good. `account-deleted` goes when the email is confirmed. An undo link sent before (7 days) still brings the account back, at the address it went to.
 
 **Path**
 
@@ -2180,17 +2255,17 @@ Requires `currentPassword`: a hijacked 15-minute access token must not be able t
 
 **Responses**
 
-| Status | Schema          | Description                                                                                        |
-| ------ | --------------- | -------------------------------------------------------------------------------------------------- |
-| `200`  | `Message`       | User deleted                                                                                       |
-| `400`  | `ErrorResponse` | Invalid ID format or missing currentPassword (code VALIDATION)                                     |
-| `401`  | `ErrorResponse` | Missing, invalid or expired access token, or wrong currentPassword (code CURRENT_PASSWORD_INVALID) |
-| `404`  | `ErrorResponse` | User not found (or not the authenticated user's id)                                                |
-| `429`  | `ErrorResponse` | Too many wrong currentPassword guesses for this user (code RATE_LIMITED)                           |
+| Status | Schema           | Description                                                                                        |
+| ------ | ---------------- | -------------------------------------------------------------------------------------------------- |
+| `200`  | `AccountDeleted` | User deleted, and kept until `keptUntil`                                                           |
+| `400`  | `ErrorResponse`  | Invalid ID format or missing currentPassword (code VALIDATION)                                     |
+| `401`  | `ErrorResponse`  | Missing, invalid or expired access token, or wrong currentPassword (code CURRENT_PASSWORD_INVALID) |
+| `404`  | `ErrorResponse`  | User not found (or not the authenticated user's id)                                                |
+| `429`  | `ErrorResponse`  | Too many wrong currentPassword guesses for this user (code RATE_LIMITED)                           |
 
 ### `POST /users/{id}/email-change`
 
-Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION). When the account's email is confirmed, `email-change-requested` goes to it too, naming the new address, with "Undo the change" (`/{locale}/undo#token=…`, POST /auth/email/undo) for 7 days, and the change is saved only once that notice went (an old address that refuses all email does not stop it); while that link works the old address stays the account's, and another account's register or change of email to it is EMAIL_TAKEN.
+Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION). When the account's email is confirmed, `email-change-requested` goes to it too, naming the new address, with "Undo the change" (`/{locale}/undo#token=…`, POST /auth/email/undo) for 7 days, and the change is saved only once that notice went (an old address that refuses all email does not stop it); while that link works the old address stays the account's. An address another account holds — live, deleted and still kept, or kept by an undo link — answers the same as any other, so nothing here tells whether it has an account: it is sent `email-change-taken` instead, and the change waits and never confirms.
 
 **Path**
 
@@ -2208,7 +2283,6 @@ Save changes with a new email in Password & email. Nothing moves yet: the accoun
 | `400`  | `ErrorResponse`   | Validation error, the account's own email among them (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID)                                                                                                                                                                                                                                                                |
 | `401`  | `ErrorResponse`   | Missing, invalid or expired access token, or a wrong `currentPassword` (code CURRENT_PASSWORD_INVALID)                                                                                                                                                                                                                                                                                                |
 | `404`  | `ErrorResponse`   | User not found (or not the authenticated user's id)                                                                                                                                                                                                                                                                                                                                                   |
-| `409`  | `ErrorResponse`   | The address belongs to another account, a deleted one included (code EMAIL_TAKEN)                                                                                                                                                                                                                                                                                                                     |
 | `422`  | `ErrorResponse`   | The address does not accept our emails: it bounced or complained before, or the provider refused it (code EMAIL_SEND_FAILED). Nothing was saved                                                                                                                                                                                                                                                       |
 | `429`  | `ErrorResponse`   | Too many requests (code RATE_LIMITED; `Retry-After` in seconds): password guesses for this account, from this IP, from this device or IP in the hour, for this account (five verification or email-change emails a day), or for this address — one a minute and five a day — which counts the old address's `email-change-requested` too, as does the day's cap of security emails. Nothing was saved |
 | `503`  | `ErrorResponse`   | The email to the new address, or the notice to the confirmed old one, could not be sent (code EMAIL_SEND_FAILED), or the captcha could not be checked (code CAPTCHA_UNAVAILABLE). Nothing was saved                                                                                                                                                                                                   |
@@ -2256,25 +2330,3 @@ Resend on the card of the pending address. Sends `email-change-confirm` again, w
 | `422`  | `ErrorResponse`   | The address does not accept our emails (code EMAIL_SEND_FAILED). A code that was live before still works                                                      |
 | `429`  | `ErrorResponse`   | Too many requests (code RATE_LIMITED; `Retry-After` in seconds): the limits of POST /users/{id}/email-change, but for password guesses                        |
 | `503`  | `ErrorResponse`   | The email could not be sent (code EMAIL_SEND_FAILED), or the captcha could not be checked (code CAPTCHA_UNAVAILABLE). A code that was live before still works |
-
-### `POST /users/{id}/keep-or-start-fresh`
-
-Open only while `keepOrStartFresh` is set: after a password reset of an account that had never confirmed its email and held something, so whoever created it may not own the inbox. It stays open until it is answered. `keep` closes it and changes nothing. `start-fresh` deletes for good the account's accounts, transactions, budgets, categories, contacts and the shared groups it created with their expenses and payments; stops sharing those groups and leaves the ones it joined, as deleting an account does; seeds the default categories again; and sets the profile from the body, the currency free again. The email and the password stay. Only a session opened by the reset or after it may answer. A start-fresh that fails half-way stays open and chosen: send it again to finish it (a `keep` is then refused). Every copy of the account's data synced before it is out of date: `GET /sync/changes` with an older cursor answers RESYNC_REQUIRED.
-
-**Path**
-
-| Name | Type          | Required | Description |
-| ---- | ------------- | -------- | ----------- |
-| `id` | string (uuid) | yes      | User ID     |
-
-**Body** `KeepOrStartFreshInput` (required)
-
-**Responses**
-
-| Status | Schema          | Description                                                                                                                                                                                                  |
-| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `200`  | `User`          | Answered; `keepOrStartFresh` is null again                                                                                                                                                                   |
-| `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                                                                           |
-| `401`  | `ErrorResponse` | Missing, invalid or expired access token, or one issued before the question was asked: only a session opened by the reset (or after it) may answer                                                           |
-| `404`  | `ErrorResponse` | User not found (or not the authenticated user's id)                                                                                                                                                          |
-| `409`  | `ErrorResponse` | No question is open: never asked, already answered, or `keep` after Start fresh was chosen (code KEEP_OR_START_FRESH_CLOSED); or another start-fresh request is still erasing (code START_FRESH_IN_PROGRESS) |

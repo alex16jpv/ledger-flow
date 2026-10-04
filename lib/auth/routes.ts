@@ -5,7 +5,7 @@ export const APP_HOME_PATH = "/home";
 export const ONBOARDING_PATH = "/onboarding";
 export const FORGOT_PATH = "/forgot";
 export const RESET_PATH = "/reset";
-export const KEEP_OR_START_FRESH_PATH = "/keep-or-start-fresh";
+export const CONFIRM_TO_CONTINUE_PATH = "/confirm-to-continue";
 export const PROFILE_PATH = "/settings/profile";
 
 // §2.6: the app links here when the session is dead and the queue still has to go up.
@@ -13,11 +13,11 @@ export const REAUTH_PARAM = "reauth";
 
 // P-32/P-33 (owner, 2026-09-08): a device carrying the marker goes to the app, not the pitch.
 const GUEST_ONLY = new Set([HOME_PATH, LOGIN_PATH, REGISTER_PATH]);
-// Every screen folder of `(app)` (checked by `routes.test.ts`), `/onboarding` and the question.
+// Every screen folder of `(app)` (checked by `routes.test.ts`), `/onboarding` and the confirmation step.
 export const APP_PREFIXES = [
   "/home",
   "/onboarding",
-  KEEP_OR_START_FRESH_PATH,
+  CONFIRM_TO_CONTINUE_PATH,
   "/transactions",
   "/accounts",
   "/shared",

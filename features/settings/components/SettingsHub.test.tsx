@@ -117,6 +117,33 @@ describe("Settings › Password & email", () => {
     expect(row).toHaveTextContent("Not confirmed");
   });
 
+  it("names the deadline on the row once the account has one", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              user: {
+                id: "u1",
+                name: "John",
+                locale: "en",
+                createdAt: "2026-08-01T10:00:00.000Z",
+                emailVerified: false,
+                confirmBy: "2026-10-12",
+              },
+            }),
+            { headers: { "content-type": "application/json" } },
+          ),
+        ),
+      ),
+    );
+    view();
+    const row = (await screen.findByText("Confirm your email by October 12")).closest("a");
+    expect(row).toHaveAttribute("href", "/settings/profile");
+    expect(row).toHaveTextContent("Not confirmed");
+  });
+
   it("keeps its usual line for a confirmed email", async () => {
     view();
     expect(await screen.findByText("Requires your current password")).toBeInTheDocument();

@@ -1,5 +1,5 @@
 import { expect, type Page, test, uniqueEmail } from "../fixtures";
-import { TEST_CAPTCHA } from "../mailpit";
+import { signUpWithCode, TEST_CAPTCHA } from "../mailpit";
 import { vaultState } from "../offline";
 import { expectNoAxeViolations } from "./axe";
 
@@ -103,9 +103,11 @@ test("Save all completes the categorized cards, one guarded operation per row", 
 }) => {
   // A fresh user: the batch sweeps every categorized card, so a shared inbox would be swallowed.
   const email = uniqueEmail("saveall");
-  const registered = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { captcha: TEST_CAPTCHA, name: "Save All E2E", email, password: "LedgerFlow!2026" },
+  const registered = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: "Save All E2E",
+    email,
+    password: "LedgerFlow!2026",
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   const wallet = await request.post("/api/accounts", {
@@ -183,9 +185,11 @@ test("Home and the inbox say what went out and what came in, and a transfer in n
 }) => {
   // A fresh user: the figures are the whole inbox's, so a shared one would never add up.
   const email = uniqueEmail("totals");
-  const registered = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { captcha: TEST_CAPTCHA, name: "Totals E2E", email, password: "LedgerFlow!2026" },
+  const registered = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: "Totals E2E",
+    email,
+    password: "LedgerFlow!2026",
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await request.post("/api/accounts", {

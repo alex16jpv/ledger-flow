@@ -35,6 +35,7 @@ export function OfflineReadyAnnouncement({ enabled }: { enabled: boolean }) {
         if (state.cancelled || offlineReadyAnnounced()) return;
         markOfflineReadyAnnounced();
         toast.show({
+          polite: true,
           message: t("title"),
           action: {
             label: t("action"),

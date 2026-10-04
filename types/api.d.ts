@@ -591,67 +591,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/auth/email/not-me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Delete, for good, an account that used somebody else's address
-         * @description "It wasn't me" of `verify-email` (`/{locale}/not-me#token=…`), for whoever holds the inbox. It works while the account has never confirmed an email — not even an earlier address — and still has the address the link went to, with no change of address since, and does what the owner's decision 11 says: the account and everything in it are erased — not archived, so no register can bring them back — its invitations end as when an account is deleted, and the address is free for a new account at once. No `account-deleted` is sent. Every verification email of such an account carries its own link and all of them work until then; a new code does not cancel them. An account confirmed once gets `verify-email` without it.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["NotMeInput"];
-                };
-            };
-            responses: {
-                /** @description The account is gone and its address is free */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Message"];
-                    };
-                };
-                /** @description Validation error (code VALIDATION), or a link that no longer works: the account was confirmed, moved to another address, or is already gone (code LINK_INVALID) */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Too many attempts from this IP (code RATE_LIMITED) */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/auth/email/resend": {
         parameters: {
             query?: never;
@@ -663,7 +602,7 @@ export type paths = {
         put?: never;
         /**
          * Email a new code to confirm the account's email
-         * @description Send code and Resend code of the sheet that confirms the email. Sends `verify-email` to the account's address, in its language: a 6-digit code and a link, both for 24 hours, and "It wasn't me". The new code replaces the old one only once its email was accepted; the "It wasn't me" of earlier emails keeps working. Unlike Forgot your password?, a failed send is said: the address is the account's own. `captcha` is a Cloudflare Turnstile token for the action `verify-email`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+         * @description Send code and Resend code of the sheet that confirms the email. Sends `verify-email` to the account's address, in its language: a 6-digit code and a link, both for 24 hours. The new code replaces the old one only once its email was accepted. Unlike Forgot your password?, a failed send is said: the address is the account's own. `captcha` is a Cloudflare Turnstile token for the action `verify-email`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
          */
         post: {
             parameters: {
@@ -758,6 +697,67 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/auth/email/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore a deleted account from its email, and stop its password
+         * @description "Restore account" of `account-deleted` (`/{locale}/restore#token=…`), for whoever did not delete it. It works for 7 days and once, even if the account was restored meanwhile. The account comes back, any change of email waiting is cancelled, every session and device token is revoked, every device is forgotten, and the password stops working: `password-reset-after-undo`, in its restore words, takes a code and a link to the account's address, which `/auth/password/reset` redeems.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RestoreFromLinkInput"];
+                };
+            };
+            responses: {
+                /** @description The account is back, with no usable password */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RestoreLinkUsed"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), or a link that no longer works: used, past its 7 days, or the account is erased (code LINK_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many attempts from this IP (code RATE_LIMITED) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/email/undo": {
         parameters: {
             query?: never;
@@ -769,7 +769,7 @@ export type paths = {
         put?: never;
         /**
          * Undo an email change, from the old address
-         * @description "Undo the change" of `email-change-requested` (`/{locale}/undo#token=…`), for whoever holds the address the account had. It works for 7 days and once, even after the change was confirmed, and brings back an account deleted since. The account goes back to that address (confirmed), any change still waiting is cancelled, every session and device token is revoked, and the password stops working: `password-reset-after-undo` takes a code and a link to that address, which `/auth/password/reset` redeems. The undo links issued after it stop working, with the addresses they kept; an earlier one still works, so the first link an owner received always wins. No `new-sign-in` and no `password-changed` are sent.
+         * @description "Undo the change" of `email-change-requested` (`/{locale}/undo#token=…`), for whoever holds the address the account had. It works for 7 days and once, even after the change was confirmed, and brings back an account deleted since and still kept. The account goes back to that address (confirmed), any change still waiting is cancelled, every session and device token is revoked, and the password stops working: `password-reset-after-undo` takes a code and a link to that address, which `/auth/password/reset` redeems. The undo links issued after it stop working, with the addresses they kept; an earlier one still works, so the first link an owner received always wins. No `new-sign-in` and no `password-changed` are sent.
          */
         post: {
             parameters: {
@@ -829,8 +829,8 @@ export type paths = {
         get?: never;
         put?: never;
         /**
-         * Confirm the account's email with the emailed code or link
-         * @description Either `{ code }`, with the session (`Authorization`) of the account the code went to, or `{ token }` from the email's link (`/{locale}/verify#token=…`) with no session: it names the account. A code takes five tries and works for 24 hours; asking for another cancels it once the new email is accepted. Confirming is not spent: an account already confirmed answers 200 for its code and for its link, so tapping the link after typing the code reads "Email confirmed". A link for an address the account no longer has is LINK_INVALID, and so is one replaced by a newer code, even once the account is confirmed: only the newest email's link answers 200. Confirming ends the wait of the invitations addressed to it: they reach the change feed on the next pull.
+         * Confirm an email with the emailed code or link
+         * @description Either `{ code }`, with the session (`Authorization`) of the account the code went to, or `{ token }` from the email's link (`/{locale}/verify#token=…`) with no session: it names the account. The link of `sign-up` creates its account and signs nobody in (`result: account-ready`); the links of `verify-email` and of the deadline emails confirm an account from before email existed (`result: email-confirmed`) — a deadline link until its deadline. A code takes five tries and works for 24 hours; asking for another cancels it once the new email is accepted. Confirming is not spent: an account already confirmed answers 200 for its code and for its link, so tapping the link after typing the code reads "Email confirmed". A link for an address the account no longer has is LINK_INVALID, and so is one replaced by a newer code, even once the account is confirmed: only the newest email's link answers 200. Confirming ends the wait of the invitations addressed to it: they reach the change feed on the next pull.
          */
         post: {
             parameters: {
@@ -845,13 +845,13 @@ export type paths = {
                 };
             };
             responses: {
-                /** @description The email is confirmed */
+                /** @description The email is confirmed, or the sign-up's account exists */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Message"];
+                        "application/json": components["schemas"]["EmailVerified"];
                     };
                 };
                 /** @description Validation error (code VALIDATION); a code that is not the one sent (code EMAIL_CODE_INVALID); no code that still works — it expired, it was tried five times, or none was sent (code EMAIL_CODE_EXPIRED: send a new one); or a link that no longer works — expired, replaced, or for another address (code LINK_INVALID) */
@@ -909,7 +909,7 @@ export type paths = {
         put?: never;
         /**
          * Login and obtain a JWT token
-         * @description Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded. A login whose `deviceToken` is not one this account's email gave since its last password reset, undo or logout-all emails `new-sign-in` to that email, when it is confirmed.
+         * @description Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded. A login whose `deviceToken` is not one this account's email gave since its last undo, restore link or logout-all emails `new-sign-in` to that email, when it is confirmed. The right password of an account deleted in its last 30 days answers 409 ACCOUNT_DELETED with its two days and opens nothing: "Restore your account?" then calls `POST /auth/login/restore`. A wrong password reads the same for every address, deleted or not.
          */
         post: {
             parameters: {
@@ -951,7 +951,86 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description The right password of a deleted account that is still kept (code ACCOUNT_DELETED): `deletedAccount` says when it was deleted and its last day */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountDeletedResponse"];
+                    };
+                };
                 /** @description Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total (code RATE_LIMITED) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore a deleted account and sign in
+         * @description "Restore account" of "Restore your account?", with the same email and password as the sign-in that answered ACCOUNT_DELETED, under the same limits. Brings the account back with everything it had, except the shared groups it left and the invitations that ended, signs in like a login and emails `account-restored`. An account that is no longer deleted just signs in.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RestoreAccountInput"];
+                };
+            };
+            responses: {
+                /** @description Restored and signed in */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuthTokens"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Invalid email or password, or the account is no longer kept */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many attempts, counted with the logins (code RATE_LIMITED) */
                 429: {
                     headers: {
                         [name: string]: unknown;
@@ -1049,7 +1128,7 @@ export type paths = {
         put?: never;
         /**
          * Revoke every session of the authenticated user
-         * @description Bumps the user's token version, so every outstanding refresh token stops working (subsequent refreshes fail with 401 REFRESH_REVOKED), and forgets every device: a login with a device token issued before emails `new-sign-in`. The answer's `deviceToken` is this device's new one, issued after that.
+         * @description Bumps the user's token version, so every outstanding refresh token stops working (subsequent refreshes fail with 401 REFRESH_REVOKED), and forgets every device (with an undo and a restore link, the only things that do): a login with a device token issued before emails `new-sign-in`. The answer's `deviceToken` is this device's new one, issued after that.
          */
         post: {
             parameters: {
@@ -1097,7 +1176,7 @@ export type paths = {
         put?: never;
         /**
          * Email a code and a link to choose a new password
-         * @description Always the same answer, in at least the same time, whether the address has a live account, a deleted one or none, and whether the email could be sent: nothing here may tell them apart. Only a live account is emailed, in its own language: a 6-digit code and a link (`/{locale}/reset#token=…`), both good for 30 minutes and for one reset. A new code replaces the previous one only once its email was accepted for delivery. `captcha` is a Cloudflare Turnstile token issued for the action `forgot-password`, asked for when the button is pressed: it works once. `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+         * @description Always the same answer, in at least the same time, whether the address has a live account, a deleted one or none, and whether the email could be sent: nothing here may tell them apart. A live account and one deleted in its last 30 days are emailed, in their own language: a 6-digit code and a link (`/{locale}/reset#token=…`), both good for 30 minutes and for one reset; the deleted one in its own words, since choosing a password restores it. A new code replaces the previous one only once its email was accepted for delivery. `captcha` is a Cloudflare Turnstile token issued for the action `forgot-password`, asked for when the button is pressed: it works once. `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
          */
         post: {
             parameters: {
@@ -1167,7 +1246,7 @@ export type paths = {
         put?: never;
         /**
          * Choose a new password with the emailed code or link
-         * @description Either the address and the 6-digit code, or the link's token alone (it names the account). Sets the password, signs out every other device (every refresh and device token issued before stops working), confirms the account's email, and answers a session like a login. Using a code or the link spends every code of that request. A code takes five tries. When the account had never confirmed its email and holds accounts or transactions, the answer's `user.keepOrStartFresh` is set: ask "Keep what's in this account?" before opening anything (`POST /users/{id}/keep-or-start-fresh`). A change of email that was waiting is cancelled, and `password-changed` goes to the address. The code of `password-reset-after-undo` is redeemed here as well.
+         * @description Either the address and the 6-digit code, or the link's token alone (it names the account). Sets the password, signs out every other device (every refresh and device token issued before stops working), confirms the account's email, and answers a session like a login. Using a code or the link spends every code of that request. A code takes five tries. A deleted account still kept comes back (`restored`), and `account-restored` goes instead of `password-changed`. A change of email that was waiting is cancelled. Devices are not forgotten: signing in again on one sends no `new-sign-in`. The code of `password-reset-after-undo` is redeemed here as well.
          */
         post: {
             parameters: {
@@ -1188,7 +1267,7 @@ export type paths = {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["AuthTokens"];
+                        "application/json": components["schemas"]["PasswordResetDone"];
                     };
                 };
                 /** @description Validation error (code VALIDATION); a code that does not work — mistyped, expired, replaced by a newer one, used up by five tries, or for an address with no account, all one answer (code RESET_CODE_INVALID); or a link that no longer works — used, expired or replaced (code LINK_INVALID) */
@@ -1297,8 +1376,9 @@ export type paths = {
         get?: never;
         put?: never;
         /**
-         * Register a new user
-         * @description Register acts as login: the response already carries the token pair, no follow-up login call is needed. Emails are normalized (trim + lowercase). Registering with the email and the password of a soft-deleted account reactivates that account with its full financial history (the response's `user.reactivated` is `true` and the original currency is kept — the `currency` sent in that register is ignored); with any other password it answers 409 EMAIL_TAKEN, like a live account. On a 500 the user may still have been created: try login before retrying register. `captcha` is a Cloudflare Turnstile token issued for the action `register`, asked for when the button is pressed: it works once, and nothing is created without one that passes. An account whose email is not confirmed is sent `verify-email` (a 6-digit code and a link, 24 hours). A send that fails does not fail the register: `GET /users/{id}` then shows no live code, so the client offers Send code. The account works before its email is confirmed (`user.emailVerified`); only invitations wait for it.
+         * Register a new user, before its email is confirmed
+         * @deprecated
+         * @description Kept only until the app confirms the email before the account exists (`POST /auth/sign-up`); then it goes. Register acts as login: the response already carries the token pair. Emails are normalized (trim + lowercase). An address with any account, live or deleted and still kept, answers 409 EMAIL_TAKEN: a deleted account comes back by signing in. `captcha` is a Cloudflare Turnstile token for the action `register`. The account is sent `verify-email`; a send that fails does not fail the register.
          */
         post: {
             parameters: {
@@ -1322,7 +1402,7 @@ export type paths = {
                         "application/json": components["schemas"]["AuthTokens"];
                     };
                 };
-                /** @description Validation error, a missing captcha among them (code VALIDATION), or Cloudflare refused the captcha token: spent, expired, forged, or issued for another site or action (code CAPTCHA_INVALID). Ask for a new token and try again */
+                /** @description Validation error, a missing captcha among them (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID). Ask for a new token and try again */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1331,7 +1411,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Email is already registered (code EMAIL_TAKEN): a live account, a soft-deleted one registered with a different password, or a concurrent register that reactivated it first */
+                /** @description Email is already registered (code EMAIL_TAKEN) */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -1340,7 +1420,7 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Too many attempts from this client IP, or too many failed ones for this email — from this device if `deviceToken` recognizes it, otherwise from this IP or in total — counted with the failed logins (code RATE_LIMITED) */
+                /** @description Too many attempts from this client IP, or too many failed ones for this email, counted with the failed logins (code RATE_LIMITED) */
                 429: {
                     headers: {
                         [name: string]: unknown;
@@ -1478,6 +1558,225 @@ export type paths = {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sign-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start creating an account; its emailed code creates it
+         * @description Nothing is created yet (the owner's decision 16): what was typed waits 24 hours, and a new sign-up for the address replaces it. The answer, its limits and its time are the same for every address, so it never tells who has an account: an address with no account is sent `sign-up` (a 6-digit code and a link, 24 hours); one with an account — live, deleted and still kept, or kept by an undo link — is sent `account-exists` instead, and its sign-up can never be confirmed. A send that fails is never shown. Keep `signUpToken` for this browser alone: `POST /auth/sign-up/confirm` takes it with the code. `captcha` is a Cloudflare Turnstile token for the action `register`; `deviceToken` lets the limits count this device instead of its IP.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SignUpInput"];
+                };
+            };
+            responses: {
+                /** @description Taken, the same for every address */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SignUpStarted"];
+                    };
+                };
+                /** @description Validation error, a missing captcha among them (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID). Ask for a new token and try again */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests (code RATE_LIMITED; `Retry-After` in seconds): from this IP, from this device or IP in the hour, or for this address — one a minute and five a day. Counted the same for every address */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The captcha could not be checked (code CAPTCHA_UNAVAILABLE): nothing was sent. Try again */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sign-up/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create the account with the emailed code, and sign in here
+         * @description Only with the `signUpToken` of the browser where the password was typed: the code alone never signs anyone in. Creates the account, its email confirmed, and answers a session with its device token, so no `new-sign-in` is sent. If the email's link created the account first, the same code signs in once. A code takes five tries and every bad one gets the same answer.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SignUpConfirmInput"];
+                };
+            };
+            responses: {
+                /** @description The account exists and this device is signed in */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AuthTokens"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION), or a code that does not work — mistyped, expired, replaced, used up by five tries, already used to sign in, or for a sign-up that is over: all one answer (code SIGN_UP_CODE_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The address became another account's meanwhile (code EMAIL_TAKEN): only whoever holds the code sees it */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many attempts from this IP (code RATE_LIMITED) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sign-up/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email the sign-up again
+         * @description Resend code of the sign-up's code step: `sign-up` with a new code, or `account-exists` if the address has an account by now, under the same limits and in the same time either way. A new code replaces the old one only once its email was accepted. A send that fails is never shown. `captcha` is a Cloudflare Turnstile token for the action `register`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SignUpResendInput"];
+                };
+            };
+            responses: {
+                /** @description Taken */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VerificationCodeSent"];
+                    };
+                };
+                /** @description Validation error (code VALIDATION) or a refused captcha (code CAPTCHA_INVALID) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The sign-up is over: its 24 hours passed or a newer one for the address replaced it (code SIGN_UP_EXPIRED). Start again from Create account */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests (code RATE_LIMITED; `Retry-After` in seconds) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The captcha could not be checked (code CAPTCHA_UNAVAILABLE) */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -5484,6 +5783,15 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description The account is past its deadline to confirm its email (code EMAIL_CONFIRMATION_REQUIRED): the whole batch, before any operation is applied. Keep the queue and send it again once the email is confirmed */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
                 /** @description Body over 1 MB (code PAYLOAD_TOO_LARGE) */
                 413: {
                     headers: {
@@ -5592,9 +5900,18 @@ export type paths = {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
+                /** @description The account is past its deadline to confirm its email (code EMAIL_CONFIRMATION_REQUIRED): nothing is read until it is confirmed */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
                 /**
                  * @description The cursor, or `since`, is from before the account's last Start
-                 *     fresh, which erased rows without tombstones (code
+                 *     fresh (removed in T-238), which erased rows without tombstones (code
                  *     RESYNC_REQUIRED): drop the local copy and ask again without a
                  *     cursor.
                  */
@@ -6376,7 +6693,7 @@ export type paths = {
         post?: never;
         /**
          * Delete a user
-         * @description Requires `currentPassword`: a hijacked 15-minute access token must not be able to delete the account. Soft delete: the account and its financial history are kept, and registering again with the same email and the password it had reactivates it. Emails `account-deleted` when the email is confirmed. An undo link sent before (7 days) still brings the account back, at the address it went to.
+         * @description Requires `currentPassword`: a hijacked 15-minute access token must not be able to delete the account. The account and everything in it are kept 30 days — `keptUntil` is the last one, whole, in its time zone — and the first nightly pass after it erases them for good, freeing the address (the owner's decision 19). Until then signing in with its password (`POST /auth/login/restore`), Forgot your password?, and the "Restore account" link of `account-deleted` (7 days) bring it back. Every session ends now, and its shared groups are left now for good. `account-deleted` goes when the email is confirmed. An undo link sent before (7 days) still brings the account back, at the address it went to.
          */
         delete: {
             parameters: {
@@ -6394,13 +6711,13 @@ export type paths = {
                 };
             };
             responses: {
-                /** @description User deleted */
+                /** @description User deleted, and kept until `keptUntil` */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Message"];
+                        "application/json": components["schemas"]["AccountDeleted"];
                     };
                 };
                 /** @description Invalid ID format or missing currentPassword (code VALIDATION) */
@@ -6457,7 +6774,7 @@ export type paths = {
         put?: never;
         /**
          * Ask to move the account to a new email
-         * @description Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION). When the account's email is confirmed, `email-change-requested` goes to it too, naming the new address, with "Undo the change" (`/{locale}/undo#token=…`, POST /auth/email/undo) for 7 days, and the change is saved only once that notice went (an old address that refuses all email does not stop it); while that link works the old address stays the account's, and another account's register or change of email to it is EMAIL_TAKEN.
+         * @description Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION). When the account's email is confirmed, `email-change-requested` goes to it too, naming the new address, with "Undo the change" (`/{locale}/undo#token=…`, POST /auth/email/undo) for 7 days, and the change is saved only once that notice went (an old address that refuses all email does not stop it); while that link works the old address stays the account's. An address another account holds — live, deleted and still kept, or kept by an undo link — answers the same as any other, so nothing here tells whether it has an account: it is sent `email-change-taken` instead, and the change waits and never confirms.
          */
         post: {
             parameters: {
@@ -6504,15 +6821,6 @@ export type paths = {
                 };
                 /** @description User not found (or not the authenticated user's id) */
                 404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description The address belongs to another account, a deleted one included (code EMAIL_TAKEN) */
-                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -6717,88 +7025,6 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
-    "/users/{id}/keep-or-start-fresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Answer "Keep what's in this account?"
-         * @description Open only while `keepOrStartFresh` is set: after a password reset of an account that had never confirmed its email and held something, so whoever created it may not own the inbox. It stays open until it is answered. `keep` closes it and changes nothing. `start-fresh` deletes for good the account's accounts, transactions, budgets, categories, contacts and the shared groups it created with their expenses and payments; stops sharing those groups and leaves the ones it joined, as deleting an account does; seeds the default categories again; and sets the profile from the body, the currency free again. The email and the password stay. Only a session opened by the reset or after it may answer. A start-fresh that fails half-way stays open and chosen: send it again to finish it (a `keep` is then refused). Every copy of the account's data synced before it is out of date: `GET /sync/changes` with an older cursor answers RESYNC_REQUIRED.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description User ID */
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["KeepOrStartFreshInput"];
-                };
-            };
-            responses: {
-                /** @description Answered; `keepOrStartFresh` is null again */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["User"];
-                    };
-                };
-                /** @description Validation error (code VALIDATION) */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Missing, invalid or expired access token, or one issued before the question was asked: only a session opened by the reset (or after it) may answer */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description User not found (or not the authenticated user's id) */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description No question is open: never asked, already answered, or `keep` after Start fresh was chosen (code KEEP_OR_START_FRESH_CLOSED); or another start-fresh request is still erasing (code START_FRESH_IN_PROGRESS) */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 };
 export type webhooks = Record<string, never>;
 export type components = {
@@ -6831,6 +7057,18 @@ export type components = {
         };
         AccountConflict: components["schemas"]["ErrorResponse"] & {
             current?: components["schemas"]["Account"];
+        };
+        AccountDeleted: {
+            message: string;
+            /**
+             * Format: date
+             * @description The last day the account is kept; the first nightly pass after it erases it for good.
+             * @example 2026-10-28
+             */
+            keptUntil: string;
+        };
+        AccountDeletedResponse: components["schemas"]["ErrorResponse"] & {
+            deletedAccount: components["schemas"]["DeletedAccount"];
         };
         AccountList: {
             data: components["schemas"]["Account"][];
@@ -6886,14 +7124,14 @@ export type components = {
             accessToken: string;
             refreshToken: string;
             user?: components["schemas"]["User"];
-            /** @description Login, register and password reset only. Proof that this device already signed in to this email: send it back as `deviceToken` on the next login, register or Forgot your password? and its attempts get a budget of their own, so a stranger's failures cannot lock this device out. Keep it across logouts, and keep the new one each of them answers. A password or email change and a logout-all revoke every device token issued before. */
+            /** @description Login, sign-up, register, restore and password reset only. Proof that this device already signed in to this email: send it back as `deviceToken` on the next login, register or Forgot your password? and its attempts get a budget of their own, so a stranger's failures cannot lock this device out. Keep it across logouts, and keep the new one each of them answers. A password or email change and a logout-all revoke every device token issued before. */
             deviceToken?: string;
         };
         BatchUpdateFailure: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "EMAIL_NOT_VERIFIED" | "EMAIL_ALREADY_VERIFIED" | "EMAIL_CODE_INVALID" | "EMAIL_CODE_EXPIRED" | "EMAIL_SEND_FAILED" | "EMAIL_CHANGE_NOT_PENDING" | "EMAIL_CHANGE_REQUIRES_VERIFICATION" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "SIGN_UP_CODE_INVALID" | "SIGN_UP_EXPIRED" | "ACCOUNT_DELETED" | "EMAIL_CONFIRMATION_REQUIRED" | "EMAIL_NOT_VERIFIED" | "EMAIL_ALREADY_VERIFIED" | "EMAIL_CODE_INVALID" | "EMAIL_CODE_EXPIRED" | "EMAIL_SEND_FAILED" | "EMAIL_CHANGE_NOT_PENDING" | "EMAIL_CHANGE_REQUIRES_VERIFICATION" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message: string;
         };
         /** @description Per-item outcome. The status is 200 even when some items failed: read `failed`. */
@@ -7181,6 +7419,19 @@ export type components = {
                 percent: number;
             }[];
         };
+        DeletedAccount: {
+            /**
+             * Format: date
+             * @example 2026-10-28
+             */
+            deletedOn: string;
+            /**
+             * Format: date
+             * @description Signing in by the end of this day restores it; then it is erased for good.
+             * @example 2026-10-28
+             */
+            keptUntil: string;
+        };
         DeleteUserInput: {
             currentPassword: string;
         };
@@ -7222,6 +7473,14 @@ export type components = {
             /** @description Whether that code was accepted for delivery (or may still arrive). False when it could not go: Forgot your password? for this address is the way in. */
             codeSent: boolean;
         };
+        EmailVerified: {
+            message: string;
+            /**
+             * @description account-ready: the link of `sign-up` created the account, with no session (Sign in follows). email-confirmed: an account from before email existed is confirmed.
+             * @enum {string}
+             */
+            result: "account-ready" | "email-confirmed";
+        };
         ErrorResponse: {
             /** @example NotFoundError */
             error: string;
@@ -7230,7 +7489,7 @@ export type components = {
              * @description Stable machine-readable code. Branch on this, never on message.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "EMAIL_NOT_VERIFIED" | "EMAIL_ALREADY_VERIFIED" | "EMAIL_CODE_INVALID" | "EMAIL_CODE_EXPIRED" | "EMAIL_SEND_FAILED" | "EMAIL_CHANGE_NOT_PENDING" | "EMAIL_CHANGE_REQUIRES_VERIFICATION" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "SIGN_UP_CODE_INVALID" | "SIGN_UP_EXPIRED" | "ACCOUNT_DELETED" | "EMAIL_CONFIRMATION_REQUIRED" | "EMAIL_NOT_VERIFIED" | "EMAIL_ALREADY_VERIFIED" | "EMAIL_CODE_INVALID" | "EMAIL_CODE_EXPIRED" | "EMAIL_SEND_FAILED" | "EMAIL_CHANGE_NOT_PENDING" | "EMAIL_CHANGE_REQUIRES_VERIFICATION" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             details?: {
                 field?: string;
                 message?: string;
@@ -7338,18 +7597,6 @@ export type components = {
             you: boolean;
             joined: boolean;
         };
-        KeepOrStartFreshInput: {
-            /** @enum {string} */
-            choice: "keep";
-        } | {
-            /** @enum {string} */
-            choice: "start-fresh";
-            name: string;
-            /** @enum {string} */
-            locale: "en" | "es";
-            currency: string;
-            timezone: string;
-        };
         LoggedOutEverywhere: {
             message: string;
             /** @description This device's new device token, issued after every earlier one was forgotten: keep it in place of the old one. Absent when the account is gone. */
@@ -7368,9 +7615,6 @@ export type components = {
             /** @description The other rows this write rewrote, empty when it touched none. A queued write on one of them guarded by `previousUpdatedAt` may be guarded by `updatedAt` instead: nothing else moved it in between. */
             restamped: components["schemas"]["Restamp"][];
         };
-        NotMeInput: {
-            token: string;
-        };
         Pagination: {
             limit: number;
             offset: number;
@@ -7378,6 +7622,10 @@ export type components = {
             hasMore: boolean;
             /** Format: uuid */
             nextCursor: string | null;
+        };
+        PasswordResetDone: components["schemas"]["AuthTokens"] & {
+            /** @description True when the account had been deleted and the new password brought it back: toast "Account restored". */
+            restored: boolean;
         };
         QuickAddTransactionInput: {
             /** Format: uuid */
@@ -7482,12 +7730,30 @@ export type components = {
             /** Format: date-time */
             updatedAt: string;
         };
+        RestoreAccountInput: {
+            /** Format: email */
+            email: string;
+            password: string;
+            deviceToken?: string;
+        };
         RestoreDefaultsResponse: {
             data: components["schemas"]["Category"][];
+        };
+        RestoreFromLinkInput: {
+            token: string;
         };
         /** @default {} */
         RestoreInput: {
             name?: string;
+        };
+        RestoreLinkUsed: {
+            /**
+             * Format: email
+             * @description The account's address, where the code to choose a new password went.
+             */
+            email: string;
+            /** @description Whether that code was accepted for delivery (or may still arrive). False when it could not go: Forgot your password? for this address is the way in. */
+            codeSent: boolean;
         };
         /** @description An invitation to one of your groups, as the inviter reads it: who it was addressed to and how it stands. It never says whether the address has an account, nor who answered. A PENDING one past `expiresAt` can no longer be answered — nothing on the server marks that moment, so it is read from the date. */
         SentInvitation: {
@@ -7798,6 +8064,38 @@ export type components = {
             } | null;
             shares: components["schemas"]["SharedShare"][];
         };
+        SignUpConfirmInput: {
+            signUpToken: string;
+            code: string;
+        };
+        SignUpInput: {
+            name: string;
+            /** Format: email */
+            email: string;
+            password: string;
+            timezone?: string;
+            currency?: string;
+            /** @enum {string} */
+            locale?: "en" | "es";
+            deviceToken?: string;
+            captcha: string;
+        };
+        SignUpResendInput: {
+            signUpToken: string;
+            captcha: string;
+            deviceToken?: string;
+        };
+        SignUpStarted: {
+            /** @description Keep it for this browser only (the BFF's httpOnly cookie): with the emailed code it creates the account and signs in here. A newer sign-up for the address replaces it. */
+            signUpToken: string;
+            /**
+             * Format: date-time
+             * @description When the sign-up and its code stop working: 24 hours.
+             */
+            expiresAt: string;
+            /** @description Seconds before Resend can go: the same for every address. */
+            resendAfterSeconds: number;
+        };
         StatsBucket: {
             /** @description Category id, day (YYYY-MM-DD), month (YYYY-MM), account id or tag; 'uncategorized' and 'untagged' for the catch-all buckets, and 'unassigned' for a row with no account at all, which validation no longer allows. */
             key: string;
@@ -7959,7 +8257,7 @@ export type components = {
              * @description conflict / rejected: the code the matching route would have answered.
              * @enum {string}
              */
-            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "KEEP_OR_START_FRESH_CLOSED" | "START_FRESH_IN_PROGRESS" | "EMAIL_NOT_VERIFIED" | "EMAIL_ALREADY_VERIFIED" | "EMAIL_CODE_INVALID" | "EMAIL_CODE_EXPIRED" | "EMAIL_SEND_FAILED" | "EMAIL_CHANGE_NOT_PENDING" | "EMAIL_CHANGE_REQUIRES_VERIFICATION" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
+            code?: "VALIDATION" | "INTERNAL" | "DUPLICATE" | "INVALID_ID" | "INVALID_CURSOR" | "RESYNC_REQUIRED" | "RESOURCE_ARCHIVED" | "NOT_FOUND" | "DB_UNAVAILABLE" | "RATE_LIMITED" | "MALFORMED_JSON" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_ENCODING" | "REQUEST_ABORTED" | "BAD_REQUEST" | "EMAIL_TAKEN" | "REFRESH_INVALID" | "REFRESH_REVOKED" | "CURRENT_PASSWORD_INVALID" | "RESET_CODE_INVALID" | "LINK_INVALID" | "CAPTCHA_INVALID" | "CAPTCHA_UNAVAILABLE" | "SIGN_UP_CODE_INVALID" | "SIGN_UP_EXPIRED" | "ACCOUNT_DELETED" | "EMAIL_CONFIRMATION_REQUIRED" | "EMAIL_NOT_VERIFIED" | "EMAIL_ALREADY_VERIFIED" | "EMAIL_CODE_INVALID" | "EMAIL_CODE_EXPIRED" | "EMAIL_SEND_FAILED" | "EMAIL_CHANGE_NOT_PENDING" | "EMAIL_CHANGE_REQUIRES_VERIFICATION" | "CURRENCY_LOCKED" | "CURRENCY_MISMATCH" | "AMOUNT_PRECISION" | "FUTURE_DATE" | "ACCOUNT_LIMIT_REACHED" | "DEFAULT_ACCOUNT_ARCHIVE_BLOCKED" | "NO_DEFAULT_ACCOUNT" | "ACCOUNT_FIELD_NOT_FOR_TYPE" | "INCOME_ON_CARD_OR_LOAN" | "LOAN_OVERPAID" | "CATEGORY_LIMIT_REACHED" | "CATEGORY_ARCHIVED" | "CATEGORY_TYPE_LOCKED" | "CATEGORY_TYPE_MISMATCH" | "BUDGET_PERIOD_OVERLAP" | "CONTACT_LIMIT_REACHED" | "PARTICIPANT_LIMIT_REACHED" | "PARTICIPANT_ALREADY_IN_GROUP" | "PARTICIPANT_NOT_IN_GROUP" | "PARTICIPANT_IN_USE" | "SPLIT_INVALID" | "SHARED_EXPENSE_LINKED" | "TRANSACTION_ALREADY_SHARED" | "TRANSACTION_NOT_SPLITTABLE" | "SETTLEMENT_OVER_PAID" | "SETTLEMENT_MOVEMENT_LOCKED" | "GUEST_BLOCK_HAS_PAYMENTS" | "CONTACT_HAS_NO_EMAIL" | "INVITATION_TO_SELF" | "INVITATION_LIMIT_REACHED" | "INVITATION_UNAVAILABLE" | "SHARED_LINE_NOT_PAID" | "SHARED_LINE_IN_LEDGER" | "ID_TAKEN" | "STALE_UPDATE" | "IDEMPOTENCY_KEY_INVALID" | "IDEMPOTENCY_PAYLOAD_MISMATCH" | "IDEMPOTENCY_ORIGINAL_DELETED";
             message?: string;
             details?: {
                 field?: string;
@@ -8291,8 +8589,16 @@ export type components = {
             name: string;
             /** Format: email */
             email: string;
-            /** @description Whether this address is confirmed, by its code or link, or by a password reset. Until it is, the account works as ever but invitations wait: sending, accepting and seeing new ones answer 403 EMAIL_NOT_VERIFIED. */
+            /** @description Whether this address is confirmed, by its code or link, or by a password reset. Every account made by POST /auth/sign-up is; only an account from before email existed can be false. Until it is, invitations wait: sending, accepting and seeing new ones answer 403 EMAIL_NOT_VERIFIED. */
             emailVerified: boolean;
+            /**
+             * Format: date
+             * @description The last day an unconfirmed account from before email existed has to confirm it (14 days from confirm-deadline), whole, in its time zone. Null when it is confirmed or has no deadline yet.
+             * @example 2026-10-28
+             */
+            confirmBy: string | null;
+            /** @description Past that deadline: everything but reading the profile, confirming, resending, changing the email and signing out answers 403 EMAIL_CONFIRMATION_REQUIRED until the email is confirmed. Its data is untouched. */
+            emailConfirmationRequired: boolean;
             /** @example America/Bogota */
             timezone: string;
             /** @example COP */
@@ -8304,19 +8610,10 @@ export type components = {
             locale: "en" | "es";
             /** Format: date-time */
             lastLoginAt: string | null;
-            /** @description Set after a password reset of an account that had never confirmed its email and held accounts or transactions: ask "Keep what's in this account?" before opening anything, and answer with POST /users/{id}/keep-or-start-fresh. The three facts are when the account was created and what it held then (active accounts, transactions). Null otherwise. */
-            keepOrStartFresh: {
-                /** Format: date-time */
-                createdAt: string;
-                accounts: number;
-                transactions: number;
-            } | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
-            /** @description Present (true) only when register revived a soft-deleted account. */
-            reactivated?: boolean;
         };
         UserWithEmailVerification: components["schemas"]["User"] & {
             /** @description What the sheet that confirms the email needs: which of its shapes, and Resend's countdown. Null once the email is confirmed. */
@@ -8369,6 +8666,8 @@ export type components = {
 };
 export type Account = components['schemas']['Account'];
 export type AccountConflict = components['schemas']['AccountConflict'];
+export type AccountDeleted = components['schemas']['AccountDeleted'];
+export type AccountDeletedResponse = components['schemas']['AccountDeletedResponse'];
 export type AccountList = components['schemas']['AccountList'];
 export type AccountWithRestamps = components['schemas']['AccountWithRestamps'];
 export type AddParticipantsInput = components['schemas']['AddParticipantsInput'];
@@ -8400,11 +8699,13 @@ export type CreateSharedExpenseInput = components['schemas']['CreateSharedExpens
 export type CreateSharedGroupInput = components['schemas']['CreateSharedGroupInput'];
 export type CreateTransactionInput = components['schemas']['CreateTransactionInput'];
 export type DefaultSplit = components['schemas']['DefaultSplit'];
+export type DeletedAccount = components['schemas']['DeletedAccount'];
 export type DeleteUserInput = components['schemas']['DeleteUserInput'];
 export type EmailChange = components['schemas']['EmailChange'];
 export type EmailChangeConfirmed = components['schemas']['EmailChangeConfirmed'];
 export type EmailChangeSent = components['schemas']['EmailChangeSent'];
 export type EmailChangeUndone = components['schemas']['EmailChangeUndone'];
+export type EmailVerified = components['schemas']['EmailVerified'];
 export type ErrorResponse = components['schemas']['ErrorResponse'];
 export type ForgotPasswordAccepted = components['schemas']['ForgotPasswordAccepted'];
 export type ForgotPasswordInput = components['schemas']['ForgotPasswordInput'];
@@ -8414,13 +8715,12 @@ export type JoinedExpenseList = components['schemas']['JoinedExpenseList'];
 export type JoinedGroup = components['schemas']['JoinedGroup'];
 export type JoinedGroupList = components['schemas']['JoinedGroupList'];
 export type JoinedParticipant = components['schemas']['JoinedParticipant'];
-export type KeepOrStartFreshInput = components['schemas']['KeepOrStartFreshInput'];
 export type LoggedOutEverywhere = components['schemas']['LoggedOutEverywhere'];
 export type LoginInput = components['schemas']['LoginInput'];
 export type Message = components['schemas']['Message'];
 export type MessageWithRestamps = components['schemas']['MessageWithRestamps'];
-export type NotMeInput = components['schemas']['NotMeInput'];
 export type Pagination = components['schemas']['Pagination'];
+export type PasswordResetDone = components['schemas']['PasswordResetDone'];
 export type QuickAddTransactionInput = components['schemas']['QuickAddTransactionInput'];
 export type ReceivedInvitation = components['schemas']['ReceivedInvitation'];
 export type ReceivedInvitationList = components['schemas']['ReceivedInvitationList'];
@@ -8431,8 +8731,11 @@ export type ResendEmailChangeInput = components['schemas']['ResendEmailChangeInp
 export type ResendVerificationInput = components['schemas']['ResendVerificationInput'];
 export type ResetPasswordInput = components['schemas']['ResetPasswordInput'];
 export type Restamp = components['schemas']['Restamp'];
+export type RestoreAccountInput = components['schemas']['RestoreAccountInput'];
 export type RestoreDefaultsResponse = components['schemas']['RestoreDefaultsResponse'];
+export type RestoreFromLinkInput = components['schemas']['RestoreFromLinkInput'];
 export type RestoreInput = components['schemas']['RestoreInput'];
+export type RestoreLinkUsed = components['schemas']['RestoreLinkUsed'];
 export type SentInvitation = components['schemas']['SentInvitation'];
 export type SentInvitationList = components['schemas']['SentInvitationList'];
 export type Session = components['schemas']['Session'];
@@ -8456,6 +8759,10 @@ export type SharedHistoryEntry = components['schemas']['SharedHistoryEntry'];
 export type SharedLimits = components['schemas']['SharedLimits'];
 export type SharedShare = components['schemas']['SharedShare'];
 export type SharedSplit = components['schemas']['SharedSplit'];
+export type SignUpConfirmInput = components['schemas']['SignUpConfirmInput'];
+export type SignUpInput = components['schemas']['SignUpInput'];
+export type SignUpResendInput = components['schemas']['SignUpResendInput'];
+export type SignUpStarted = components['schemas']['SignUpStarted'];
 export type StatsBucket = components['schemas']['StatsBucket'];
 export type StatsResponse = components['schemas']['StatsResponse'];
 export type StatsSplit = components['schemas']['StatsSplit'];

@@ -57,10 +57,9 @@ export const resetLinkSchema = z.object({ newPassword });
 
 export type ResetLinkValues = Infer<typeof resetLinkSchema>;
 
-export const freshDetailsSchema = z.object({
-  name: registerSchema.shape.name,
-  currency: registerSchema.shape.currency,
-  timezone: registerSchema.shape.timezone,
+export const changeEmailSchema = z.object({
+  email: z.email({ error: "validation.email" }),
+  currentPassword: z.string().min(1, { error: "validation.required" }),
 });
 
-export type FreshDetailsValues = Infer<typeof freshDetailsSchema>;
+export type ChangeEmailValues = Infer<typeof changeEmailSchema>;

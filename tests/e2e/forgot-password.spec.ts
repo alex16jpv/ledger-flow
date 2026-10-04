@@ -1,15 +1,6 @@
 import { type APIRequestContext, expect, type Page, test, uniqueEmail } from "../fixtures";
-import { readResetEmail, TEST_CAPTCHA } from "../mailpit";
-import {
-  accountIdsIn,
-  APP,
-  coldStart,
-  freshUser,
-  listAccounts,
-  readyForOffline,
-  signInAs,
-  vaultState,
-} from "../offline";
+import { readResetEmail, readRestoreLink, signUpWithCode, TEST_CAPTCHA } from "../mailpit";
+import { APP } from "../offline";
 import { expectNoAxeViolations } from "./axe";
 
 const OLD_PASSWORD = "LedgerFlow!2026";
@@ -17,9 +8,11 @@ const NEW_PASSWORD = "LedgerFlow!2027-new";
 
 async function emptyAccount(request: APIRequestContext, tag: string): Promise<string> {
   const email = uniqueEmail(tag);
-  const registered = await request.post("/api/auth/register", {
-    headers: { origin: APP },
-    data: { captcha: TEST_CAPTCHA, name: "Forgot E2E", email, password: OLD_PASSWORD },
+  const registered = await signUpWithCode(request, {
+    captcha: TEST_CAPTCHA,
+    name: "Forgot E2E",
+    email,
+    password: OLD_PASSWORD,
   });
   expect(registered.ok(), await registered.text()).toBe(true);
   await request.post("/api/auth/logout", { headers: { origin: APP } });
@@ -28,7 +21,10 @@ async function emptyAccount(request: APIRequestContext, tag: string): Promise<st
 
 async function askForCode(page: Page, email: string): Promise<void> {
   await page.getByRole("button", { name: "Send code" }).click();
-  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+  // The server holds every answer to a floor of about two seconds, which a loaded run stretches.
+  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.getByText(email)).toBeVisible();
 }
 
@@ -105,53 +101,63 @@ test("a wrong code gets the one answer, and Save waits for another code", async 
   await expect(page).toHaveURL(`${APP}/home`);
 });
 
-test("the email's link asks about an account that was never confirmed, until it is answered", async ({
-  page,
-  request,
-}) => {
-  const owner = await freshUser(request, "forgot-keep");
-  await chooseFromLink(page, await emailALink(request, owner.email));
+test("Forgot your password? restores a deleted account, and says so", async ({ page, request }) => {
+  const email = uniqueEmail("forgot-deleted");
+  const registered = await signUpWithCode(request, {
+    name: "Forgot E2E",
+    email,
+    password: OLD_PASSWORD,
+  });
+  const { user } = (await registered.json()) as { user: { id: string } };
+  const deleted = await request.delete(`/api/users/${user.id}`, {
+    headers: { origin: APP },
+    data: { currentPassword: OLD_PASSWORD },
+  });
+  expect(deleted.ok(), await deleted.text()).toBe(true);
+  await request.post("/api/auth/logout", { headers: { origin: APP } });
 
-  await expect(page).toHaveURL(`${APP}/keep-or-start-fresh`);
-  await expect(page.getByRole("heading", { name: "Keep what’s in this account?" })).toBeVisible();
-  await expect(page.getByText("Accounts", { exact: true })).toBeVisible();
-  await expectNoAxeViolations(page);
-  await page.goto("/home");
-  await expect(page).toHaveURL(`${APP}/keep-or-start-fresh`);
-
-  await page.getByRole("button", { name: "Keep it" }).click();
+  await chooseFromLink(page, await emailALink(request, email));
   await expect(page).toHaveURL(`${APP}/home`);
-  await page.goto("/accounts");
-  await expect(page.getByText(owner.accountName).first()).toBeVisible();
+  await expect(
+    page.getByText("Account restored. Every other device was signed out."),
+  ).toBeVisible();
 });
 
-test("Start fresh erases the account, and another device's copy drops it too", async ({
-  page,
+test("the deleted email's Restore account signs out, and its code chooses a new password", async ({
   request,
   browser,
 }) => {
-  const owner = await freshUser(request, "forgot-fresh");
-  const otherDevice = await browser.newContext();
-  await signInAs(otherDevice, request, owner);
-  const other = await coldStart(otherDevice);
-  await readyForOffline(other);
-  const vault = (await vaultState(other))?.name ?? "";
-  expect(await accountIdsIn(other, vault)).toContain(owner.accountId);
+  const email = uniqueEmail("restore-link");
+  const registered = await signUpWithCode(request, {
+    name: "Restore E2E",
+    email,
+    password: OLD_PASSWORD,
+  });
+  const { user } = (await registered.json()) as { user: { id: string } };
+  const deleted = await request.delete(`/api/users/${user.id}`, {
+    headers: { origin: APP },
+    data: { currentPassword: OLD_PASSWORD },
+  });
+  expect(deleted.ok(), await deleted.text()).toBe(true);
+  const link = await readRestoreLink(request, email);
 
-  await chooseFromLink(page, await emailALink(request, owner.email));
-  await page.getByRole("button", { name: "Start fresh" }).click();
-  await expect(page.getByText(/deleted for good/)).toBeVisible();
-  await page.getByRole("button", { name: "Delete everything and start" }).click();
-  await expect(page.getByRole("heading", { name: "Your details" })).toBeVisible();
-  await page.getByRole("textbox", { name: "Name" }).fill("Fresh Start");
-  await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page).toHaveURL(`${APP}/onboarding`);
-  expect(await listAccounts(page.request)).toEqual([]);
+  const inbox = await browser.newContext({ baseURL: APP });
+  const tab = await inbox.newPage();
+  await tab.goto(link);
+  await expect(tab.getByRole("heading", { name: "Restore your account?" })).toBeVisible();
+  expect(tab.url()).not.toContain("token=");
+  await expectNoAxeViolations(tab);
+  await tab.getByRole("button", { name: "Restore account" }).click();
+  await expect(tab.getByRole("heading", { name: "Account restored" })).toBeVisible();
+  await tab.getByRole("link", { name: "Enter the code" }).click();
+  await expect(tab).toHaveURL(`${APP}/forgot`);
+  await expect(tab.getByText(email)).toBeVisible();
+  const { code } = await readResetEmail(request, email);
+  await tab.getByLabel("6-digit code").fill(code);
+  await tab.getByLabel("New password", { exact: true }).fill(NEW_PASSWORD);
+  await tab.getByRole("button", { name: "Save password and sign in" }).click();
+  await expect(tab).toHaveURL(`${APP}/home`);
+  await inbox.close();
 
-  await signInAs(otherDevice, request, { email: owner.email, password: NEW_PASSWORD });
-  await other.goto("/home");
-  await expect
-    .poll(() => accountIdsIn(other, vault), { timeout: 15_000 })
-    .not.toContain(owner.accountId);
-  await otherDevice.close();
+  expect((await signIn(request, email, OLD_PASSWORD)).status()).toBe(401);
 });

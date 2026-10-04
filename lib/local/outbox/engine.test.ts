@@ -32,6 +32,7 @@ import {
   requestSync,
   resetSyncEngine,
   resumeSyncEngine,
+  setSyncTransport,
   startSyncEngine,
 } from "./engine";
 import { operationPayload } from "./envelope";
@@ -504,6 +505,39 @@ describe("backoff", () => {
     expect(cancelled).toHaveBeenCalled();
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
+});
+
+describe("an account past its email deadline (T-239)", () => {
+  const closedDoor = () =>
+    Promise.resolve(
+      json({ code: "EMAIL_CONFIRMATION_REQUIRED", message: "confirm" }, { status: 403 }),
+    );
+
+  it.each(["batch", "routes"] as const)(
+    "keeps the queue and stops knocking when the %s transport meets the door",
+    async (transport) => {
+      const vault = await vaultWith();
+      const waits: number[] = [];
+      startSyncEngine({
+        random: () => 1,
+        schedule: (_run, delayMs) => {
+          waits.push(delayMs);
+          return () => undefined;
+        },
+      });
+      setSyncTransport(transport);
+      await seed(vault.db, [{ seq: 1 }]);
+      fetchMock.mockImplementation(closedDoor);
+
+      await requestSync();
+      await requestSync();
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(waits).toEqual([]);
+      expect(isSyncPaused()).toBe(true);
+      expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([1]);
+    },
+  );
 });
 
 describe("a session that died under the queue (F-26)", () => {

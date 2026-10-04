@@ -7,7 +7,14 @@ import { clientIpOf } from "@/lib/api/client-ip";
 import { REQUEST_ID_HEADER } from "@/lib/api/request-id";
 import { env } from "@/lib/env";
 import { LOCALE_COOKIE } from "@/lib/i18n/routing";
-import type { AuthTokens, EmailChangeConfirmed, ErrorResponse, User } from "@/types/api";
+import type {
+  AuthTokens,
+  EmailChangeConfirmed,
+  ErrorResponse,
+  PasswordResetDone,
+  SignUpStarted,
+  User,
+} from "@/types/api";
 
 import {
   ACCESS_COOKIE,
@@ -22,6 +29,13 @@ import {
 } from "./cookies";
 import { decodeAccessToken } from "./jwt";
 import { isTrustedOrigin } from "./origin";
+import {
+  expiredSignUpCookie,
+  parseSignUpCookie,
+  type PendingSignUp,
+  SIGN_UP_COOKIE,
+  signUpCookie,
+} from "./sign-up-cookie";
 
 export const AUTH_JSON_LIMIT_BYTES = 10_000;
 
@@ -102,8 +116,9 @@ export function sessionResponse(
   user: User | undefined,
   status: number,
   requestId: string | null,
+  extra: Record<string, unknown> = {},
 ): NextResponse {
-  const response = NextResponse.json(user ? { user } : {}, { status });
+  const response = NextResponse.json(user ? { user, ...extra } : extra, { status });
   applyCookies(response, sessionCookies(tokens, user?.id));
   if (user?.locale) applyCookies(response, [localeCookie(LOCALE_COOKIE, user.locale)]);
   if (requestId) response.headers.set(REQUEST_ID_HEADER, requestId);
@@ -150,13 +165,20 @@ interface ForwardOptions {
   sendDeviceToken: boolean;
   sendSession?: boolean;
   sendRefreshToken?: boolean;
+  fields?: Record<string, string>;
+}
+
+interface Forwarded {
+  upstream: Response;
+  requestId: string | null;
+  body: unknown;
 }
 
 async function forwardAuthRequest(
   path: string,
   request: NextRequest,
-  { sendDeviceToken, sendSession = false, sendRefreshToken = false }: ForwardOptions,
-): Promise<{ upstream: Response; requestId: string | null } | NextResponse> {
+  { sendDeviceToken, sendSession = false, sendRefreshToken = false, fields }: ForwardOptions,
+): Promise<Forwarded | NextResponse> {
   const denied = untrustedOriginResponse(request);
   if (denied) return denied;
   const body = await readJsonBody(request);
@@ -167,9 +189,10 @@ async function forwardAuthRequest(
     );
   }
   const requestId = forwardedRequestId(request);
+  const withFields = fields && isFields(body) ? { ...body, ...fields } : body;
   const withDevice = sendDeviceToken
-    ? withDeviceToken(body, request.cookies.get(DEVICE_COOKIE)?.value)
-    : body;
+    ? withDeviceToken(withFields, request.cookies.get(DEVICE_COOKIE)?.value)
+    : withFields;
   const upstream = await backendFetch(path, {
     method: "POST",
     body: sendRefreshToken
@@ -180,12 +203,34 @@ async function forwardAuthRequest(
     clientIp: clientIpOf(request),
     userAgent: request.headers.get("user-agent"),
   });
-  return { upstream, requestId };
+  return { upstream, requestId, body };
+}
+
+function emptyAnswer(path: string): NextResponse {
+  return NextResponse.json(
+    { error: "UpstreamError", message: `Empty answer from ${path}`, code: "INTERNAL" },
+    { status: 502 },
+  );
+}
+
+async function signedIn(
+  path: string,
+  { upstream, requestId }: Forwarded,
+  extraCookies: CookieSpec[] = [],
+): Promise<NextResponse> {
+  const tokens = await readBackendJson<AuthTokens & Partial<Pick<PasswordResetDone, "restored">>>(
+    upstream,
+  );
+  if (!tokens) return emptyAnswer(path);
+  const extra = typeof tokens.restored === "boolean" ? { restored: tokens.restored } : {};
+  const response = sessionResponse(tokens, tokens.user, upstream.status, requestId, extra);
+  if (tokens.deviceToken) applyCookies(response, [deviceCookie(tokens.deviceToken)]);
+  return applyCookies(response, extraCookies);
 }
 
 // The backend reads the reset's body strictly: no device token there.
 export async function authenticate(
-  path: "/auth/login" | "/auth/register" | "/auth/password/reset",
+  path: "/auth/login" | "/auth/login/restore" | "/auth/password/reset",
   request: NextRequest,
 ): Promise<NextResponse> {
   return withBackend(async () => {
@@ -193,18 +238,120 @@ export async function authenticate(
       sendDeviceToken: path !== "/auth/password/reset",
     });
     if (forwarded instanceof NextResponse) return forwarded;
-    const { upstream, requestId } = forwarded;
+    if (!forwarded.upstream.ok) return passThroughError(forwarded.upstream, forwarded.requestId);
+    return signedIn(path, forwarded);
+  });
+}
+
+function signUpAnswer(pending: PendingSignUp, now = Date.now()) {
+  return {
+    email: pending.email,
+    expiresAt: new Date(pending.expiresAt).toISOString(),
+    resendAfterSeconds: Math.max(0, Math.ceil((pending.resendAt - now) / 1000)),
+  };
+}
+
+const noStore = { "cache-control": "no-store" };
+
+function signUpExpired(): NextResponse {
+  const response = NextResponse.json(
+    { error: "Conflict", message: "This sign-up is over", code: "SIGN_UP_EXPIRED" },
+    { status: 409 },
+  );
+  return applyCookies(response, [expiredSignUpCookie()]);
+}
+
+const typedEmail = (body: unknown): string =>
+  isFields(body) && typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+
+export function startSignUp(request: NextRequest): Promise<NextResponse> {
+  return withBackend(async () => {
+    const forwarded = await forwardAuthRequest("/auth/sign-up", request, { sendDeviceToken: true });
+    if (forwarded instanceof NextResponse) return forwarded;
+    const { upstream, requestId, body } = forwarded;
     if (!upstream.ok) return passThroughError(upstream, requestId);
-    const tokens = await readBackendJson<AuthTokens>(upstream);
-    if (!tokens) {
+    const started = await readBackendJson<SignUpStarted>(upstream);
+    if (!started) return emptyAnswer("/auth/sign-up");
+    const now = Date.now();
+    const pending: PendingSignUp = {
+      token: started.signUpToken,
+      email: typedEmail(body),
+      expiresAt: Date.parse(started.expiresAt),
+      resendAt: now + started.resendAfterSeconds * 1000,
+    };
+    const response = NextResponse.json(signUpAnswer(pending, now), {
+      status: upstream.status,
+      headers: noStore,
+    });
+    if (requestId) response.headers.set(REQUEST_ID_HEADER, requestId);
+    return applyCookies(response, [signUpCookie(pending, now)]);
+  });
+}
+
+export function pendingSignUp(request: NextRequest): NextResponse {
+  const pending = parseSignUpCookie(request.cookies.get(SIGN_UP_COOKIE)?.value);
+  if (!pending) return new NextResponse(null, { status: 204, headers: noStore });
+  return NextResponse.json(signUpAnswer(pending), { headers: noStore });
+}
+
+export function forgetSignUp(request: NextRequest): NextResponse {
+  const denied = untrustedOriginResponse(request);
+  if (denied) return denied;
+  return applyCookies(new NextResponse(null, { status: 204 }), [expiredSignUpCookie()]);
+}
+
+export function resendSignUp(request: NextRequest): Promise<NextResponse> {
+  return withBackend(async () => {
+    const denied = untrustedOriginResponse(request);
+    if (denied) return denied;
+    const pending = parseSignUpCookie(request.cookies.get(SIGN_UP_COOKIE)?.value);
+    if (!pending) return signUpExpired();
+    const forwarded = await forwardAuthRequest("/auth/sign-up/resend", request, {
+      sendDeviceToken: true,
+      fields: { signUpToken: pending.token },
+    });
+    if (forwarded instanceof NextResponse) return forwarded;
+    const { upstream, requestId } = forwarded;
+    if (!upstream.ok) {
+      const response = await passThroughError(upstream, requestId);
+      return upstream.status === 409 ? applyCookies(response, [expiredSignUpCookie()]) : response;
+    }
+    const answer = await readBackendJson<{ resendAfterSeconds: number }>(upstream);
+    if (!answer) return emptyAnswer("/auth/sign-up/resend");
+    const now = Date.now();
+    const resent = { ...pending, resendAt: now + answer.resendAfterSeconds * 1000 };
+    const response = NextResponse.json(signUpAnswer(resent, now), {
+      status: upstream.status,
+      headers: noStore,
+    });
+    if (requestId) response.headers.set(REQUEST_ID_HEADER, requestId);
+    return applyCookies(response, [signUpCookie(resent, now)]);
+  });
+}
+
+export function confirmSignUp(request: NextRequest): Promise<NextResponse> {
+  return withBackend(async () => {
+    const denied = untrustedOriginResponse(request);
+    if (denied) return denied;
+    const pending = parseSignUpCookie(request.cookies.get(SIGN_UP_COOKIE)?.value);
+    if (!pending) {
       return NextResponse.json(
-        { error: "UpstreamError", message: "Empty auth response", code: "INTERNAL" },
-        { status: 502 },
+        { error: "BadRequest", message: "Invalid code", code: "SIGN_UP_CODE_INVALID" },
+        { status: 400 },
       );
     }
-    const response = sessionResponse(tokens, tokens.user, upstream.status, requestId);
-    if (tokens.deviceToken) applyCookies(response, [deviceCookie(tokens.deviceToken)]);
-    return response;
+    const forwarded = await forwardAuthRequest("/auth/sign-up/confirm", request, {
+      sendDeviceToken: false,
+      fields: { signUpToken: pending.token },
+    });
+    if (forwarded instanceof NextResponse) return forwarded;
+    if (!forwarded.upstream.ok) {
+      const response = await passThroughError(forwarded.upstream, forwarded.requestId);
+      return forwarded.upstream.status === 409
+        ? applyCookies(response, [expiredSignUpCookie()])
+        : response;
+    }
+    return signedIn("/auth/sign-up/confirm", forwarded, [expiredSignUpCookie()]);
   });
 }
 
@@ -216,7 +363,7 @@ export function requestPasswordReset(request: NextRequest): Promise<NextResponse
 const EMAIL_FORWARDS = {
   "/auth/email/verify": { sendDeviceToken: false, sendSession: true },
   "/auth/email/resend": { sendDeviceToken: true, sendSession: true },
-  "/auth/email/not-me": { sendDeviceToken: false, sendSession: false },
+  "/auth/email/restore": { sendDeviceToken: false, sendSession: false },
 } as const satisfies Record<string, ForwardOptions>;
 
 export function confirmEmail(

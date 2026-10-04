@@ -145,11 +145,13 @@ export function DeleteAccountSheet({
   onClose,
   pending,
   offline = false,
+  keptUntil,
   error,
   onConfirm,
 }: SheetProps & {
   pending: boolean;
   offline?: boolean;
+  keptUntil: string;
   error: unknown;
   onConfirm: (currentPassword: string) => void;
 }) {
@@ -189,7 +191,12 @@ export function DeleteAccountSheet({
           if (password !== "" && !offline) onConfirm(password);
         }}
       >
-        <Alert tone="danger">{t("settings.delete.body")}</Alert>
+        <Alert tone="danger">
+          {t.rich("settings.delete.body", {
+            date: keptUntil,
+            b: (chunks) => <b className="font-semibold">{chunks}</b>,
+          })}
+        </Alert>
         {offline && <Alert tone="warning">{t("settings.needsConnection")}</Alert>}
         {failure && !wrongPassword && <Alert tone="danger">{t(failure.messageKey)}</Alert>}
         <Field

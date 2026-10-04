@@ -95,7 +95,18 @@ function infoOf(file: string): SourceInfo {
     ) {
       return;
     }
-    if ((ts.isStringLiteralLike(node) || ts.isTemplateHead(node)) && file !== SCOPES_FILE) {
+    // The source file has no parent, whatever the node type says.
+    const { parent } = node as { parent?: ts.Node };
+    const namespaceArgument =
+      parent !== undefined &&
+      ts.isCallExpression(parent) &&
+      ts.isIdentifier(parent.expression) &&
+      parent.expression.text === "useTranslations";
+    if (
+      (ts.isStringLiteralLike(node) || ts.isTemplateHead(node)) &&
+      file !== SCOPES_FILE &&
+      !namespaceArgument
+    ) {
       info.literals.push(node.text);
     }
     if (

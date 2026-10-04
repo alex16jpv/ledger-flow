@@ -134,8 +134,18 @@
       "invalidCredentials": "Wrong email or password.",
       "tooManyAttempts": "Too many attempts.",
       "retryIn": "You can try again in {time}.",
-      "deleted": "Your account was deleted. Sign up again with the same email and password whenever you want to come back.",
-      "wiped": "Everything on this device was deleted. Your account is still there: sign in to download it again."
+      "deleted": "It’s kept until {date}: signing in before then restores it.",
+      "wiped": "Everything on this device was deleted. Your account is still there: sign in to download it again.",
+      "deletedTitle": "Your account was deleted.",
+      "restore": {
+        "title": "Restore your account?",
+        "body": "You deleted this account on <b>{deletedOn}</b>. It’s kept until <b>{keptUntil}</b>, and then erased for good.",
+        "note": "Restoring brings back everything in it, as it was. The shared groups you left when you deleted it stay left.",
+        "submit": "Restore account",
+        "notNow": "Not now",
+        "offline": "Restoring needs a connection.",
+        "failed": "Something went wrong on our side. Nothing was restored: try again."
+      }
     },
     "register": {
       "title": "Create account",
@@ -156,18 +166,26 @@
       "submit": "Create account",
       "alreadyHaveAccount": "Already have an account?",
       "signIn": "Sign in",
-      "emailTaken": "This email already has an account. <signIn>Sign in</signIn> or <reset>reset your password</reset>. If you deleted it, sign up with the password it had to bring it back.",
-      "maybeCreated": "Your account may already exist: try signing in before registering again.",
-      "reactivated": {
-        "title": "Welcome back.",
-        "body": "We restored your previous account with its full history; the currency is kept."
-      },
       "currencyPicker": "Choose your currency",
       "timeZonePicker": "Choose your time zone",
       "consentRequired": "You need to accept the privacy policy to continue.",
       "unavailable": {
         "title": "You can’t create an account here.",
         "body": "It needs Cloudflare’s check, which this version of the app doesn’t have."
+      },
+      "serverError": "Something went wrong on our side. Nothing was created: try again.",
+      "code": {
+        "title": "Check your email",
+        "subtitle": "We sent an email to <b>{email}</b>. Type the 6-digit code in it to finish creating your account."
+      },
+      "expired": {
+        "title": "That sign-up is over.",
+        "body": "It lasts 24 hours, and a newer Create account with the same email replaces it. Fill in the form again to get a new code."
+      },
+      "offline": "Creating your account needs a connection.",
+      "taken": {
+        "title": "That email has an account now.",
+        "body": "It was created while you were waiting for your code. Sign in with it, or use another email here."
       }
     },
     "offline": "You’re offline.",
@@ -205,44 +223,18 @@
       "failedTitle": "We couldn’t check that you’re a person.",
       "failedBody": "Try again. If it keeps failing, something in this browser may be blocking Cloudflare’s check, such as a content blocker."
     },
-    "keep": {
-      "title": "Keep what’s in this account?",
-      "subtitle": "Your email is confirmed now. Until today it never was, so someone else could have created this account with your address.",
-      "created": "Created",
-      "accounts": "Accounts",
-      "transactions": "Transactions",
-      "help": "Keep it if you created it and never got around to confirming the email. Start fresh if you didn’t: nothing somebody else put in it stays with you.",
-      "keep": "Keep it",
-      "startFresh": "Start fresh",
-      "confirmTitle": "Start fresh?",
-      "confirmBody": "Everything in this account is <b>deleted for good</b>: its accounts, transactions, budgets and categories, and it leaves every shared group. Your email and the password you just chose stay.",
-      "confirm": "Delete everything and start",
-      "goBack": "Go back",
-      "detailsTitle": "Your details",
-      "detailsSubtitle": "A fresh start takes nothing from before, not even the name. You can change these later in Settings.",
-      "namePlaceholder": "Your name",
-      "offline": "Answering needs a connection."
-    },
     "verify": {
       "title": "Confirm your email",
-      "body": "Use the button to confirm that the address this email reached belongs to your Ledger Flow account.",
+      "body": "Use the button to confirm that this address is yours.",
       "submit": "Confirm email",
       "doneTitle": "Email confirmed",
-      "doneBody": "You can invite people to Shared and accept their invitations.",
-      "deadBody": "A confirmation link works for 24 hours and only once, and asking for another code cancels it."
-    },
-    "notMe": {
-      "title": "Delete the account that used your address?",
-      "body": "Somebody signed up to Ledger Flow with this address and never confirmed it. This deletes that account and everything in it, for good, and frees your address.",
-      "warningTitle": "If you signed up yourself, don’t.",
-      "warningBody": "Use the code or the Confirm email button in the same message instead.",
-      "submit": "Delete that account",
-      "keep": "Don’t delete it",
-      "doneTitle": "That account is gone",
-      "doneBody": "Your address is free: you can create your own account with it.",
+      "doneBody": "Nothing else changes in your account.",
+      "deadBody": "A link to create an account or to confirm an email works for 24 hours and only once, and asking for another code cancels it.",
+      "readyTitle": "Your account is ready",
+      "readyBody": "Sign in with this email and the password you chose.",
+      "signIn": "Sign in",
       "createAccount": "Create account",
-      "deadBody": "It only works while the account is unconfirmed. If you didn’t confirm it, Forgot your password? takes it back for you.",
-      "forgot": "Forgot your password?"
+      "deadlineDeadBody": "This link worked until its deadline, and only once."
     },
     "link": {
       "openApp": "Open Ledger Flow",
@@ -255,7 +247,30 @@
       "doneTitle": "Your email changed",
       "doneBody": "Every other device was signed out. Sign in with this address from now on.",
       "takenTitle": "That address now belongs to another account",
-      "takenBody": "Your account keeps its current email."
+      "takenBody": "Your account keeps its current email.",
+      "deadBody": "A confirmation link works for 24 hours and only once, and asking for another code cancels it."
+    },
+    "restore": {
+      "title": "Restore your account?",
+      "body": "Your account was deleted. This brings it back with everything in it, except the shared groups it left.",
+      "warning": "Every device is signed out and <b>your current password stops working</b>. We’ll email you a code to choose a new one.",
+      "submit": "Restore account",
+      "doneTitle": "Account restored",
+      "doneBody": "Every device was signed out. We sent a code to this address so you can choose a new password: it works for 30 minutes.",
+      "enterCode": "Enter the code",
+      "noCodeBody": "Every device was signed out, and your old password no longer works. We couldn’t send the code to choose a new one: ask for it from Forgot your password?.",
+      "deadBody": "A restore link works for 7 days and only once. Until the account is erased, Forgot your password? restores it too."
+    },
+    "confirmRequired": {
+      "title": "Confirm your email to continue",
+      "subtitle": "Ledger Flow now asks every account to confirm its email. Nothing in your account has changed: once you confirm, you’re back in.",
+      "queued": "<b>{count, plural, one {# change on this device} other {# changes on this device}}</b> {count, plural, one {is kept and syncs} other {are kept and sync}} once you confirm.",
+      "signOut": "Sign out",
+      "changeTitle": "Use another email",
+      "changeSubtitle": "We’ll send a code to the new address. Once you confirm it, it becomes your account’s email.",
+      "newEmail": "New email",
+      "currentPasswordHelp": "So nobody else can change your email.",
+      "back": "Back"
     }
   },
   "onboarding": {
@@ -316,7 +331,9 @@
     },
     "owedBothWays": "{owed} owed to you · you owe {owe}",
     "owedToYou": "{owed} owed to you",
-    "passwordChanged": "Password changed. Every other device was signed out."
+    "passwordChanged": "Password changed. Every other device was signed out.",
+    "accountRestored": "Account restored",
+    "accountRestoredByReset": "Account restored. Every other device was signed out."
   },
   "settings": {
     "title": "Settings",
@@ -401,7 +418,9 @@
       "resend": "Resend",
       "resendIn": "Resend in {time}",
       "cancelChange": "Cancel change",
-      "cancelled": "Change cancelled. Your account keeps {email}."
+      "cancelled": "Change cancelled. Your account keeps {email}.",
+      "notConfirmedByMeta": "Confirm your email by {date}",
+      "notConfirmedByHelp": "Confirm it by {date} to keep signing in as usual, and to invite people to Shared and be invited. <confirm>Confirm it</confirm>"
     },
     "sessions": {
       "title": "Active sessions",
@@ -417,7 +436,7 @@
       "signedOut": "Device signed out",
       "signOutOthers": "Sign out all other sessions",
       "signOutOthersTitle": "Sign out every device?",
-      "signOutOthersBody": "This also signs out this device: you’ll need to sign in again here.",
+      "signOutOthersBody": "This also signs out this device: you’ll need to sign in again here. Every device is forgotten too, so each one gets a “New sign-in” email the next time it signs in.",
       "signOutOthersConfirm": "Sign out everywhere",
       "unknownDevice": "Unknown device",
       "empty": "No other sessions"
@@ -474,7 +493,7 @@
     },
     "delete": {
       "title": "Delete my account",
-      "body": "Your account and your financial history are kept for a while so you can come back: signing up again with the same email and this password brings everything back. You’ll be signed out now.",
+      "body": "Your account and everything in it are kept for <b>30 days</b>, until <b>{date}</b>, and then <b>erased for good</b>. Until then, signing in with your email and password restores it. You leave your shared groups now, and restoring doesn’t bring you back into them. You’ll be signed out now.",
       "passwordLabel": "Current password",
       "passwordHelp": "So nobody else can delete your account.",
       "confirm": "Delete account"
@@ -840,7 +859,9 @@
       "takenTitle": "That address now belongs to another account.",
       "takenBody": "Your account keeps its current email.",
       "goneTitle": "This change isn’t waiting any more.",
-      "goneBody": "It was confirmed, cancelled, or its 24 hours passed."
+      "goneBody": "It was confirmed, cancelled, or its 24 hours passed.",
+      "titleBy": "Confirm your email by {date}.",
+      "bodyBy": "After that, signing in asks for a code first. Nothing in your account changes."
     }
   },
   "dev": {
@@ -1002,15 +1023,17 @@
     "LINK_INVALID": "This link no longer works.",
     "CAPTCHA_INVALID": "We couldn’t check that you’re a person. Try again.",
     "CAPTCHA_UNAVAILABLE": "Something went wrong on our side. Nothing changed: try again.",
-    "KEEP_OR_START_FRESH_CLOSED": "That question was already answered.",
-    "START_FRESH_IN_PROGRESS": "Your fresh start is still being prepared. Try again in a minute.",
     "EMAIL_NOT_VERIFIED": "Confirm your email first: invitations wait for it.",
     "EMAIL_ALREADY_VERIFIED": "Your email is already confirmed.",
     "EMAIL_CODE_INVALID": "That code isn’t right. Check the last email we sent.",
     "EMAIL_CODE_EXPIRED": "This code no longer works: it expired, or it was tried too many times. Send a new one.",
     "EMAIL_SEND_FAILED": "We couldn’t send the email. Try again in a few minutes.",
     "EMAIL_CHANGE_NOT_PENDING": "This change isn’t waiting any more: it was confirmed, cancelled, or its 24 hours passed.",
-    "EMAIL_CHANGE_REQUIRES_VERIFICATION": "Your email changes only once you confirm the new address. Reload the app and save it again."
+    "EMAIL_CHANGE_REQUIRES_VERIFICATION": "Your email changes only once you confirm the new address. Reload the app and save it again.",
+    "SIGN_UP_CODE_INVALID": "That code doesn’t work. It may be mistyped, out of date or replaced by a newer one: check the last email we sent, or ask for a new code.",
+    "SIGN_UP_EXPIRED": "That sign-up is over. Fill in the form again to get a new code.",
+    "ACCOUNT_DELETED": "This account was deleted.",
+    "EMAIL_CONFIRMATION_REQUIRED": "Confirm your email to continue."
   },
   "validation": {
     "required": "This field is required.",

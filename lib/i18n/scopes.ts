@@ -1,6 +1,6 @@
 export const MESSAGE_SCOPES = {
   root: ["public.error"],
-  auth: ["auth", "common", "errors", "settings", "validation"],
+  auth: ["auth", "common", "errors", "settings", "states.confirmEmail", "validation"],
   onboarding: [
     "accountTypeDescriptions",
     "accountTypes",
@@ -48,7 +48,7 @@ export const MESSAGE_SCOPES = {
     "common",
     "dev",
     "errors",
-    "settings",
+    "settings.appearance",
     "states",
   ],
 } as const satisfies Record<string, readonly string[]>;

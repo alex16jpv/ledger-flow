@@ -134,8 +134,18 @@
       "invalidCredentials": "Correo o contraseña incorrectos.",
       "tooManyAttempts": "Demasiados intentos.",
       "retryIn": "Puedes intentarlo de nuevo en {time}.",
-      "deleted": "Tu cuenta fue eliminada. Regístrate de nuevo con el mismo correo y la misma contraseña cuando quieras volver.",
-      "wiped": "Se borró todo en este dispositivo. Tu cuenta sigue ahí: entra para descargarla otra vez."
+      "deleted": "Se guarda hasta el {date}: si entras antes, se restaura.",
+      "wiped": "Se borró todo en este dispositivo. Tu cuenta sigue ahí: entra para descargarla otra vez.",
+      "deletedTitle": "Tu cuenta se eliminó.",
+      "restore": {
+        "title": "¿Restaurar tu cuenta?",
+        "body": "Eliminaste esta cuenta el <b>{deletedOn}</b>. Se guarda hasta el <b>{keptUntil}</b>, y después se borra para siempre.",
+        "note": "Al restaurarla vuelve todo lo que tenía, tal como estaba. Los grupos compartidos de los que saliste al eliminarla siguen sin ti.",
+        "submit": "Restaurar la cuenta",
+        "notNow": "Ahora no",
+        "offline": "Restaurar necesita conexión.",
+        "failed": "Algo falló de nuestro lado. No se restauró nada: inténtalo de nuevo."
+      }
     },
     "register": {
       "title": "Crear cuenta",
@@ -156,18 +166,26 @@
       "submit": "Crear cuenta",
       "alreadyHaveAccount": "¿Ya tienes cuenta?",
       "signIn": "Entrar",
-      "emailTaken": "Este correo ya tiene una cuenta. <signIn>Entra</signIn> o <reset>restablece tu contraseña</reset>. Si la eliminaste, regístrate con la contraseña que tenía para recuperarla.",
-      "maybeCreated": "Puede que tu cuenta ya se haya creado: intenta entrar antes de registrarte otra vez.",
-      "reactivated": {
-        "title": "Bienvenido de vuelta.",
-        "body": "Restauramos tu cuenta anterior con todo su historial; la moneda se conserva."
-      },
       "currencyPicker": "Elige tu moneda",
       "timeZonePicker": "Elige tu zona horaria",
       "consentRequired": "Debes aceptar la política de privacidad para continuar.",
       "unavailable": {
         "title": "Aquí no se puede crear una cuenta.",
         "body": "Hace falta la comprobación de Cloudflare, y esta versión de la app no la tiene."
+      },
+      "serverError": "Algo falló de nuestro lado. No se creó nada: inténtalo de nuevo.",
+      "code": {
+        "title": "Revisa tu correo",
+        "subtitle": "Enviamos un correo a <b>{email}</b>. Escribe el código de 6 cifras que trae para terminar de crear tu cuenta."
+      },
+      "expired": {
+        "title": "Ese registro ya terminó.",
+        "body": "Dura 24 horas, y un Crear cuenta más reciente con el mismo correo lo reemplaza. Vuelve a llenar el formulario para recibir un código nuevo."
+      },
+      "offline": "Crear tu cuenta necesita conexión.",
+      "taken": {
+        "title": "Ese correo ya tiene una cuenta.",
+        "body": "Se creó mientras esperabas tu código. Entra con él, o usa aquí otro correo."
       }
     },
     "offline": "Sin conexión.",
@@ -205,44 +223,18 @@
       "failedTitle": "No pudimos comprobar que eres una persona.",
       "failedBody": "Inténtalo de nuevo. Si sigue fallando, puede que algo en este navegador esté bloqueando la comprobación de Cloudflare, como un bloqueador de contenido."
     },
-    "keep": {
-      "title": "¿Conservar lo que hay en esta cuenta?",
-      "subtitle": "Tu correo ya está confirmado. Hasta hoy nunca lo estuvo, así que otra persona pudo crear esta cuenta con tu dirección.",
-      "created": "Creada",
-      "accounts": "Cuentas",
-      "transactions": "Movimientos",
-      "help": "Consérvala si la creaste tú y nunca llegaste a confirmar el correo. Empieza de cero si no: nada de lo que otra persona puso en ella se queda contigo.",
-      "keep": "Conservarla",
-      "startFresh": "Empezar de cero",
-      "confirmTitle": "¿Empezar de cero?",
-      "confirmBody": "Todo lo que hay en esta cuenta se <b>elimina para siempre</b>: sus cuentas, movimientos, presupuestos y categorías, y sale de todos los grupos compartidos. Tu correo y la contraseña que acabas de elegir se quedan.",
-      "confirm": "Eliminar todo y empezar",
-      "goBack": "Volver",
-      "detailsTitle": "Tus datos",
-      "detailsSubtitle": "Empezar de cero no conserva nada de antes, ni siquiera el nombre. Puedes cambiar estos datos después en Ajustes.",
-      "namePlaceholder": "Tu nombre",
-      "offline": "Responder necesita conexión."
-    },
     "verify": {
       "title": "Confirma tu correo",
-      "body": "Usa el botón para confirmar que la dirección a la que llegó este correo es la de tu cuenta de Ledger Flow.",
+      "body": "Usa el botón para confirmar que esta dirección es tuya.",
       "submit": "Confirmar correo",
       "doneTitle": "Correo confirmado",
-      "doneBody": "Ya puedes invitar a gente en Shared y aceptar sus invitaciones.",
-      "deadBody": "Un enlace de confirmación sirve durante 24 horas y una sola vez, y pedir otro código lo anula."
-    },
-    "notMe": {
-      "title": "¿Eliminar la cuenta que usó tu dirección?",
-      "body": "Alguien se registró en Ledger Flow con esta dirección y nunca la confirmó. Esto elimina esa cuenta y todo lo que tiene, para siempre, y libera tu dirección.",
-      "warningTitle": "Si te registraste tú, no lo hagas.",
-      "warningBody": "Usa el código o el botón Confirmar correo del mismo mensaje.",
-      "submit": "Eliminar esa cuenta",
-      "keep": "No la elimines",
-      "doneTitle": "Esa cuenta ya no existe",
-      "doneBody": "Tu dirección está libre: puedes crear tu propia cuenta con ella.",
+      "doneBody": "En tu cuenta no cambia nada más.",
+      "deadBody": "Un enlace para crear una cuenta o para confirmar un correo sirve durante 24 horas y una sola vez, y pedir otro código lo anula.",
+      "readyTitle": "Tu cuenta está lista",
+      "readyBody": "Entra con este correo y la contraseña que elegiste.",
+      "signIn": "Entrar",
       "createAccount": "Crear cuenta",
-      "deadBody": "Solo sirve mientras la cuenta no esté confirmada. Si no la confirmaste tú, ¿Olvidaste tu contraseña? te la devuelve.",
-      "forgot": "¿Olvidaste tu contraseña?"
+      "deadlineDeadBody": "Este enlace servía hasta su fecha límite, y una sola vez."
     },
     "link": {
       "openApp": "Abrir Ledger Flow",
@@ -251,11 +243,34 @@
     "confirmNewEmail": {
       "title": "¿Pasar tu cuenta a esta dirección?",
       "body": "El correo de tu cuenta pasa a ser la dirección a la que llegó este mensaje, y se cierra la sesión en tus otros dispositivos. A partir de ahora entras con ella.",
-      "submit": "Confirmar correo nuevo",
+      "submit": "Confirmar nuevo correo",
       "doneTitle": "Tu correo cambió",
       "doneBody": "Se cerró la sesión en todos los demás dispositivos. A partir de ahora entra con esta dirección.",
       "takenTitle": "Esa dirección ahora es de otra cuenta",
-      "takenBody": "Tu cuenta conserva su correo actual."
+      "takenBody": "Tu cuenta conserva su correo actual.",
+      "deadBody": "Un enlace de confirmación sirve durante 24 horas y una sola vez, y pedir otro código lo anula."
+    },
+    "restore": {
+      "title": "¿Restaurar tu cuenta?",
+      "body": "Tu cuenta se eliminó. Esto la trae de vuelta con todo lo que tenía, menos los grupos compartidos de los que salió.",
+      "warning": "Se cierra la sesión en todos los dispositivos y <b>tu contraseña actual deja de servir</b>. Te enviaremos por correo un código para elegir una nueva.",
+      "submit": "Restaurar la cuenta",
+      "doneTitle": "Cuenta restaurada",
+      "doneBody": "Se cerró la sesión en todos los dispositivos. Enviamos un código a esta dirección para que elijas una contraseña nueva: sirve durante 30 minutos.",
+      "enterCode": "Escribir el código",
+      "noCodeBody": "Se cerró la sesión en todos los dispositivos, y tu contraseña anterior ya no sirve. No pudimos enviar el código para elegir una nueva: pídelo desde ¿Olvidaste tu contraseña?.",
+      "deadBody": "Un enlace para restaurar sirve durante 7 días y una sola vez. Hasta que la cuenta se borre para siempre, ¿Olvidaste tu contraseña? también la restaura."
+    },
+    "confirmRequired": {
+      "title": "Confirma tu correo para continuar",
+      "subtitle": "Ledger Flow ahora pide a cada cuenta que confirme su correo. En tu cuenta no cambió nada: en cuanto lo confirmes, vuelves a entrar.",
+      "queued": "<b>{count, plural, one {# cambio en este dispositivo} other {# cambios en este dispositivo}}</b> {count, plural, one {se guarda y se sincroniza} other {se guardan y se sincronizan}} cuando confirmes.",
+      "signOut": "Cerrar sesión",
+      "changeTitle": "Usa otro correo",
+      "changeSubtitle": "Enviaremos un código a la dirección nueva. Cuando la confirmes, pasa a ser el correo de tu cuenta.",
+      "newEmail": "Correo nuevo",
+      "currentPasswordHelp": "Para que nadie más pueda cambiar tu correo.",
+      "back": "Volver"
     }
   },
   "onboarding": {
@@ -316,7 +331,9 @@
     },
     "owedBothWays": "{owed} que te deben · debes {owe}",
     "owedToYou": "{owed} que te deben",
-    "passwordChanged": "Contraseña cambiada. Se cerró la sesión en todos tus demás dispositivos."
+    "passwordChanged": "Contraseña cambiada. Se cerró la sesión en todos tus demás dispositivos.",
+    "accountRestored": "Cuenta restaurada",
+    "accountRestoredByReset": "Cuenta restaurada. Se cerró la sesión en todos tus demás dispositivos."
   },
   "settings": {
     "title": "Ajustes",
@@ -401,7 +418,9 @@
       "resend": "Reenviar",
       "resendIn": "Reenviar en {time}",
       "cancelChange": "Cancelar el cambio",
-      "cancelled": "Cambio cancelado. Tu cuenta sigue con {email}."
+      "cancelled": "Cambio cancelado. Tu cuenta sigue con {email}.",
+      "notConfirmedByMeta": "Confirma tu correo a más tardar el {date}",
+      "notConfirmedByHelp": "Confírmalo a más tardar el {date} para seguir entrando como siempre, y para invitar a gente en Shared y que te inviten. <confirm>Confírmalo</confirm>"
     },
     "sessions": {
       "title": "Sesiones activas",
@@ -417,7 +436,7 @@
       "signedOut": "Sesión cerrada",
       "signOutOthers": "Cerrar todas las demás sesiones",
       "signOutOthersTitle": "¿Cerrar sesión en todos los dispositivos?",
-      "signOutOthersBody": "También cierra este dispositivo: tendrás que iniciar sesión de nuevo aquí.",
+      "signOutOthersBody": "También cierra este dispositivo: tendrás que iniciar sesión de nuevo aquí. Además, todos los dispositivos se olvidan, así que cada uno recibirá un correo de «Nuevo inicio de sesión» la próxima vez que entre.",
       "signOutOthersConfirm": "Cerrar en todos",
       "unknownDevice": "Dispositivo desconocido",
       "empty": "No hay otras sesiones"
@@ -474,7 +493,7 @@
     },
     "delete": {
       "title": "Eliminar mi cuenta",
-      "body": "Tu cuenta y tu historial financiero se conservan un tiempo para que puedas volver: registrarte de nuevo con el mismo correo y esta contraseña lo recupera todo. Se cerrará tu sesión ahora.",
+      "body": "Tu cuenta y todo lo que tiene se guardan <b>30 días</b>, hasta el <b>{date}</b>, y después se <b>borran para siempre</b>. Hasta entonces, si entras con tu correo y tu contraseña, se restaura. Sales de tus grupos compartidos ahora, y restaurarla no te devuelve a ellos. Se cerrará tu sesión ahora.",
       "passwordLabel": "Contraseña actual",
       "passwordHelp": "Para que nadie más pueda eliminar tu cuenta.",
       "confirm": "Eliminar cuenta"
@@ -840,7 +859,9 @@
       "takenTitle": "Esa dirección ahora es de otra cuenta.",
       "takenBody": "Tu cuenta conserva su correo actual.",
       "goneTitle": "Este cambio ya no está esperando.",
-      "goneBody": "Se confirmó, se canceló o pasaron sus 24 horas."
+      "goneBody": "Se confirmó, se canceló o pasaron sus 24 horas.",
+      "titleBy": "Confirma tu correo a más tardar el {date}.",
+      "bodyBy": "Después, para entrar te pediremos primero un código. En tu cuenta no cambia nada."
     }
   },
   "dev": {
@@ -1002,15 +1023,17 @@
     "LINK_INVALID": "Este enlace ya no sirve.",
     "CAPTCHA_INVALID": "No pudimos comprobar que eres una persona. Inténtalo de nuevo.",
     "CAPTCHA_UNAVAILABLE": "Algo falló de nuestro lado. No cambió nada: inténtalo de nuevo.",
-    "KEEP_OR_START_FRESH_CLOSED": "Esa pregunta ya se respondió.",
-    "START_FRESH_IN_PROGRESS": "Todavía estamos preparando tu nuevo comienzo. Inténtalo en un minuto.",
     "EMAIL_NOT_VERIFIED": "Primero confirma tu correo: las invitaciones lo esperan.",
     "EMAIL_ALREADY_VERIFIED": "Tu correo ya está confirmado.",
     "EMAIL_CODE_INVALID": "Ese código no es correcto. Revisa el último correo que te enviamos.",
     "EMAIL_CODE_EXPIRED": "Este código ya no sirve: venció o se probó demasiadas veces. Envía uno nuevo.",
     "EMAIL_SEND_FAILED": "No pudimos enviar el correo. Vuelve a intentarlo en unos minutos.",
     "EMAIL_CHANGE_NOT_PENDING": "Este cambio ya no está esperando: se confirmó, se canceló o pasaron sus 24 horas.",
-    "EMAIL_CHANGE_REQUIRES_VERIFICATION": "Tu correo solo cambia cuando confirmas la dirección nueva. Recarga la app y vuelve a guardarlo."
+    "EMAIL_CHANGE_REQUIRES_VERIFICATION": "Tu correo solo cambia cuando confirmas la dirección nueva. Recarga la app y vuelve a guardarlo.",
+    "SIGN_UP_CODE_INVALID": "Ese código no sirve. Puede estar mal escrito, vencido o reemplazado por uno más nuevo: revisa el último correo que te enviamos o pide un código nuevo.",
+    "SIGN_UP_EXPIRED": "Ese registro ya terminó. Vuelve a llenar el formulario para recibir un código nuevo.",
+    "ACCOUNT_DELETED": "Esta cuenta se eliminó.",
+    "EMAIL_CONFIRMATION_REQUIRED": "Confirma tu correo para continuar."
   },
   "validation": {
     "required": "Este campo es obligatorio.",

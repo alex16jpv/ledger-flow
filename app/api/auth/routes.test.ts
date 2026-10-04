@@ -8,8 +8,13 @@ import {
   cancelEmailChange,
   confirmEmail,
   confirmEmailChange,
+  confirmSignUp,
+  forgetSignUp,
+  pendingSignUp,
   requestEmailChange,
   requestPasswordReset,
+  resendSignUp,
+  startSignUp,
 } from "@/lib/auth/handlers";
 import { SESSION_END_HEADER } from "@/lib/auth/session-end";
 
@@ -129,7 +134,7 @@ describe("login handler", () => {
     ).toBe(true);
   });
 
-  it.each(["/auth/login", "/auth/register"] as const)(
+  it.each(["/auth/login", "/auth/login/restore"] as const)(
     "sends %s the device cookie, never a device token the browser wrote",
     async (path) => {
       fetchMock.mockResolvedValue(json(tokens, { status: 200 }));
@@ -406,14 +411,15 @@ describe("email confirmation handlers", () => {
     expect(JSON.parse(init?.body as string)).toEqual({ captcha: "tok", deviceToken: "dev1" });
   });
 
-  it("sends It wasn't me without any session, whatever this browser holds", async () => {
-    fetchMock.mockResolvedValue(json({ message: "Deleted" }));
-    await confirmEmail(
-      "/auth/email/not-me",
-      post("/api/auth/not-me", { token: "t".repeat(96) }, { cookie: "__Host-access=acc" }),
+  it("sends a restore link without any session, whatever this browser holds", async () => {
+    fetchMock.mockResolvedValue(json({ email: "a@b.co", codeSent: true }));
+    const response = await confirmEmail(
+      "/auth/email/restore",
+      post("/api/auth/restore", { token: "t".repeat(64) }, { cookie: "__Host-access=acc" }),
     );
+    await expect(response.json()).resolves.toEqual({ email: "a@b.co", codeSent: true });
     const [url, init] = fetchMock.mock.calls[0] ?? [];
-    expect(url).toBe("http://backend.test/auth/email/not-me");
+    expect(url).toBe("http://backend.test/auth/email/restore");
     expect(new Headers(init?.headers).get("authorization")).toBeNull();
   });
 
@@ -454,6 +460,15 @@ describe("reset-password handler", () => {
     expect(cookies.some((c) => c.startsWith("__Secure-device=dev2"))).toBe(true);
   });
 
+  it("says when the new password brought a deleted account back", async () => {
+    fetchMock.mockResolvedValue(json({ ...tokens, restored: true }, { status: 200 }));
+    const response = await authenticate(
+      "/auth/password/reset",
+      post("/api/auth/reset", { token: "t".repeat(43), newPassword: "LedgerFlow!2027" }),
+    );
+    await expect(response.json()).resolves.toEqual({ user: tokens.user, restored: true });
+  });
+
   it("does not add the device token to a body the backend reads strictly", async () => {
     fetchMock.mockResolvedValue(json(tokens, { status: 200 }));
     await authenticate(
@@ -469,6 +484,135 @@ describe("reset-password handler", () => {
       code: "123456",
       newPassword: "LedgerFlow!2027",
     });
+  });
+});
+
+describe("sign-up handlers", () => {
+  const started = {
+    signUpToken: "s".repeat(43),
+    expiresAt: "2099-01-02T00:00:00.000Z",
+    resendAfterSeconds: 60,
+  };
+  const signUpCookieOf = (response: Response) =>
+    setCookies(response).find((c) => c.startsWith("__Secure-sign-up="));
+  const cookieValue = (cookie: string | undefined) => cookie?.split(";")[0]?.split("=")[1] ?? "";
+  const body = {
+    name: "Ana",
+    email: " Ana@Example.co ",
+    password: "LedgerFlow!2026",
+    currency: "COP",
+    timezone: "America/Bogota",
+    locale: "es",
+    captcha: "tok",
+  };
+
+  async function startedCookie(): Promise<string> {
+    fetchMock.mockResolvedValueOnce(json(started, { status: 202 }));
+    const response = await startSignUp(post("/api/auth/sign-up", body));
+    return `__Secure-sign-up=${cookieValue(signUpCookieOf(response))}`;
+  }
+
+  it("keeps the sign-up's token in this browser's cookie and never gives it to the page", async () => {
+    fetchMock.mockResolvedValue(json(started, { status: 202 }));
+    const response = await startSignUp(
+      post(
+        "/api/auth/sign-up",
+        { ...body, deviceToken: "forged" },
+        { cookie: "__Secure-device=d1" },
+      ),
+    );
+    expect(response.status).toBe(202);
+    const answer = (await response.json()) as Record<string, unknown>;
+    expect(answer).toMatchObject({ email: "ana@example.co", expiresAt: started.expiresAt });
+    expect(answer.resendAfterSeconds).toBeGreaterThanOrEqual(59);
+    expect(JSON.stringify(answer)).not.toContain(started.signUpToken);
+    const cookie = signUpCookieOf(response);
+    expect(cookie).toMatch(/Path=\/api\/auth\/sign-up/i);
+    expect(cookie).toMatch(/HttpOnly/i);
+    expect(cookie).toMatch(/SameSite=strict/i);
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("http://backend.test/auth/sign-up");
+    expect(JSON.parse(init?.body as string)).toEqual({ ...body, deviceToken: "d1" });
+  });
+
+  it("reads back what this browser is waiting for after a reload, and nothing once forgotten", async () => {
+    const cookie = await startedCookie();
+    const pending = pendingSignUp(
+      new NextRequest(`${APP}/api/auth/sign-up`, { headers: { cookie } }),
+    );
+    await expect(pending.json()).resolves.toMatchObject({ email: "ana@example.co" });
+    const none = pendingSignUp(new NextRequest(`${APP}/api/auth/sign-up`));
+    expect(none.status).toBe(204);
+    const forgotten = forgetSignUp(
+      new NextRequest(`${APP}/api/auth/sign-up`, {
+        method: "DELETE",
+        headers: { origin: APP, cookie },
+      }),
+    );
+    expect(signUpCookieOf(forgotten)).toMatch(/Max-Age=0/i);
+  });
+
+  it("confirms with the cookie's token, signs in, and forgets the sign-up", async () => {
+    const cookie = await startedCookie();
+    fetchMock.mockResolvedValueOnce(json({ ...tokens, deviceToken: "dev3" }, { status: 201 }));
+    const response = await confirmSignUp(
+      post("/api/auth/sign-up/confirm", { code: "482719" }, { cookie }),
+    );
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual({ user: tokens.user });
+    const [url, init] = fetchMock.mock.calls[1] ?? [];
+    expect(url).toBe("http://backend.test/auth/sign-up/confirm");
+    expect(JSON.parse(init?.body as string)).toEqual({
+      code: "482719",
+      signUpToken: started.signUpToken,
+    });
+    const cookies = setCookies(response);
+    expect(cookies.some((c) => c.startsWith("__Host-access=acc"))).toBe(true);
+    expect(cookies.some((c) => c.startsWith("__Secure-device=dev3"))).toBe(true);
+    expect(signUpCookieOf(response)).toMatch(/Max-Age=0/i);
+  });
+
+  it("answers a code with no sign-up in this browser like any bad code, without asking", async () => {
+    const response = await confirmSignUp(post("/api/auth/sign-up/confirm", { code: "482719" }));
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ code: "SIGN_UP_CODE_INVALID" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("forgets a sign-up the server says is over when Resend meets it", async () => {
+    const cookie = await startedCookie();
+    fetchMock.mockResolvedValueOnce(
+      json({ error: "Conflict", message: "over", code: "SIGN_UP_EXPIRED" }, { status: 409 }),
+    );
+    const response = await resendSignUp(
+      post("/api/auth/sign-up/resend", { captcha: "tok" }, { cookie }),
+    );
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ code: "SIGN_UP_EXPIRED" });
+    expect(signUpCookieOf(response)).toMatch(/Max-Age=0/i);
+    const [, init] = fetchMock.mock.calls[1] ?? [];
+    expect(JSON.parse(init?.body as string)).toEqual({
+      captcha: "tok",
+      signUpToken: started.signUpToken,
+    });
+  });
+
+  it("moves the countdown on a Resend the server took", async () => {
+    const cookie = await startedCookie();
+    fetchMock.mockResolvedValueOnce(json({ resendAfterSeconds: 120 }, { status: 202 }));
+    const response = await resendSignUp(
+      post("/api/auth/sign-up/resend", { captcha: "tok" }, { cookie }),
+    );
+    const answer = (await response.json()) as { resendAfterSeconds: number };
+    expect(answer.resendAfterSeconds).toBeGreaterThanOrEqual(119);
+    expect(signUpCookieOf(response)).toMatch(/Max-Age=\d+/i);
+  });
+
+  it("says the sign-up is over when the browser holds none", async () => {
+    const response = await resendSignUp(post("/api/auth/sign-up/resend", { captcha: "tok" }));
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ code: "SIGN_UP_EXPIRED" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

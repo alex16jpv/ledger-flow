@@ -188,3 +188,13 @@ export function isSameLocalDay(a: Date, b: Date, timeZone: string): boolean {
 export function toIsoWindow(window: DateWindow): { from: string; to: string } {
   return { from: window.from.toISOString(), to: window.to.toISOString() };
 }
+
+// A calendar day names no instant, so it is read at noon UTC where no zone can move it.
+export function formatCalendarDay(day: string, locale: string, withYear = true): string {
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: "UTC",
+    month: "long",
+    day: "numeric",
+    ...(withYear ? { year: "numeric" } : {}),
+  }).format(new Date(`${day}T12:00:00Z`));
+}
