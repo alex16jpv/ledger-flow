@@ -364,6 +364,7 @@ const EMAIL_FORWARDS = {
   "/auth/email/verify": { sendDeviceToken: false, sendSession: true },
   "/auth/email/resend": { sendDeviceToken: true, sendSession: true },
   "/auth/email/restore": { sendDeviceToken: false, sendSession: false },
+  "/auth/email/undo": { sendDeviceToken: false, sendSession: false },
 } as const satisfies Record<string, ForwardOptions>;
 
 export function confirmEmail(

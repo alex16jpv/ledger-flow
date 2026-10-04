@@ -17,7 +17,6 @@ const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 // Session and email endpoints have dedicated handlers, and only those carry the Vercel rate rule.
 const BLOCKED_PREFIXES = [
   "auth/login",
-  "auth/register",
   "auth/sign-up",
   "auth/refresh",
   "auth/logout",

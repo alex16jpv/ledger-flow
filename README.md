@@ -188,6 +188,7 @@ Accounts, Stats, Categories, Settings and the user (T-72). From 900px up the sid
 | `/verify#token=…`, `/restore#token=…`                          | The links of the sign-up and confirmation emails, and of Your account was deleted (one tap each)                                              |
 | `/confirm-to-continue`                                         | Confirm your email to continue: an account from before email past its deadline, instead of the app                                            |
 | `/confirm-email#token=…`                                       | The new address's link: move the account to it (one tap)                                                                                      |
+| `/undo#token=…`                                                | The old address's Undo the change: take the account back to it and choose a new password (one tap)                                            |
 | `/home`                                                        | Authenticated home                                                                                                                            |
 | `/settings`, `/settings/appearance`                            | Settings hub (language, currency, time zone, your data, install, about, delete) and appearance                                                |
 | `/settings/profile`, `/settings/sessions`                      | Profile & security (name, password with re-authentication, a new email that waits for its code) and active sessions                           |

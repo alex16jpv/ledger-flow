@@ -238,7 +238,11 @@
     },
     "link": {
       "openApp": "Abrir Ledger Flow",
-      "offline": "Esto necesita conexión."
+      "offline": "Esto necesita conexión.",
+      "passwordStops": "Se cierra la sesión en todos los dispositivos y <b>tu contraseña actual deja de servir</b>. Te enviaremos por correo un código para elegir una nueva.",
+      "codeSent": "Se cerró la sesión en todos los dispositivos. Enviamos un código a esta dirección para que elijas una contraseña nueva: sirve durante 30 minutos.",
+      "noCode": "Se cerró la sesión en todos los dispositivos, y tu contraseña anterior ya no sirve. No pudimos enviar el código para elegir una nueva: pídelo desde ¿Olvidaste tu contraseña?.",
+      "enterCode": "Escribir el código"
     },
     "confirmNewEmail": {
       "title": "¿Pasar tu cuenta a esta dirección?",
@@ -253,13 +257,16 @@
     "restore": {
       "title": "¿Restaurar tu cuenta?",
       "body": "Tu cuenta se eliminó. Esto la trae de vuelta con todo lo que tenía, menos los grupos compartidos de los que salió.",
-      "warning": "Se cierra la sesión en todos los dispositivos y <b>tu contraseña actual deja de servir</b>. Te enviaremos por correo un código para elegir una nueva.",
       "submit": "Restaurar la cuenta",
       "doneTitle": "Cuenta restaurada",
-      "doneBody": "Se cerró la sesión en todos los dispositivos. Enviamos un código a esta dirección para que elijas una contraseña nueva: sirve durante 30 minutos.",
-      "enterCode": "Escribir el código",
-      "noCodeBody": "Se cerró la sesión en todos los dispositivos, y tu contraseña anterior ya no sirve. No pudimos enviar el código para elegir una nueva: pídelo desde ¿Olvidaste tu contraseña?.",
       "deadBody": "Un enlace para restaurar sirve durante 7 días y una sola vez. Hasta que la cuenta se borre para siempre, ¿Olvidaste tu contraseña? también la restaura."
+    },
+    "undo": {
+      "title": "¿Deshacer el cambio?",
+      "body": "El correo de tu cuenta vuelve a ser esta dirección, aunque el cambio ya se haya confirmado.",
+      "submit": "Deshacer el cambio",
+      "doneTitle": "Cambio deshecho",
+      "deadBody": "Un enlace para deshacer sirve durante 7 días y una sola vez. Si algo sigue pareciéndote raro, ¿Olvidaste tu contraseña? cierra la sesión en todos los dispositivos."
     },
     "confirmRequired": {
       "title": "Confirma tu correo para continuar",
@@ -410,6 +417,7 @@
       "notConfirmed": "Sin confirmar",
       "notConfirmedHelp": "Confírmalo para invitar a gente en Shared y para que te inviten. <confirm>Confírmalo</confirm>",
       "savedNewEmail": "Revisa {email}: tu correo cambia cuando lo confirmes",
+      "savedExceptEmail": "Guardado, pero tu correo no cambió.",
       "emailLocked": "Cambiar el correo necesita la comprobación de Cloudflare, que aquí no está configurada.",
       "emailUndeliverable": "No podemos enviar correos a esta dirección. Revísala o usa otra.",
       "pendingTitle": "Esperando la confirmación de <b>{email}</b>",

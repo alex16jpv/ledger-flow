@@ -1,6 +1,7 @@
 import { api } from "@/lib/api/client";
 import type { SessionUser } from "@/lib/session/api";
 import type {
+  EmailChangeUndone,
   EmailVerified,
   ForgotPasswordAccepted,
   PasswordResetDone,
@@ -75,4 +76,8 @@ export function sendVerificationCode(captcha: string): Promise<VerificationCodeS
 
 export function restoreFromLink(token: string): Promise<RestoreLinkUsed> {
   return api<RestoreLinkUsed>("/auth/restore", { method: "POST", body: { token } });
+}
+
+export function undoEmailChange(token: string): Promise<EmailChangeUndone> {
+  return api<EmailChangeUndone>("/auth/undo", { method: "POST", body: { token } });
 }

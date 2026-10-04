@@ -238,12 +238,17 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
   countdown runs, then sending with Cloudflare's check, whose box shows above the card's buttons when it
   has doubts — and **Cancel change**, which drops it with the toast "Change cancelled. Your account keeps
   {email}.". The card goes when the address is confirmed, here or from the link, when it is cancelled, or
-  when its 24 hours pass, and then the change is dropped. Saving another new address while one is waiting
+  when its 24 hours pass, or when the password changes, and then the change is dropped. Saving another new address while one is waiting
   replaces it, and the first one's code and link stop working. Offline, the card's buttons are disabled
   with the rest of the page.
 
-  - **A new name or password saved with it goes after the address is asked for**, with the same current
-    password: if the address is refused, nothing is saved.
+  - **A new name or password saved with it goes first**, and the address is asked for after it — with
+    the new password, when there is one. A password change cancels a change of email that waits
+    ([emails.md](emails.md)), so the other order would leave the new address waiting for a code that no
+    longer works. Cloudflare's check is asked for before either, so a refused check saves nothing. If the
+    address is then refused for any reason below, what went first stays saved: the toast "Saved, but your
+    email didn't change.", the password fields empty, and the field or the alert says why
+    (`#profile-and-security-email-refused-after-save`).
   - **An address another account holds is not refused** (the owner's decision 16: nothing may tell
     whether an address has an account): the card shows the change waiting, as for any address, and that
     inbox gets `email-change-taken` instead of the code ([emails.md](emails.md)). The change never
@@ -252,9 +257,11 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
     bounced or complained before, or the provider refused it), "We can't send email to this address.
     Check it, or use another one." (`#profile-and-security-new-email-refused`). A send that failed on our
     side (`503`) is the `danger` alert "We couldn't send the email. Try again in a few minutes.", and a
-    Resend that fails says the same words in an alert above the card's buttons. Nothing is saved in
-    either. A limit reached (`429`) is the countdown alert of [states.md](states.md), with Save changes
-    off until it ends.
+    Resend that fails says the same words in an alert above the card's buttons. The address is not
+    saved in either. A limit reached (`429`) is the countdown alert of [states.md](states.md), with Save
+    changes off until it ends. A `503` or a `429` can also come from the notice to the current address,
+    which has to go before the change is saved ([emails.md](emails.md)); the words name no address, so
+    they hold for both.
   - **Nothing waits any more** when Resend is pressed (confirmed from the link, cancelled in another
     tab, or past its 24 hours): the card goes, with the toast "This change isn't waiting any more: it
     was confirmed, cancelled, or its 24 hours passed."

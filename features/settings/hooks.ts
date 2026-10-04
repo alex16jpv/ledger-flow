@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { refreshSession } from "@/lib/api/refresh";
 import { type AppLocale } from "@/lib/i18n/routing";
 import { tabChannel } from "@/lib/session/channel";
+import { useSetEmailChange } from "@/lib/session/email-change";
 import { useSession } from "@/lib/session/SessionProvider";
 import type { UpdateUserInput } from "@/types/api";
 
@@ -73,6 +74,7 @@ export interface ProfileChange extends UpdateUserInput {
 // A password change revokes every refresh token, so this device signs in again with the new pair.
 export function useUpdateProfile() {
   const { user, setUser } = useSession();
+  const setEmailChange = useSetEmailChange();
   return useMutation({
     mutationFn: async ({ reauthenticateWith, ...input }: ProfileChange) => {
       if (!user) throw new Error("No session");
@@ -81,8 +83,9 @@ export function useUpdateProfile() {
         await reauthenticate(reauthenticateWith.email, reauthenticateWith.password);
       return updated;
     },
-    onSuccess: (updated) => {
+    onSuccess: (updated, { password }) => {
       setUser(updated);
+      if (password !== undefined) setEmailChange(null);
     },
   });
 }

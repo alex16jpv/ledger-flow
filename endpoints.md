@@ -2,7 +2,7 @@
 
 # lag-money-manager API endpoints
 
-Version 1.0.0 · 94 operations · 129 schemas.
+Version 1.0.0 · 93 operations · 128 schemas.
 
 Regenerate with `npm run gen:api-types` against a running backend. The client never calls these
 URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), which adds the
@@ -11,7 +11,7 @@ URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), wh
 | Group                           | Operations |
 | ------------------------------- | ---------- |
 | [Accounts](#accounts)           | 7          |
-| [Auth](#auth)                   | 18         |
+| [Auth](#auth)                   | 17         |
 | [Budgets](#budgets)             | 8          |
 | [Categories](#categories)       | 7          |
 | [Contacts](#contacts)           | 6          |
@@ -195,7 +195,6 @@ Idempotent - restoring an already-active account returns it unchanged.
 | `POST /auth/password/forgot`      | public | Email a code and a link to choose a new password                |
 | `POST /auth/password/reset`       | public | Choose a new password with the emailed code or link             |
 | `POST /auth/refresh`              | public | Exchange a refresh token for a new access + refresh token pair  |
-| `POST /auth/register`             | public | Register a new user, before its email is confirmed              |
 | `GET /auth/sessions`              | bearer | List the user's active device sessions                          |
 | `DELETE /auth/sessions/{id}`      | bearer | Revoke one device session by its id                             |
 | `POST /auth/sign-up`              | public | Start creating an account; its emailed code creates it          |
@@ -221,7 +220,7 @@ Either `{ code }`, with the session (`Authorization`) of the account that asked 
 
 ### `POST /auth/email/resend`
 
-Send code and Resend code of the sheet that confirms the email. Sends `verify-email` to the account's address, in its language: a 6-digit code and a link, both for 24 hours. The new code replaces the old one only once its email was accepted. Unlike Forgot your password?, a failed send is said: the address is the account's own. `captcha` is a Cloudflare Turnstile token for the action `verify-email`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+Send code and Resend code of the sheet that confirms the email. Sends `verify-email` to the account's address, in its language: a 6-digit code and a link, both for 24 hours. The new code replaces the old one only once its email was accepted. Unlike Forgot your password?, a failed send is said: the address is the account's own. `captcha` is a Cloudflare Turnstile token for the action `verify-email`; `deviceToken`, from this device's last login or sign-up, lets the limits count this device instead of its IP.
 
 **Body** `ResendVerificationInput` (required)
 
@@ -288,7 +287,7 @@ Either `{ code }`, with the session (`Authorization`) of the account the code we
 
 ### `POST /auth/login`
 
-Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or register and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded. A login whose `deviceToken` is not one this account's email gave since its last undo, restore link or logout-all emails `new-sign-in` to that email, when it is confirmed. The right password of an account deleted in its last 30 days answers 409 ACCOUNT_DELETED with its two days and opens nothing: "Restore your account?" then calls `POST /auth/login/restore`. A wrong password reads the same for every address, deleted or not.
+Returns a short-lived access token (~15 min), a refresh token and a `deviceToken`. Rate-limited per IP, and failed attempts per account: send the `deviceToken` of this device's last login or sign-up and they count against this device alone, so nobody else's failures can lock it out; without one they count per email and IP and per email in total. Successful logins are refunded. A login whose `deviceToken` is not one this account's email gave since its last undo, restore link or logout-all emails `new-sign-in` to that email, when it is confirmed. The right password of an account deleted in its last 30 days answers 409 ACCOUNT_DELETED with its two days and opens nothing: "Restore your account?" then calls `POST /auth/login/restore`. A wrong password reads the same for every address, deleted or not.
 
 No token required.
 
@@ -351,7 +350,7 @@ Bumps the user's token version, so every outstanding refresh token stops working
 
 ### `POST /auth/password/forgot`
 
-Always the same answer, in at least the same time, whether the address has a live account, a deleted one or none, and whether the email could be sent: nothing here may tell them apart. A live account and one deleted in its last 30 days are emailed, in their own language: a 6-digit code and a link (`/{locale}/reset#token=…`), both good for 30 minutes and for one reset; the deleted one in its own words, since choosing a password restores it. A new code replaces the previous one only once its email was accepted for delivery. `captcha` is a Cloudflare Turnstile token issued for the action `forgot-password`, asked for when the button is pressed: it works once. `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP.
+Always the same answer, in at least the same time, whether the address has a live account, a deleted one or none, and whether the email could be sent: nothing here may tell them apart. A live account and one deleted in its last 30 days are emailed, in their own language: a 6-digit code and a link (`/{locale}/reset#token=…`), both good for 30 minutes and for one reset; the deleted one in its own words, since choosing a password restores it. A new code replaces the previous one only once its email was accepted for delivery. `captcha` is a Cloudflare Turnstile token issued for the action `forgot-password`, asked for when the button is pressed: it works once. `deviceToken`, from this device's last login or sign-up, lets the limits count this device instead of its IP.
 
 No token required.
 
@@ -398,24 +397,6 @@ No token required.
 | `400`  | `ErrorResponse` | Validation error (code VALIDATION)                                                                                                                                                                         |
 | `401`  | `ErrorResponse` | Invalid or expired refresh token (code REFRESH_INVALID), or token revoked — reuse of a rotated token whose successor is already spent, logout, password/email change, or logout-all (code REFRESH_REVOKED) |
 | `429`  | `ErrorResponse` | Too many attempts (code RATE_LIMITED)                                                                                                                                                                      |
-
-### `POST /auth/register`
-
-Kept only until the app confirms the email before the account exists (`POST /auth/sign-up`); then it goes. Register acts as login: the response already carries the token pair. Emails are normalized (trim + lowercase). An address with any account, live or deleted and still kept, answers 409 EMAIL_TAKEN: a deleted account comes back by signing in. `captcha` is a Cloudflare Turnstile token for the action `register`. The account is sent `verify-email`; a send that fails does not fail the register.
-
-No token required.
-
-**Body** `RegisterInput` (required)
-
-**Responses**
-
-| Status | Schema          | Description                                                                                                                                                         |
-| ------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `201`  | `AuthTokens`    | User registered and logged in                                                                                                                                       |
-| `400`  | `ErrorResponse` | Validation error, a missing captcha among them (code VALIDATION), or Cloudflare refused the captcha token (code CAPTCHA_INVALID). Ask for a new token and try again |
-| `409`  | `ErrorResponse` | Email is already registered (code EMAIL_TAKEN)                                                                                                                      |
-| `429`  | `ErrorResponse` | Too many attempts from this client IP, or too many failed ones for this email, counted with the failed logins (code RATE_LIMITED)                                   |
-| `503`  | `ErrorResponse` | The captcha could not be checked (code CAPTCHA_UNAVAILABLE): nothing was created. Try again                                                                         |
 
 ### `GET /auth/sessions`
 
@@ -2265,7 +2246,7 @@ Requires `currentPassword`: a hijacked 15-minute access token must not be able t
 
 ### `POST /users/{id}/email-change`
 
-Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or register, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION). When the account's email is confirmed, `email-change-requested` goes to it too, naming the new address, with "Undo the change" (`/{locale}/undo#token=…`, POST /auth/email/undo) for 7 days, and the change is saved only once that notice went (an old address that refuses all email does not stop it); while that link works the old address stays the account's. An address another account holds — live, deleted and still kept, or kept by an undo link — answers the same as any other, so nothing here tells whether it has an account: it is sent `email-change-taken` instead, and the change waits and never confirms.
+Save changes with a new email in Password & email. Nothing moves yet: the account keeps its email, and `email-change-confirm` goes to the new address, in the account's language, with a 6-digit code and a link (`/{locale}/confirm-email#token=…`), both for 24 hours. The account moves once POST /auth/email/confirm-change receives either; then every other device is signed out. The change is saved only once its email was accepted, or may have gone (a provider timed out), so a send that fails leaves any earlier one as it was. Asking again replaces a change that was waiting: its code and its link stop working. `currentPassword` re-authenticates, as a password change on PUT /users/{id} does; `captcha` is a Cloudflare Turnstile token for the action `email-change`; `deviceToken`, from this device's last login or sign-up, lets the limits count this device instead of its IP. It is the only way the email changes: PUT /users/{id} refuses `email` (EMAIL_CHANGE_REQUIRES_VERIFICATION). When the account's email is confirmed, `email-change-requested` goes to it too, naming the new address, with "Undo the change" (`/{locale}/undo#token=…`, POST /auth/email/undo) for 7 days, and the change is saved only once that notice went (an old address that refuses all email does not stop it); while that link works the old address stays the account's. An address another account holds — live, deleted and still kept, or kept by an undo link — answers the same as any other, so nothing here tells whether it has an account: it is sent `email-change-taken` instead, and the change waits and never confirms.
 
 **Path**
 

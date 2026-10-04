@@ -20,7 +20,11 @@ Delete account in Settings lands on Sign in with `?deleted=<keptUntil>`, which t
 account-deleted email's link lands on `/restore` (no session, like `/undo`): it signs everyone out and
 stops the password, and its answer says whether the code to choose a new one went — Enter the code
 opens Forgot your password? on its code step for that address, or Forgot your password? asks for one.
-A reset that brought a deleted account back says so in its toast (`restored`).
+A reset that brought a deleted account back says so in its toast (`restored`). The old address's
+"Undo the change" lands on `/undo` and reads the same way (`UndoLinkView`, through `/api/auth/undo`): the
+tap takes the account back to that address, signs everyone out and stops the password, and its answer
+(`{ email, codeSent }`) leads to the code step or to Forgot your password? with the address. Both pages
+share one component, since only their words and icon differ.
 
 **Confirm your email to continue** (`/confirm-to-continue`, decision 17): an account from before email
 past its deadline signs in as ever, with `emailConfirmationRequired`, and goes there instead of the app;

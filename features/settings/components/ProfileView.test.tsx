@@ -8,7 +8,7 @@ import type { FeatureFlag } from "@/lib/flags";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import type { SessionProfile } from "@/lib/session/api";
 import { confirmEmailStore } from "@/lib/session/confirm-email";
-import { SessionProvider } from "@/lib/session/SessionProvider";
+import { SessionProvider, useSession } from "@/lib/session/SessionProvider";
 import { renderWithProviders } from "@/lib/testing/render";
 import type { User } from "@/types/api";
 
@@ -143,6 +143,7 @@ describe("ProfileView", () => {
       expect(onSaved).toHaveBeenCalledWith({
         reauthenticated: false,
         newEmail: "new@ledgerflow.test",
+        emailRefused: false,
       });
     });
     expect(sent("/api/auth/change-email")).toEqual([
@@ -152,13 +153,49 @@ describe("ProfileView", () => {
     expect(screen.getByLabelText("Email")).toHaveValue(user.email);
   });
 
-  it("saves a new password only after the new address was asked for", async () => {
+  it("saves a new password first and asks for the address with it, which the change would cancel otherwise", async () => {
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (url.startsWith("/api/auth/me")) return Promise.resolve(json({ user }));
+      if (url === "/api/auth/change-email")
+        return Promise.resolve(
+          json({ resendAfterSeconds: 60, emailChange: waiting }, { status: 202 }),
+        );
+      if (init?.method === "PUT") return Promise.resolve(json(user));
+      if (init?.method === "POST") return Promise.resolve(json({ user, accessToken: "a" }));
+      return Promise.resolve(json({}));
+    });
+    const onSaved = renderView();
+    await userEvent.type(screen.getByLabelText(/^New password/), "Str0ngPass!");
+    await askForNewEmail();
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledWith({
+        reauthenticated: true,
+        newEmail: "new@ledgerflow.test",
+        emailRefused: false,
+      });
+    });
+    const order = fetchMock.mock.calls
+      .map(([input, init]) => `${init?.method ?? "GET"} ${urlOf(input)}`)
+      .filter((call) => !call.includes("/api/auth/me"));
+    expect(order).toEqual([
+      "PUT /api/users/u1",
+      "POST /api/auth/login",
+      "POST /api/auth/change-email",
+    ]);
+    expect(sent("/api/auth/change-email")).toEqual([
+      { email: "new@ledgerflow.test", currentPassword: "Str0ngPass!", captcha: "captcha-token" },
+    ]);
+  });
+
+  it("keeps a saved password when the address is refused after it, and says the email did not change", async () => {
     fetchMock.mockImplementation((input, init) => {
       const url = urlOf(input);
       if (url.startsWith("/api/auth/me")) return Promise.resolve(json({ user }));
       if (url === "/api/auth/change-email")
         return Promise.resolve(failure("EMAIL_SEND_FAILED", 422));
       if (init?.method === "PUT") return Promise.resolve(json(user));
+      if (init?.method === "POST") return Promise.resolve(json({ user, accessToken: "a" }));
       return Promise.resolve(json({}));
     });
     const onSaved = renderView();
@@ -167,6 +204,22 @@ describe("ProfileView", () => {
     expect(
       await screen.findByText("We can’t send email to this address. Check it, or use another one."),
     ).toBeInTheDocument();
+    expect(onSaved).toHaveBeenCalledWith({
+      reauthenticated: true,
+      newEmail: null,
+      emailRefused: true,
+    });
+    expect(screen.getByLabelText(/^Email/)).toHaveValue("bounced@ledgerflow.test");
+    expect(screen.getByLabelText(/^New password/)).toHaveValue("");
+    expect(screen.getByLabelText("Current password")).toHaveValue("");
+  });
+
+  it("saves nothing when Cloudflare's check is refused, not even the password", async () => {
+    token.mockRejectedValueOnce(new Error("blocked"));
+    const onSaved = renderView();
+    await userEvent.type(screen.getByLabelText(/^New password/), "Str0ngPass!");
+    await askForNewEmail();
+    expect(await screen.findByText("We couldn’t check that you’re a person.")).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
     expect(onSaved).not.toHaveBeenCalled();
   });
@@ -187,29 +240,134 @@ describe("ProfileView", () => {
     expect(screen.queryByText("We couldn’t check that you’re a person.")).not.toBeInTheDocument();
   });
 
-  it("does not ask for the address again when only the password failed after it", async () => {
+  it("does not ask for the address when the password failed before it", async () => {
     fetchMock.mockImplementation((input, init) => {
       const url = urlOf(input);
       if (url.startsWith("/api/auth/me")) return Promise.resolve(json({ user }));
-      if (url === "/api/auth/change-email")
-        return Promise.resolve(
-          json({ resendAfterSeconds: 60, emailChange: waiting }, { status: 202 }),
-        );
       if (init?.method === "PUT") return Promise.resolve(failure("DB_UNAVAILABLE", 503));
       return Promise.resolve(json({}));
     });
-    renderView();
+    const onSaved = renderView();
     await userEvent.type(screen.getByLabelText(/^New password/), "Str0ngPass!");
     await askForNewEmail();
     await waitFor(() => {
       expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true);
     });
-    expect(screen.getByLabelText(/^Email/)).toHaveValue(user.email);
+    expect(sent("/api/auth/change-email")).toHaveLength(0);
+    expect(screen.getByLabelText(/^Email/)).toHaveValue("new@ledgerflow.test");
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it("keeps a saved name when the address is refused after it, and empties the current password", async () => {
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (url.startsWith("/api/auth/me")) return Promise.resolve(json({ user }));
+      if (url === "/api/auth/change-email")
+        return Promise.resolve(failure("EMAIL_SEND_FAILED", 422));
+      if (init?.method === "PUT") return Promise.resolve(json({ ...user, name: "Ana María" }));
+      return Promise.resolve(json({}));
+    });
+    const onSaved = renderView();
+    await userEvent.clear(screen.getByLabelText("Name"));
+    await userEvent.type(screen.getByLabelText("Name"), "Ana María");
+    await askForNewEmail("bounced@ledgerflow.test");
+    expect(
+      await screen.findByText("We can’t send email to this address. Check it, or use another one."),
+    ).toBeInTheDocument();
+    expect(onSaved).toHaveBeenCalledWith({
+      reauthenticated: false,
+      newEmail: null,
+      emailRefused: true,
+    });
+    expect(sent("/api/users/u1")).toEqual([{ name: "Ana María" }]);
+    expect(screen.getByLabelText("Current password")).toHaveValue("");
+  });
+
+  it("waits out a limit met after the password was saved, and asks again with the new password only", async () => {
+    let limited = true;
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (url.startsWith("/api/auth/me")) return Promise.resolve(json({ user }));
+      if (url === "/api/auth/change-email") {
+        if (limited)
+          return Promise.resolve(
+            new Response(JSON.stringify({ error: "Too many", code: "RATE_LIMITED" }), {
+              status: 429,
+              headers: { "content-type": "application/json", "retry-after": "1" },
+            }),
+          );
+        return Promise.resolve(
+          json({ resendAfterSeconds: 60, emailChange: waiting }, { status: 202 }),
+        );
+      }
+      if (init?.method === "PUT") return Promise.resolve(json(user));
+      if (init?.method === "POST") return Promise.resolve(json({ user, accessToken: "a" }));
+      return Promise.resolve(json({}));
+    });
+    const onSaved = renderView();
+    await userEvent.type(screen.getByLabelText(/^New password/), "Str0ngPass!");
+    await askForNewEmail();
+    expect(await screen.findByText(/You can try again in 0:0\d\./)).toBeInTheDocument();
+    expect(onSaved).toHaveBeenLastCalledWith({
+      reauthenticated: true,
+      newEmail: null,
+      emailRefused: true,
+    });
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+
+    limited = false;
+    await waitFor(
+      () => {
+        expect(screen.getByRole("button", { name: "Save changes" })).toBeEnabled();
+      },
+      { timeout: 3_000 },
+    );
+    await userEvent.type(screen.getByLabelText("Current password"), "Str0ngPass!");
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => {
-      expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(2);
+      expect(onSaved).toHaveBeenLastCalledWith({
+        reauthenticated: false,
+        newEmail: "new@ledgerflow.test",
+        emailRefused: false,
+      });
     });
-    expect(sent("/api/auth/change-email")).toHaveLength(1);
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(1);
+    expect(sent("/api/auth/change-email").at(-1)).toEqual({
+      email: "new@ledgerflow.test",
+      currentPassword: "Str0ngPass!",
+      captcha: "captcha-token",
+    });
+  });
+
+  it("drops the card of a waiting address once a new password is saved, which cancels it", async () => {
+    fetchMock.mockImplementation((input, init) => {
+      const url = urlOf(input);
+      if (url.startsWith("/api/auth/me"))
+        return Promise.resolve(json({ user: { ...user, emailChange: waiting } }));
+      if (init?.method === "PUT") return Promise.resolve(json(user));
+      if (init?.method === "POST") return Promise.resolve(json({ user, accessToken: "a" }));
+      return Promise.resolve(json({}));
+    });
+    function FromSession() {
+      const { user: shown } = useSession();
+      return shown ? <ProfileView user={shown} onSaved={vi.fn()} /> : null;
+    }
+    renderWithProviders(
+      <QueryProvider>
+        <SessionProvider onSignedOut={vi.fn()}>
+          <ToastProvider>
+            <FromSession />
+          </ToastProvider>
+        </SessionProvider>
+      </QueryProvider>,
+    );
+    expect(await screen.findByText(/Waiting for confirmation at/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/^New password/), "Str0ngPass!");
+    await userEvent.type(screen.getByLabelText("Current password"), "OldPass!2026");
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(screen.queryByText(/Waiting for confirmation at/)).not.toBeInTheDocument();
+    });
   });
 
   it("hides a change whose 24 hours passed", () => {
@@ -311,7 +469,11 @@ describe("ProfileView", () => {
     expect(screen.queryByLabelText("Current password")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => {
-      expect(onSaved).toHaveBeenCalledWith({ reauthenticated: false, newEmail: null });
+      expect(onSaved).toHaveBeenCalledWith({
+        reauthenticated: false,
+        newEmail: null,
+        emailRefused: false,
+      });
     });
     const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
     expect(JSON.parse(put?.[1]?.body as string)).toEqual({ name: "Ana María" });
@@ -326,7 +488,11 @@ describe("ProfileView", () => {
     await userEvent.type(screen.getByLabelText("Current password"), "OldPass!2026");
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => {
-      expect(onSaved).toHaveBeenCalledWith({ reauthenticated: true, newEmail: null });
+      expect(onSaved).toHaveBeenCalledWith({
+        reauthenticated: true,
+        newEmail: null,
+        emailRefused: false,
+      });
     });
     const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
     expect(JSON.parse(put?.[1]?.body as string)).toEqual({

@@ -34,6 +34,7 @@ import {
   restoreFromLink,
   sendVerificationCode,
   startSignUp,
+  undoEmailChange,
 } from "./api";
 import { authKeys } from "./keys";
 
@@ -187,4 +188,8 @@ export function useConfirmEmailChangeLink() {
 
 export function useRestoreFromLink() {
   return useMutation({ mutationFn: restoreFromLink });
+}
+
+export function useUndoFromLink() {
+  return useMutation({ mutationFn: undoEmailChange });
 }

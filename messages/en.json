@@ -238,7 +238,11 @@
     },
     "link": {
       "openApp": "Open Ledger Flow",
-      "offline": "This needs a connection."
+      "offline": "This needs a connection.",
+      "passwordStops": "Every device is signed out and <b>your current password stops working</b>. We’ll email you a code to choose a new one.",
+      "codeSent": "Every device was signed out. We sent a code to this address so you can choose a new password: it works for 30 minutes.",
+      "noCode": "Every device was signed out, and your old password no longer works. We couldn’t send the code to choose a new one: ask for it from Forgot your password?.",
+      "enterCode": "Enter the code"
     },
     "confirmNewEmail": {
       "title": "Move your account to this address?",
@@ -253,13 +257,16 @@
     "restore": {
       "title": "Restore your account?",
       "body": "Your account was deleted. This brings it back with everything in it, except the shared groups it left.",
-      "warning": "Every device is signed out and <b>your current password stops working</b>. We’ll email you a code to choose a new one.",
       "submit": "Restore account",
       "doneTitle": "Account restored",
-      "doneBody": "Every device was signed out. We sent a code to this address so you can choose a new password: it works for 30 minutes.",
-      "enterCode": "Enter the code",
-      "noCodeBody": "Every device was signed out, and your old password no longer works. We couldn’t send the code to choose a new one: ask for it from Forgot your password?.",
       "deadBody": "A restore link works for 7 days and only once. Until the account is erased, Forgot your password? restores it too."
+    },
+    "undo": {
+      "title": "Undo the change?",
+      "body": "Your account’s email goes back to this address, even if the change was already confirmed.",
+      "submit": "Undo the change",
+      "doneTitle": "Change undone",
+      "deadBody": "An undo link works for 7 days and only once. If something still looks wrong, Forgot your password? signs everyone out."
     },
     "confirmRequired": {
       "title": "Confirm your email to continue",
@@ -410,6 +417,7 @@
       "notConfirmed": "Not confirmed",
       "notConfirmedHelp": "Confirm it to invite people to Shared and to be invited. <confirm>Confirm it</confirm>",
       "savedNewEmail": "Check {email}: your email changes once you confirm it",
+      "savedExceptEmail": "Saved, but your email didn’t change.",
       "emailLocked": "Changing the email needs Cloudflare’s check, which isn’t set up here.",
       "emailUndeliverable": "We can’t send email to this address. Check it, or use another one.",
       "pendingTitle": "Waiting for confirmation at <b>{email}</b>",

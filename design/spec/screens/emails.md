@@ -235,13 +235,28 @@ The path names are a contract: the pages at them are drawn in [access.md](access
   **Only an undo, a restore from its link and Sign out all other sessions forget the devices** (the owner's
   approval E of 2026-09-28): after one of those, each device can get one `new-sign-in` on its next sign-in.
   A password change and a reset do not, because the app signs in again right after them and would warn
-  its own owner.
+  its own owner. After a move to a new address, only the device that confirmed it holds a token for that
+  address, so every other one gets a `new-sign-in` the first time it signs in with it.
 - **Security notices go to every account**, because every address is confirmed now; the few accounts
   from before email existed get them once they confirm.
 - **`email-change-requested` goes only to an address that was confirmed.** An account from before email
   existed that never confirmed is usually correcting a typo, and the old address may be a stranger's:
   telling them the new one would hand over somebody's real address. The old codes and links simply stop
   working.
+- **`email-change-requested` goes before the change is saved, or the change is not saved** (the owner's
+  decision 14 of 2026-09-28, the one exception to "a notice never blocks what triggered it"). A limit, a
+  cap or no provider leaves the account as it was, and the app shows it like any send that fails
+  ([settings.md](settings.md)); otherwise filling the security budget would let a thief move an account
+  with nobody told and no undo. An old address that takes none of our email does not stop it: nobody can
+  be told there, and the account must be able to leave a dead address.
+- **A reset or a password change cancels a change of email that waits**, with its code and link: it was
+  asked for with the password that just stopped working, and an owner who changes the password on
+  reading `email-change-requested` must not see the account move by that link afterwards.
+- **"Undo the change" also brings back an account deleted after the change** (the owner's decision 13 of
+  2026-09-28), so a thief who moves the account and deletes it leaves the owner with everything; what the
+  deletion ended stays ended, as with any restore. **It stops only the undo links sent after the one
+  used**: a thief who moves the account on from their own address gets a newer link, and the owner's
+  older one still wins over it.
 - **`email-change-confirm` names the account that moves**, masked (above). Several accounts can ask for
   the same new address at once, each with its own code and link; without the name, the owner could tap
   the link of someone else's request and move that account to their address, with the invitations

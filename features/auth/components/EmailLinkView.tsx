@@ -7,6 +7,7 @@ import {
   type LucideIcon,
   MailCheck,
   TriangleAlert,
+  Undo2,
   WifiOff,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -33,6 +34,7 @@ import {
   useConfirmEmailChangeLink,
   useConfirmEmailLink,
   useRestoreFromLink,
+  useUndoFromLink,
 } from "../hooks";
 import { useLinkToken } from "../useLinkToken";
 
@@ -280,9 +282,14 @@ export function ConfirmNewEmailLinkView() {
   );
 }
 
-export function RestoreLinkView() {
+interface PasswordStoppingLinkProps {
+  purpose: "restore" | "undo";
+  icon: LucideIcon;
+  mutation: UseMutationResult<{ email: string; codeSent: boolean }, Error, string>;
+}
+
+function PasswordStoppingLink({ purpose, icon, mutation }: PasswordStoppingLinkProps) {
   const t = useTranslations("auth");
-  const restore = useRestoreFromLink();
   const forgot = (email?: string) => ({
     href: FORGOT_PATH,
     label: t("login.forgotPassword"),
@@ -292,28 +299,28 @@ export function RestoreLinkView() {
   });
   return (
     <EmailLinkPage
-      purpose="restore"
-      title={t("restore.title")}
-      body={t("restore.body")}
+      purpose={purpose}
+      title={t(`${purpose}.title`)}
+      body={t(`${purpose}.body`)}
       warning={
         <Alert tone="warning" icon={TriangleAlert}>
-          {t.rich("restore.warning", {
+          {t.rich("link.passwordStops", {
             b: (chunks) => <b className="font-semibold">{chunks}</b>,
           })}
         </Alert>
       }
-      submit={{ label: t("restore.submit") }}
-      mutation={restore}
+      submit={{ label: t(`${purpose}.submit`) }}
+      mutation={mutation}
       done={({ email, codeSent }) =>
         codeSent
           ? {
-              icon: ArchiveRestore,
+              icon,
               color: null,
-              title: t("restore.doneTitle"),
-              body: t("restore.doneBody"),
+              title: t(`${purpose}.doneTitle`),
+              body: t("link.codeSent"),
               action: {
                 href: FORGOT_PATH,
-                label: t("restore.enterCode"),
+                label: t("link.enterCode"),
                 onClick: () => {
                   rememberSentCode({
                     email,
@@ -323,14 +330,24 @@ export function RestoreLinkView() {
               },
             }
           : {
-              icon: ArchiveRestore,
+              icon,
               color: null,
-              title: t("restore.doneTitle"),
-              body: t("restore.noCodeBody"),
+              title: t(`${purpose}.doneTitle`),
+              body: t("link.noCode"),
               action: forgot(email),
             }
       }
-      dead={() => ({ body: t("restore.deadBody"), action: forgot() })}
+      dead={() => ({ body: t(`${purpose}.deadBody`), action: forgot() })}
     />
   );
+}
+
+export function RestoreLinkView() {
+  return (
+    <PasswordStoppingLink purpose="restore" icon={ArchiveRestore} mutation={useRestoreFromLink()} />
+  );
+}
+
+export function UndoLinkView() {
+  return <PasswordStoppingLink purpose="undo" icon={Undo2} mutation={useUndoFromLink()} />;
 }

@@ -30,6 +30,7 @@ import { PendingEmailCard } from "./PendingEmailCard";
 interface ProfileSaved {
   reauthenticated: boolean;
   newEmail: string | null;
+  emailRefused: boolean;
 }
 
 export interface ProfileViewProps {
@@ -79,20 +80,13 @@ export function ProfileView({ user, onSaved }: ProfileViewProps) {
       ? sent
       : null;
 
-  const askForNewEmail = async (values: ProfileValues): Promise<boolean> => {
-    let captcha: string;
+  const askForNewEmail = async (
+    email: string,
+    currentPassword: string,
+    captcha: string,
+  ): Promise<boolean> => {
     try {
-      captcha = await check.token();
-    } catch {
-      setHumanRefused(true);
-      return false;
-    }
-    try {
-      await request.mutateAsync({
-        email: values.email.trim(),
-        currentPassword: values.currentPassword,
-        captcha,
-      });
+      await request.mutateAsync({ email, currentPassword, captcha });
       return true;
     } catch (error) {
       if (error instanceof ApiError && error.code === "CAPTCHA_INVALID") setHumanRefused(true);
@@ -110,9 +104,14 @@ export function ProfileView({ user, onSaved }: ProfileViewProps) {
   const submit = form.handleSubmit(async (values) => {
     setFailure(null);
     setHumanRefused(false);
+    let captcha = "";
     if (newEmail) {
-      if (!(await askForNewEmail(values))) return;
-      form.resetField("email");
+      try {
+        captcha = await check.token();
+      } catch {
+        setHumanRefused(true);
+        return;
+      }
     }
     const change: ProfileChange = {};
     if (values.name.trim() !== user.name) change.name = values.name;
@@ -123,17 +122,28 @@ export function ProfileView({ user, onSaved }: ProfileViewProps) {
     }
     if (!newEmail && change.name === undefined && change.password === undefined)
       change.name = values.name;
+    const updating = change.name !== undefined || change.password !== undefined;
+    const reauthenticated = change.reauthenticateWith !== undefined;
     try {
-      if (change.name !== undefined || change.password !== undefined)
-        await update.mutateAsync(change);
-      form.reset({ ...values, email: user.email, newPassword: "", currentPassword: "" });
-      onSaved({
-        reauthenticated: change.reauthenticateWith !== undefined,
-        newEmail: newEmail ? values.email.trim() : null,
-      });
+      if (updating) await update.mutateAsync(change);
     } catch (error) {
       fail(error);
+      return;
     }
+    // The server cancels a change of email that waits when the password changes.
+    const email = values.email.trim();
+    if (
+      newEmail &&
+      !(await askForNewEmail(email, change.password ?? values.currentPassword, captcha))
+    ) {
+      if (updating) {
+        form.reset({ ...values, newPassword: "", currentPassword: "" });
+        onSaved({ reauthenticated, newEmail: null, emailRefused: true });
+      }
+      return;
+    }
+    form.reset({ ...values, email: user.email, newPassword: "", currentPassword: "" });
+    onSaved({ reauthenticated, newEmail: newEmail ? email : null, emailRefused: false });
   });
 
   const save = (
