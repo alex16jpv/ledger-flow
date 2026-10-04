@@ -5,6 +5,26 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-03 · Signing out everywhere renews the session itself and keeps the new device token (T-235)
+
+- **Context:** "Sign out all other sessions" calls `POST /auth/logout-all` with the access cookie. That
+  cookie lives 15 minutes and the client never renews a call to `/auth/`, so after a quarter of an hour
+  on the sessions page the route found no access token (or got a 401), revoked nothing, and still
+  answered `200` and signed this browser out: every other session stayed alive behind a sign-out that
+  looked done. And since the backend's T-211 the answer carries this device's new `deviceToken`, which
+  the route dropped, so signing back in here emailed a `new-sign-in` about this very device.
+- **Decision:** the route renews the session with the refresh cookie when it has no access token or the
+  backend refuses it, then revokes with the renewed one; only a revoke the backend confirmed ends the
+  session with `200`, and its `deviceToken` goes into the device cookie as a login's does. With no
+  session left to renew it answers `401` and ends the session; any other failure passes through and
+  keeps it (handing back the renewed cookies when the renewal already rotated them).
+- **Alternatives:** letting the client refresh and retry `/auth/logout-all` (every other `/auth/` call
+  relies on that path not retrying: a wrong password must not renew anything); refreshing ahead in the
+  sessions page (a timer that wakes the backend for nothing, and the gap is still there).
+- **Consequence:** the backend now knows when a sign-out everywhere did not happen. The app still signs
+  this browser out whatever the answer: showing that failure needs its own state in the design, a task
+  of its own.
+
 ## 2026-10-03 · `/undo`, and the new address asked for after the password (T-219)
 
 - **`/undo` and `/restore` are one component** (`PasswordStoppingLink`): the same warning, the same
@@ -830,7 +850,9 @@ description }, query, limit)` ranks by co-occurrence with the description and th
 - **Consequence:** nothing changes on screen. On a device that never signed in, a `429` can still
   happen during an attack that rotates addresses; the sign-in form already shows it with its wait. A
   password or email change and Log out everywhere revoke every device token, so after them each
-  browser is recognized again only from its next sign-in. A browser holds one device cookie: if two
+  browser is recognized again only from its next sign-in — except the one that pressed "Sign out all
+  other sessions", which keeps the new token the backend answers (T-235, 2026-10-03), so signing back
+  in there does not email it a `new-sign-in` about itself. A browser holds one device cookie: if two
   people sign in on it, the last one's token replaces the other's, and the first is no longer
   recognized there.
 
