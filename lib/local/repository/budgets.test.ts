@@ -260,32 +260,42 @@ describe("budgets through the repository", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
-  // T-163: the feed taught the device the server's clock, September 3rd, while its own says later.
-  it("judges the current period by the server's clock, not this device's", async () => {
-    await mirrorOf({
-      budgets: [dining],
-      transactions: [transaction({ id: "t1", amount: 120.5, date: "2026-09-02T15:00:00.000Z" })],
+  describe("with this device's clock two months ahead (T-163)", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-11-02T12:00:00.000Z"));
     });
-    reportOnline(false);
 
-    await expect(readBudgets()).resolves.toMatchObject([
-      { periodKey: "2026-09", spent: 120.5, expired: false },
-    ]);
-    await expect(readBudget("b1")).resolves.toMatchObject({ periodKey: "2026-09" });
-  });
-
-  it("keeps a CUSTOM budget the server still runs, however late this device thinks it is", async () => {
-    const trip = budget({
-      id: "b2",
-      name: "Trip",
-      periodType: "CUSTOM",
-      periodStartDate: "2026-09-01T05:00:00.000Z",
-      periodEndDate: "2026-09-10T05:00:00.000Z",
-      effectiveFrom: "2026-01-01T00:00:00.000Z",
+    afterEach(() => {
+      vi.useRealTimers();
     });
-    await mirrorOf({ budgets: [trip] });
-    reportOnline(false);
 
-    await expect(readBudgets()).resolves.toMatchObject([{ id: "b2", expired: false }]);
+    it("judges the current period by the server's clock, not this device's", async () => {
+      await mirrorOf({
+        budgets: [dining],
+        transactions: [transaction({ id: "t1", amount: 120.5, date: "2026-09-02T15:00:00.000Z" })],
+      });
+      reportOnline(false);
+
+      await expect(readBudgets()).resolves.toMatchObject([
+        { periodKey: "2026-09", spent: 120.5, expired: false },
+      ]);
+      await expect(readBudget("b1")).resolves.toMatchObject({ periodKey: "2026-09" });
+    });
+
+    it("keeps a CUSTOM budget the server still runs, however late this device thinks it is", async () => {
+      const trip = budget({
+        id: "b2",
+        name: "Trip",
+        periodType: "CUSTOM",
+        periodStartDate: "2026-09-01T05:00:00.000Z",
+        periodEndDate: "2026-09-10T05:00:00.000Z",
+        effectiveFrom: "2026-01-01T00:00:00.000Z",
+      });
+      await mirrorOf({ budgets: [trip] });
+      reportOnline(false);
+
+      await expect(readBudgets()).resolves.toMatchObject([{ id: "b2", expired: false }]);
+    });
   });
 });

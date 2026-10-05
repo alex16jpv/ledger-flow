@@ -25,6 +25,7 @@ import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
+import { useServerNow } from "@/lib/local/useServerNow";
 
 interface FiltersSheetProps {
   open: boolean;
@@ -45,7 +46,8 @@ export function FiltersSheet({ open, filters, onClose, onApply }: FiltersSheetPr
     draft.type === "INCOME" || draft.type === "TRANSFER" ? draft.type : "EXPENSE";
   const categories = useCategoriesQuery(categoryType);
   const recent = useRecentCategories(categoryType, categories.data, 4);
-  const count = useTransactionsCount(toListQuery(draft, timeZone), open);
+  const now = useServerNow();
+  const count = useTransactionsCount(toListQuery(draft, timeZone, now), open);
   const selectedCategory = categories.data?.find((category) => category.id === draft.categoryId);
   const categoryChips =
     selectedCategory && !recent.some((category) => category.id === selectedCategory.id)

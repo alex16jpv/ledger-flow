@@ -1,6 +1,6 @@
 import { expect, type Page, test, uniqueEmail } from "../fixtures";
 import { signUpWithCode, TEST_CAPTCHA } from "../mailpit";
-import { freshUser, signInAs } from "../offline";
+import { freshUser, readyForOffline, signInAs } from "../offline";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -464,7 +464,6 @@ test("the detail says how the period got here, where it ends and how it compares
   }
 });
 
-// T-163: the current period is the server's, so a device clock weeks ahead still shows this month.
 test("a device clock weeks ahead still shows the server's month, with what was spent in it", async ({
   page,
   request,
@@ -496,4 +495,14 @@ test("a device clock weeks ahead still shows the server's month, with what was s
 
   await expect(page.getByText(/210,000/).first()).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: "Next month" })).toBeDisabled();
+  await readyForOffline(page);
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("You’re offline.")).toBeVisible();
+  await expect(page.getByText(/210,000/).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Next month" })).toBeDisabled();
+  await page.goto("/transactions");
+  await expect(page.getByText(/^Today · /)).toBeVisible();
+  await expect(page.getByText(/40,000/).first()).toBeVisible();
 });

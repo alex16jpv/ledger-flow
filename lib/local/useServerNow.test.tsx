@@ -34,4 +34,15 @@ describe("useServerNow (T-163)", () => {
     expect(first.toISOString()).toBe("2026-09-30T12:00:00.000Z");
     expect(result.current).toBe(first);
   });
+
+  it("does not move for the few milliseconds each answer's latency adds", async () => {
+    const { result, rerender } = renderHook(() => useServerNow());
+    await act(() => rememberServerTime(vault, "2026-09-30T12:00:00.000Z"));
+    const settled = result.current;
+
+    await act(() => rememberServerTime(vault, "2026-09-30T11:59:59.950Z"));
+    rerender();
+
+    expect(result.current).toBe(settled);
+  });
 });

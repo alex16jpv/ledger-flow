@@ -23,6 +23,7 @@ import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { validationMessage } from "@/lib/i18n/validation";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
+import { useServerNow } from "@/lib/local/useServerNow";
 import type { Budget, Category } from "@/types/api";
 
 import {
@@ -62,7 +63,7 @@ export function BudgetForm({
 }: BudgetFormProps) {
   const t = useTranslations();
   const { timeZone } = useFormatSettings();
-  const today = dayKey(new Date(), timeZone);
+  const today = dayKey(useServerNow(), timeZone);
   const form = useForm<BudgetFormValues>({
     resolver: zodResolver(budgetFormSchema),
     defaultValues,

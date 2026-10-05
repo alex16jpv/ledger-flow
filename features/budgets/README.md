@@ -92,9 +92,10 @@ happened**, which can move a period that was already closed; the movement's own 
 explains it.
 
 **"Now" is the server's (T-163).** Which month is the current one, which period a budget is in, whether
-it has expired and how many days are left are judged by `useServerNow()` (`lib/local/useServerNow.ts`):
-this device's time corrected by the offset every server answer teaches (`lib/local/clock.ts`, F-66). The
-budget screens, Home's month, Stats, Trends and last month's suggestion read it, and the mirror's
-budgets default to `serverNow()` when no `reference` is given, so a phone whose clock is wrong sees
-the same period online and offline as the server does. The dates a form proposes stay on the device's
-clock, where the user reads them.
+it has expired, how many days are left, which day is "Today" and the start date a new budget proposes
+are judged by `useServerNow()` (`lib/local/useServerNow.ts`): the time the screen opened, corrected by
+the offset to the server's clock that every answer teaches (`lib/local/clock.ts`, F-66), moving only
+when that offset moves by a minute or more. The budget screens, Home, Transactions, Stats, Trends and
+last month's suggestion read it, and the mirror's budgets default to `serverNow()` when no `reference`
+is given, so a phone whose clock is wrong sees the same period online and offline as the server does.
+The date and time a movement's form proposes stay on the device's clock, where F-66 warns about it.

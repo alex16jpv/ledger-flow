@@ -46,6 +46,7 @@ import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { Link, useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
+import { useServerNow } from "@/lib/local/useServerNow";
 
 import { useAdjustmentSheet } from "../useAdjustmentSheet";
 import { FiltersSheet } from "./FiltersSheet";
@@ -60,9 +61,10 @@ export function TransactionsScreen() {
   const toast = useToast();
   const dates = useDates();
   const { timeZone } = useFormatSettings();
+  const now = useServerNow();
   const filters = useMemo(() => parseFilters(new URLSearchParams(params.toString())), [params]);
-  const query = useMemo(() => toListQuery(filters, timeZone), [filters, timeZone]);
-  const window = useMemo(() => periodWindow(filters, timeZone), [filters, timeZone]);
+  const query = useMemo(() => toListQuery(filters, timeZone, now), [filters, timeZone, now]);
+  const window = useMemo(() => periodWindow(filters, timeZone, now), [filters, timeZone, now]);
   const list = useTransactionsInfinite(query);
   const totals = usePeriodTotals(window ? toIsoWindow(window) : null);
   const pendingCount = usePendingCount();
@@ -134,7 +136,7 @@ export function TransactionsScreen() {
   const activeCount = countActiveFilters(filters);
   const periodLabel =
     filters.period === "month"
-      ? dates.formatMonth(new Date())
+      ? dates.formatMonth(now)
       : filters.period === "custom" && window
         ? dates.formatRange(window.from, new Date(window.to.getTime() - 1))
         : t(`transactions.list.periods.${filters.period}`);

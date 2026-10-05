@@ -6,6 +6,7 @@ import { Amount } from "@/components/ui/Amount";
 import { Card } from "@/components/ui/Card";
 import { DayHeader, List } from "@/components/ui/Row";
 import { useDates } from "@/lib/i18n/useDates";
+import { useServerNow } from "@/lib/local/useServerNow";
 import type { Transaction } from "@/types/api";
 
 import { groupByDay } from "../groups";
@@ -26,7 +27,7 @@ export function TransactionDayList({
 }: TransactionDayListProps) {
   const t = useTranslations("common");
   const dates = useDates();
-  const now = new Date();
+  const now = useServerNow();
   const today = dates.dayKey(now);
   const yesterday = dates.dayKey(new Date(now.getTime() - 86_400_000));
 

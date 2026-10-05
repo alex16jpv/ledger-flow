@@ -25,6 +25,7 @@ import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
+import { useServerNow } from "@/lib/local/useServerNow";
 import type { Transaction } from "@/types/api";
 
 // The two the server refuses a category on carry no list to offer.
@@ -60,6 +61,7 @@ export function ReviewCard({
   const t = useTranslations();
   const tc = useTranslations("common");
   const dates = useDates();
+  const now = useServerNow();
   const toast = useToast();
   const update = useUpdateTransaction(transaction.id);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -88,7 +90,6 @@ export function ReviewCard({
       ? [selected, ...recent]
       : recent;
   const when = new Date(transaction.date);
-  const now = new Date();
   const day = dates.dayKey(when);
   const dayLabel =
     day === dates.dayKey(now)
