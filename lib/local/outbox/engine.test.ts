@@ -285,7 +285,7 @@ describe("the sync engine", () => {
     expect(left[1]).toMatchObject({ status: "pending", attempts: 0 });
   });
 
-  it("takes the amber off the figures the moment the queue is empty", async () => {
+  it("takes the amber off the figures the moment the queue is empty, but the balance's (T-260)", async () => {
     const vault = await vaultWith();
     reportOnline(false);
     await createTransaction(
@@ -299,7 +299,11 @@ describe("the sync engine", () => {
     await requestSync();
 
     expect(await pendingOperations(vault.db)).toEqual([]);
-    expect(outboxStatusStore.getSnapshot()).toEqual(EMPTY_OUTBOX);
+    // The server's balance arrives with the pull behind the round; until then it is this device's.
+    expect(outboxStatusStore.getSnapshot()).toEqual({
+      ...EMPTY_OUTBOX,
+      projected: { ...EMPTY_OUTBOX.projected, balances: true },
+    });
   });
 
   it("pulls after a push, and only after one that reached the server", async () => {

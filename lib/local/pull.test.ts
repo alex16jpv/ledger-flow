@@ -81,6 +81,7 @@ describe("pullChanges", () => {
       cursor: "v1|final|",
       serverTime: "2026-09-03T12:00:00.000Z",
       epoch: 1,
+      landed: false,
     });
     expect(queries).toEqual([
       { cursor: undefined, limit: 500 },

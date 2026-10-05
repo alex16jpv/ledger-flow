@@ -211,6 +211,57 @@ test("a pull that lands while the expense is on its way counts it once, then and
   await expect(page.getByText(figure(user.openingBalance - 2 * amount))).toHaveCount(0);
 });
 
+// T-260: the answer does not carry the balance, so until a pull brings it the device keeps counting.
+test("an expense the server took stays in the balance while the pull behind it fails", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "landed");
+  const amount = uniqueAmount();
+  const figure = (balance: number) => new Intl.NumberFormat("en-US").format(balance);
+
+  await signInAs(context, request, user);
+  await page.goto("/accounts");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("You’re offline.")).toBeVisible();
+  await addButton(page).click();
+  const sheet = page.getByRole("dialog", { name: "Add" });
+  await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
+  await page.keyboard.type(String(amount));
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(sheet).toBeHidden();
+  await expectPending(page, 1);
+
+  let pullsFail = true;
+  await context.route("**/api/sync/changes**", (route) =>
+    pullsFail ? route.abort("connectionfailed") : route.continue(),
+  );
+  await context.setOffline(false);
+  await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
+  const [account] = await listAccounts(request);
+  expect(account?.balance).toBe(user.openingBalance - amount);
+  expect((await mirrorRow(page, "accounts", user.accountId))?.balance).toBe(user.openingBalance);
+
+  // A fresh read of the copy: the balance it holds is still the old one, and the screen is not.
+  await page.reload();
+  await expect(page.getByText(figure(user.openingBalance - amount)).first()).toBeVisible();
+  await expect(page.getByText(figure(user.openingBalance))).toHaveCount(0);
+
+  pullsFail = false;
+  await page.reload();
+  await expect
+    .poll(async () => (await mirrorRow(page, "accounts", user.accountId))?.balance)
+    .toBe(user.openingBalance - amount);
+  await expect(page.getByText(figure(user.openingBalance - amount)).first()).toBeVisible();
+  await expect(page.getByText(figure(user.openingBalance - 2 * amount))).toHaveCount(0);
+});
+
 // T-123: the one write whose movements the server mints, so the device mints its own and drops them.
 test("a settle-up with no network moves every figure, and the server's movement replaces the device's", async ({
   page,

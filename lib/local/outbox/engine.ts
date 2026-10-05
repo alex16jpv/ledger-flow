@@ -11,6 +11,7 @@ import { batchBody, chunkBatch, postBatch } from "./batch";
 import { type Cancelled, coalesce, type Collapsed } from "./coalesce";
 import { conflictKind } from "./conflict";
 import { isRemoval, newEntityId, operationPayload } from "./envelope";
+import { keepLanded } from "./landed";
 import { recordNotices, type SyncNotice } from "./notices";
 import {
   holdOperations,
@@ -156,17 +157,23 @@ export const forgetRollbacks = forget;
 // An undo still registered means a form is on screen waiting for this very pass.
 const awaited = (seq: number): boolean => rollbacks.has(seq);
 
-// Drops an operation and everything folded into it in one transaction.
+// Drops an operation and everything folded into it in one transaction; their money stays counted.
 async function settle(
   db: VaultDb,
   entry: Collapsed,
+  stamp: string | undefined,
   apply?: (tx: WriteTransaction) => Promise<void> | void,
 ): Promise<void> {
-  forget([entry.operation.seq, ...entry.absorbed]);
-  await settleWrite(db, entry.operation.seq, async (tx) => {
-    for (const seq of entry.absorbed) await tx.objectStore("outbox").delete(seq);
-    await apply?.(tx);
-  });
+  const seqs = [entry.operation.seq, ...entry.absorbed];
+  forget(seqs);
+  const tx = writeTransaction(db);
+  const outbox = tx.objectStore("outbox");
+  for (const seq of seqs) {
+    await keepLanded(tx, await outbox.get(seq), stamp);
+    await outbox.delete(seq);
+  }
+  await apply?.(tx);
+  await tx.done;
 }
 
 // The row goes too: nothing on the server ever knew about it.
@@ -285,7 +292,7 @@ async function sendPlanned(
         ),
       );
       let rebased = 0;
-      await settle(db, entry, async (tx) => {
+      await settle(db, entry, stampOf(row), async (tx) => {
         await routeFor(entity, action).confirm(tx, row, operation);
         rebased = await rebaseGuards(tx, operation, stampOf(row));
         const moved = await applyRestamps(tx, restamped);
@@ -305,7 +312,7 @@ async function sendPlanned(
         return result;
       }
       if (isAlreadyGone(error, action)) {
-        await settle(db, entry, (tx) => reconcileRemoval(tx, operation));
+        await settle(db, entry, undefined, (tx) => reconcileRemoval(tx, operation));
         report.set(seq, { kind: "gone" });
         result.progressed = true;
         result.answered = true;
@@ -459,7 +466,7 @@ async function applyLanded(run: BatchRun, entry: Collapsed, answer: BatchAnswer)
   }));
   let rebased = 0;
   const landed = operation;
-  await settle(db, { ...entry, operation: landed }, async (tx) => {
+  await settle(db, { ...entry, operation: landed }, stampOf(answer.result), async (tx) => {
     await confirmLanded(tx, landed, answer.result);
     rebased = await rebaseGuards(tx, landed, stampOf(answer.result));
     const moved = await applyRestamps(tx, answer.restamped ?? []);

@@ -7,6 +7,7 @@ import type { SyncChangesResponse } from "@/types/api";
 
 import { rememberServerTime } from "./clock";
 import type { VaultHandle } from "./db";
+import { landedOpIds, releaseLanded } from "./outbox/landed";
 import { type WriteTransaction, writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow } from "./outbox/reconcile";
 import {
@@ -48,6 +49,8 @@ export interface PullResult {
   serverTime: string;
   // The mirror epoch these pages were written under, for whatever the caller adds to the same copy.
   epoch: number;
+  // T-260: some write the server applied stopped being counted on top of the balance.
+  landed: boolean;
 }
 
 export class SyncFeedStalledError extends Error {
@@ -100,6 +103,7 @@ interface Applied {
   ready: boolean;
   // The invitations to the new address are older than the cursor, so only a snapshot brings them.
   readdressed: boolean;
+  landed: boolean;
 }
 
 // Left and joined again: rows placed by the new join sit after the end of the old one, so they stay.
@@ -133,6 +137,7 @@ async function applyPage(
   handle: VaultHandle,
   page: SyncChangesResponse,
   epoch: number,
+  landedBefore: ReadonlySet<string>,
 ): Promise<Applied> {
   const { changes, pagination } = page;
   const tx = writeTransaction(handle.db);
@@ -206,6 +211,12 @@ async function applyPage(
     news ||= dropped;
   }
 
+  const landed = await releaseLanded(tx, {
+    changes,
+    before: landedBefore,
+    finished: !pagination.hasMore && !readdressed,
+  });
+
   const meta = tx.objectStore("meta");
   // Stored verbatim: the cursor is opaque, and the next run resumes from it whatever it encodes.
   if (readdressed) await meta.delete("syncCursor");
@@ -214,7 +225,7 @@ async function applyPage(
   const ready = !pagination.hasMore && (await meta.get("syncedAt")) === undefined;
   if (!pagination.hasMore) await meta.put({ key: "syncedAt", value: page.serverTime });
   await tx.done;
-  return { news: news || readdressed, readdressed, ready };
+  return { news: news || readdressed || landed, readdressed, ready, landed };
 }
 
 const resyncRequired = (error: unknown) =>
@@ -246,6 +257,8 @@ export async function pullChanges(
   let pages = 0;
   let rows = 0;
   let changed = false;
+  let landed = false;
+  const landedBefore = await landedOpIds(handle.db);
 
   for (;;) {
     if (!sessionIsFor(handle.userId)) throw new SessionChangedError(handle.userId);
@@ -262,9 +275,10 @@ export async function pullChanges(
     // F-66: every answer carries the server's clock, needed before there is a refusal to explain.
     await rememberServerTime(handle.db, page.serverTime);
     // Rows are applied by id with put, so the deliberate 60-second overlap of D-14 costs nothing.
-    const applied = await applyPage(handle, page, epoch);
+    const applied = await applyPage(handle, page, epoch, landedBefore);
     if (applied.news || applied.ready) markSuggestionsStale();
     changed = applied.news || changed;
+    landed = applied.landed || landed;
     pages += 1;
     rows += page.pagination.count;
     if (applied.readdressed) {
@@ -274,7 +288,7 @@ export async function pullChanges(
 
     const next = page.pagination.nextCursor;
     if (!page.pagination.hasMore) {
-      return { pages, rows, changed, cursor: next, serverTime: page.serverTime, epoch };
+      return { pages, rows, changed, cursor: next, serverTime: page.serverTime, epoch, landed };
     }
     if (next === cursor) throw new SyncFeedStalledError(next);
     cursor = next;

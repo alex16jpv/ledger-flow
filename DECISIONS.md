@@ -5,6 +5,29 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-05 · A write the server applied stays in the balance until a pull brings it (T-260)
+
+- **Context:** settling an operation took its effect out of the projection, but no answer carries the
+  balance it moved (`POST /sync` and the routes return the row), so until the pull behind the round
+  landed the mirror held the old balance with nothing on top: the expense was missing. Usually that is
+  the time of one request, but when that pull failed it lasted until the next good one, and any re-read
+  (another screen, a reload) showed it.
+- **Decision:** `settle` keeps the effect of what it takes out of the queue in `meta`
+  (`landedEffects`), in the same transaction, and `projectBalances` (accounts and the loan check) adds
+  it. A feed page lets go of one when it brings the write's own row with `updatedAt` at least the
+  answer's stamp: that copy was read after the write, and the server commits the row and the balance
+  together. The last page of a pull that began after it lets go of the rest, which covers answers with
+  no row (`duplicate`, a `404` on a removal). Letting go counts as news, so the screens re-read, and the
+  balance keeps the projection mark until then (`design/spec/components.md` §24).
+- **Alternatives (not taken):** having the backend answer the balances each write moved — a change to
+  both repositories for what the next pull already brings; moving the mirror's account row by the
+  effect — the row would stop being the server's, and a pull already holding the write would count it
+  twice; a store of its own — a schema bump for a list that is empty almost always.
+- **Consequence:** an operation's effect is counted while queued, and after it until the server's
+  balance is in the mirror, never both. The feed orders every collection by `updatedAt` and cuts pages at
+  500 rows, so one write's row and its balance can fall on two pages of the same pull; between them the
+  balance shows the write twice or not at all, the edge T-162 already noted.
+
 ## 2026-10-05 · A queued create the feed already brings nets to nothing (T-162)
 
 - **Context:** coming back online starts the pull and the drain together. When the pull read the feed

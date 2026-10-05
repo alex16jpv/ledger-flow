@@ -234,9 +234,10 @@ describe("the Resolve sync conflict sheet", () => {
         headers: { "content-type": "application/json" },
       }),
     );
+    const onClose = vi.fn();
     renderWithProviders(
       <ToastProvider>
-        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+        <SyncConflictSheet open seq={1} onClose={onClose} />
       </ToastProvider>,
     );
 
@@ -246,6 +247,10 @@ describe("the Resolve sync conflict sheet", () => {
     expect(screen.queryByRole("button", { name: "Keep this device’s version" })).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Restore the account" }));
+    // The sheet closes once the restore and the drain it asks for are both done.
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
 
     await waitFor(async () => {
       expect((await pendingOperations(vault.db)).map((entry) => entry.seq)).toEqual([0.5, 1]);
@@ -273,9 +278,10 @@ describe("the Resolve sync conflict sheet", () => {
         headers: { "content-type": "application/json" },
       }),
     );
+    const onClose = vi.fn();
     renderWithProviders(
       <ToastProvider>
-        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+        <SyncConflictSheet open seq={1} onClose={onClose} />
       </ToastProvider>,
     );
 
@@ -293,6 +299,9 @@ describe("the Resolve sync conflict sheet", () => {
     expect(field).toHaveValue("Cash (old)");
 
     await userEvent.click(screen.getByRole("button", { name: "Restore as “Cash (old)”" }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
 
     await waitFor(async () => {
       expect((await pendingOperations(vault.db))[0]).toMatchObject({ status: "pending" });
@@ -321,9 +330,10 @@ describe("the Resolve sync conflict sheet", () => {
         headers: { "content-type": "application/json" },
       }),
     );
+    const onClose = vi.fn();
     renderWithProviders(
       <ToastProvider>
-        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+        <SyncConflictSheet open seq={1} onClose={onClose} />
       </ToastProvider>,
     );
 
@@ -331,6 +341,9 @@ describe("the Resolve sync conflict sheet", () => {
     await userEvent.clear(field);
     await userEvent.type(field, "Petty cash");
     await userEvent.click(screen.getByRole("button", { name: "Restore as “Petty cash”" }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
 
     await waitFor(async () => {
       expect((await pendingOperations(vault.db))[0]?.payload).toMatchObject({
@@ -361,9 +374,10 @@ describe("the Resolve sync conflict sheet", () => {
         headers: { "content-type": "application/json" },
       }),
     );
+    const onClose = vi.fn();
     renderWithProviders(
       <ToastProvider>
-        <SyncConflictSheet open seq={1} onClose={vi.fn()} />
+        <SyncConflictSheet open seq={1} onClose={onClose} />
       </ToastProvider>,
     );
 
@@ -383,6 +397,9 @@ describe("the Resolve sync conflict sheet", () => {
     await userEvent.click(within(calendar).getByRole("button", { name: "Cancel" }));
 
     await userEvent.click(screen.getByRole("button", { name: "Save and try again" }));
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
 
     await waitFor(async () => {
       expect((await pendingOperations(vault.db))[0]).toMatchObject({ status: "pending" });

@@ -1,6 +1,7 @@
 import { api } from "@/lib/api/client";
 import type { Account, AccountList } from "@/types/api";
 
+import { readLanded } from "../outbox/landed";
 import { projectBalances } from "../outbox/projection";
 import { pendingOperations, type VaultDb } from "../outbox/queue";
 import { willBeSent } from "../outbox/reproject";
@@ -13,12 +14,13 @@ export interface AccountListParams {
   limit?: number;
 }
 
-// Invariant 2 with D-23: the server's `balance` plus the effect of what it has not applied yet.
+// Invariant 2 with D-23: the server's `balance` plus what it has not applied, or has and no pull brought.
 async function withProjectedBalances(db: VaultDb, rows: Account[]): Promise<Account[]> {
   const operations = (await pendingOperations(db)).filter(willBeSent);
-  if (operations.length === 0) return rows;
+  const landed = (await readLanded(db)).map((entry) => entry.effect);
+  if (operations.length === 0 && landed.length === 0) return rows;
   const projected = new Map(
-    projectBalances(rows, operations).map((entry) => [entry.accountId, entry.balance]),
+    projectBalances(rows, operations, landed).map((entry) => [entry.accountId, entry.balance]),
   );
   return rows.map((row) => ({ ...row, balance: projected.get(row.id) ?? row.balance }));
 }

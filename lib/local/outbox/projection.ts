@@ -2,6 +2,7 @@ import { type AccountBalance, type BalanceTransaction, deriveBalances } from "..
 import { fromCents, toCents } from "../derive/money";
 import type { OutboxOperation } from "../schema";
 import { type MoneyEffect, operationPayload } from "./envelope";
+import { landedIn } from "./landed";
 import { refused } from "./projected";
 import type { WriteTransaction } from "./queue";
 import { willBeSent } from "./reproject";
@@ -15,8 +16,9 @@ export interface ProjectedAccount {
 export function projectBalances(
   accounts: ProjectedAccount[],
   operations: OutboxOperation[],
+  landed: readonly MoneyEffect[] = [],
 ): AccountBalance[] {
-  const effects: MoneyEffect[] = [];
+  const effects: MoneyEffect[] = [...landed];
   for (const operation of operations) {
     const { effect } = operationPayload(operation);
     if (effect) effects.push(effect);
@@ -63,8 +65,9 @@ export async function refuseLoanInCredit(tx: WriteTransaction, effect: MoneyEffe
   }
   if (loans.length === 0) return;
   const queued = (await tx.objectStore("outbox").getAll()).filter(willBeSent);
+  const landed = (await landedIn(tx)).map((entry) => entry.effect);
   for (const loan of loans) {
-    const [now] = projectBalances([{ id: loan.id, balance: loan.balance }], queued);
+    const [now] = projectBalances([{ id: loan.id, balance: loan.balance }], queued, landed);
     const from = now?.balance ?? loan.balance;
     const [next] = applyEffects([{ id: loan.id, balance: from }], [effect]);
     const to = toCents(next?.balance ?? from);

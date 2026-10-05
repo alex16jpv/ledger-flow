@@ -53,7 +53,9 @@ export type MetaKey =
   // F-66: learned from the `serverTime` of every answer, for when there is no network left.
   | "clockOffsetMs"
   // T-164: moved by every purge, so a pull that began before one writes nothing after it.
-  | "mirrorEpoch";
+  | "mirrorEpoch"
+  // T-260: the effects of writes the server applied whose balance no pull has brought yet.
+  | "landedEffects";
 
 export interface MetaRecord {
   key: MetaKey;

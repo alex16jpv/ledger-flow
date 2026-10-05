@@ -1,5 +1,6 @@
 import type { OutboxOperation } from "../schema";
 import { operationPayload } from "./envelope";
+import { readLanded } from "./landed";
 import { pendingOperations, type VaultDb } from "./queue";
 
 // F-16 with invariant 2: from the first queued write these figures become projections.
@@ -42,7 +43,7 @@ export const EMPTY_OUTBOX: OutboxStatus = {
 const needsAttention = (operation: OutboxOperation): boolean =>
   operation.status === "conflict" || operation.status === "failed";
 
-function projectionOf(operations: OutboxOperation[]): OutboxProjection {
+function projectionOf(operations: OutboxOperation[], landed: number): OutboxProjection {
   // A queued movement moves every money figure at once; an account create only its opening.
   const money = operations.some(
     (operation) => operation.entity === "transaction" || operation.entity === "settlement",
@@ -50,6 +51,7 @@ function projectionOf(operations: OutboxOperation[]): OutboxProjection {
   return {
     balances:
       money ||
+      landed > 0 ||
       operations.some(
         (operation) => operation.entity === "account" && operation.action === "create",
       ),
@@ -65,7 +67,7 @@ const carriedIds = (operation: OutboxOperation): string[] => {
   return sharedExpenseId === undefined ? [] : [sharedExpenseId];
 };
 
-function summarise(operations: OutboxOperation[]): OutboxStatus {
+function summarise(operations: OutboxOperation[], landed: number): OutboxStatus {
   const stuck = operations.filter(needsAttention);
   return {
     // Discarding one is the only thing that takes it off the list, and that is a queue change.
@@ -86,7 +88,7 @@ function summarise(operations: OutboxOperation[]): OutboxStatus {
     firstAttention: stuck[0]?.seq ?? null,
     lastError:
       [...operations].reverse().find((operation) => operation.lastError)?.lastError ?? null,
-    projected: projectionOf(operations),
+    projected: projectionOf(operations, landed),
   };
 }
 
@@ -126,7 +128,8 @@ function publish(next: OutboxStatus): void {
 }
 
 export async function refreshOutboxStatus(db: VaultDb): Promise<OutboxStatus> {
-  publish(summarise(await pendingOperations(db)));
+  const [operations, landed] = await Promise.all([pendingOperations(db), readLanded(db)]);
+  publish(summarise(operations, landed.length));
   return status;
 }
 

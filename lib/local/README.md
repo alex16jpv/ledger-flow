@@ -479,10 +479,18 @@ and the screen agree by construction: with an empty queue the projection is the 
 and with a queue it equals `deriveBalances` over the optimistic rows. `repository/accounts.ts`
 applies it, so Accounts is the first screen to paint a projected figure.
 
+**What the server applied and no pull has brought (T-260).** An answer to a write never carries the
+balance it moved, so taking the operation out of the queue would leave the mirror's old balance with
+nothing on top. `settle` keeps the operation's effect in `meta` (`landedEffects`, `landed.ts`) in the
+same transaction, and the projection adds it like a queued one. A page of the feed lets go of it when
+it brings the write's own row at least as new as the answer's stamp — the server writes the row and
+the balance together — and the last page of a pull that began after it lets go of whatever is left,
+which covers answers with no row. Until then the balance keeps its amber mark.
+
 **Marking (invariant 2, F-16).** `outboxStatusStore` says how much is queued, how much needs a
 decision, which rows those are, and which families of figures the queue can move; `useOutbox()`
 reads it and `components/ui/Projected` puts the amber `cloud-off` mark next to the figure
-(DESIGN §8.12). Balances, `spent` and its progress bars, Home's month and day bars, the Statistics
+(DESIGN §8.12); a landed effect keeps it on balances. Balances, `spent` and its progress bars, Home's month and day bars, the Statistics
 total and its bars, and Movements' period summary carry it. A movement whose own write is still
 queued also says so on its row: the amber "Pending sync" badge and the "saved on this device" meta,
 turning to a red "Needs attention" once the server refused that write.
