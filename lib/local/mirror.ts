@@ -206,6 +206,8 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
       opened.close();
       return;
     }
+    // F-66 and T-163: what the last session learned of this clock, before any read answers from here.
+    await loadClockOffset(opened.db);
     handle = opened;
     noteVaultOpened(userId);
     setCurrentVault(opened);
@@ -213,8 +215,6 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     setBlockedOperations(opened.blockedSeqs);
     // Invariant 7: the queue survives reloads, so the banner knows before the first write.
     await refreshOutboxStatus(opened.db);
-    // What the last session learned about this device's clock, before the first form opens (F-66).
-    await loadClockOffset(opened.db);
     // O-F1: from this item on the vault holds data, and without the grant it can be evicted.
     await requestPersistentStorage();
     await pull();

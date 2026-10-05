@@ -4,7 +4,8 @@ Spending ceilings per period. The onboarding (W-13) and the home CTA create the 
 budget through `GlobalBudgetForm`; W-26 adds the list.
 
 `BudgetsView` (`/budgets?reference=YYYY-MM&period=`) resolves the month in the user's time zone,
-sends the local start of the month as `reference`, follows `hasMore` until the last page and splits the result into the featured global monthly card
+sends the local start of the month as `reference`, follows `hasMore` until the last page and splits
+the result into the featured global monthly card
 (`GlobalBudgetCard`, with the pace marker and the "left for n days / ≈ per day" line) and one
 `BudgetCard` per budget with the status phrase from `budgetProgress`. The period-type filter is
 client-side and lives in the URL. `PastBudgetsView` (`/budgets/past`) lists ended CUSTOM budgets and
@@ -89,3 +90,12 @@ minus what has come back for it — rather than its amount, with and without net
 shared expense counts in full until somebody pays, and a payment lowers it **in the month the expense
 happened**, which can move a period that was already closed; the movement's own history is what
 explains it.
+
+**"Now" is the server's (T-163).** Which month is the current one, which period a budget is in, whether
+it has expired, how many days are left, which day is "Today" and the start date a new budget proposes
+are judged by `useServerNow()` (`lib/local/useServerNow.ts`): the time the screen opened, corrected by
+the offset to the server's clock that every answer teaches (`lib/local/clock.ts`, F-66), moving only
+when that offset moves by a minute or more. The budget screens, Home, Transactions, Stats, Trends and
+last month's suggestion read it, and the mirror's budgets default to `serverNow()` when no `reference`
+is given, so a phone whose clock is wrong sees the same period online and offline as the server does.
+The date and time a movement's form proposes stay on the device's clock, where F-66 warns about it.

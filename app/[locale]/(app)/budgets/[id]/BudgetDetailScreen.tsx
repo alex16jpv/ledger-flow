@@ -51,6 +51,7 @@ import { Link, useRouter } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
+import { useServerNow } from "@/lib/local/useServerNow";
 import { useBackNavigation } from "@/lib/navigation/history";
 import type { Budget } from "@/types/api";
 
@@ -70,7 +71,7 @@ export function BudgetDetailScreen({ id }: { id: string }) {
   const toast = useToast();
   const dates = useDates();
   const params = useSearchParams();
-  const [now] = useState(() => new Date());
+  const now = useServerNow();
   const monthKey = parseMonthKey(params.get("reference"), now, dates.timeZone);
   const { reference, iso } = monthReference(monthKey, dates.timeZone, now);
   const budget = useBudgetQuery(id, iso);

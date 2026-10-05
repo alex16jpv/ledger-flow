@@ -5,6 +5,7 @@ import { useMemo } from "react";
 
 import { monthWindow, shiftMonth, toIsoWindow } from "@/lib/format/dates";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
+import { useServerNow } from "@/lib/local/useServerNow";
 import { QUERY_DOMAINS } from "@/lib/query/domains";
 import type { UpdateBudgetInput } from "@/types/api";
 
@@ -126,9 +127,10 @@ export function useRemoveBudgetOverride(id: string) {
 // Owner request F-01: budget suggestions follow what the user actually spent last month.
 export function useLastMonthSpending() {
   const { timeZone } = useFormatSettings();
+  const now = useServerNow();
   const window = useMemo(
-    () => toIsoWindow(monthWindow(shiftMonth(new Date(), -1, timeZone), timeZone)),
-    [timeZone],
+    () => toIsoWindow(monthWindow(shiftMonth(now, -1, timeZone), timeZone)),
+    [now, timeZone],
   );
   return useQuery({
     queryKey: budgetKeys.lastMonthSpending(window.from),

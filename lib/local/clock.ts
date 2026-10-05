@@ -13,10 +13,13 @@ type Listener = () => void;
 
 const listeners = new Set<Listener>();
 let offsetMs = 0;
+// Screens key their queries on "now", so the latency of each answer must not move it.
+let settledOffsetMs = 0;
 
 function publish(next: number): void {
   if (offsetMs === next) return;
   offsetMs = next;
+  if (Math.abs(next - settledOffsetMs) >= WORTH_STORING_MS) settledOffsetMs = next;
   for (const listener of listeners) listener();
 }
 
@@ -34,7 +37,14 @@ export const clockStore = {
   getServerSnapshot: (): number => 0,
 };
 
+export const settledClockStore = {
+  subscribe: clockStore.subscribe,
+  getSnapshot: (): number => settledOffsetMs,
+  getServerSnapshot: (): number => 0,
+};
+
 export function resetClockOffset(): void {
+  settledOffsetMs = 0;
   publish(0);
 }
 

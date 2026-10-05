@@ -4,7 +4,7 @@ import { ChartLine, TrendingUp } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { ComponentProps } from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
@@ -50,6 +50,7 @@ import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
+import { useServerNow } from "@/lib/local/useServerNow";
 import { useBackNavigation } from "@/lib/navigation/history";
 import type { ColorToken } from "@/lib/theme/feature-color";
 
@@ -115,7 +116,7 @@ export function TrendsScreen() {
   const dates = useDates();
   const money = useMoney();
   const outbox = useOutbox();
-  const [now] = useState(() => new Date());
+  const now = useServerNow();
 
   const monthKey = parseMonthKey(params.get("reference"), now, dates.timeZone);
   const range = parseRange(params.get("range"));

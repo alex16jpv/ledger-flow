@@ -17,6 +17,7 @@ import type {
   User,
 } from "@/types/api";
 
+import { resetClockOffset } from "../clock";
 import { pullChanges } from "../pull";
 import { readBudget, readBudgets, readBudgetsPage } from "./budgets";
 import { setCurrentVault } from "./read";
@@ -60,6 +61,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  resetClockOffset();
   setCurrentVault(null);
   connectivityStore.reset();
   vi.unstubAllGlobals();
@@ -256,5 +258,44 @@ describe("budgets through the repository", () => {
 
     await expect(readBudget("missing", REFERENCE)).rejects.toThrow("Network request failed");
     expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  describe("with this device's clock two months ahead (T-163)", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-11-02T12:00:00.000Z"));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("judges the current period by the server's clock, not this device's", async () => {
+      await mirrorOf({
+        budgets: [dining],
+        transactions: [transaction({ id: "t1", amount: 120.5, date: "2026-09-02T15:00:00.000Z" })],
+      });
+      reportOnline(false);
+
+      await expect(readBudgets()).resolves.toMatchObject([
+        { periodKey: "2026-09", spent: 120.5, expired: false },
+      ]);
+      await expect(readBudget("b1")).resolves.toMatchObject({ periodKey: "2026-09" });
+    });
+
+    it("keeps a CUSTOM budget the server still runs, however late this device thinks it is", async () => {
+      const trip = budget({
+        id: "b2",
+        name: "Trip",
+        periodType: "CUSTOM",
+        periodStartDate: "2026-09-01T05:00:00.000Z",
+        periodEndDate: "2026-09-10T05:00:00.000Z",
+        effectiveFrom: "2026-01-01T00:00:00.000Z",
+      });
+      await mirrorOf({ budgets: [trip] });
+      reportOnline(false);
+
+      await expect(readBudgets()).resolves.toMatchObject([{ id: "b2", expired: false }]);
+    });
   });
 });

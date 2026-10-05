@@ -5,6 +5,32 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-05 · The current period follows the server's clock (T-163)
+
+- **Context:** the mirror's budgets took "now" from `new Date()`, and the screens did the same before
+  asking anybody: Budgets, the detail, Stats, Trends and Transactions froze `new Date()` and sent the
+  current month's `reference` or window from it, and Home's month context too. With the phone's clock
+  wrong the current period came out different — offline from the mirror, and online as well, since the
+  server was handed the device's month.
+- **Decision:** `useServerNow()` (`lib/local/useServerNow.ts`) is the time the screen opened, corrected
+  by the offset to the server's clock that every answer updates (F-66). It reads `settledClockStore`,
+  which moves only when the offset moves by a minute or more: each answer's latency shifts the offset
+  by milliseconds, and Budgets keys its queries on that instant. Every screen that decides "today" or
+  "the current period" reads it — the budget screens, Past budgets, Home, Transactions and its filters,
+  "Today"/"Yesterday" on the day lists and the review card, Stats, Trends, last month's suggestion and
+  the start date the budget form proposes — and `repository/budgets.ts` defaults to `serverNow()`. The
+  offset kept in the vault is loaded before the vault answers any read. Taken by the session with the
+  owner away (he asked it to choose and report).
+- **Alternatives (not taken):** only the mirror's default, as the audit proposed — every screen sends a
+  `reference`, so it would change nothing anyone sees; the device's clock everywhere — the server judges
+  periods and expiry by its own, so the two would disagree; the server's clock for the date and time a
+  movement's form proposes too — that is what the user types against, and F-66 already warns when this
+  clock is ahead and fixes the date the server refuses.
+- **Consequence:** on a device that never had an answer (a first sign-in) "now" is the device's until
+  the first answer, and then the screens move to the server's period and re-read; after that the stored
+  offset is there from the start. "Now" is frozen while a screen is open, so a screen left open over
+  midnight keeps yesterday's day until it is opened again, as Budgets, Stats and Trends already did.
+
 ## 2026-10-05 · A write the server applied stays in the balance until a pull brings it (T-260)
 
 - **Context:** settling an operation took its effect out of the projection, but no answer carries the

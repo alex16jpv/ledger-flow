@@ -1,5 +1,6 @@
 import { expect, type Page, test, uniqueEmail } from "../fixtures";
 import { signUpWithCode, TEST_CAPTCHA } from "../mailpit";
+import { freshUser, readyForOffline, signInAs } from "../offline";
 import { expectNoAxeViolations } from "./axe";
 
 const APP = process.env.E2E_APP_URL ?? "http://localhost:3002";
@@ -461,4 +462,47 @@ test("the detail says how the period got here, where it ends and how it compares
     await expect(column).toBeFocused();
     await expect(history.locator("xpath=following-sibling::p[1]")).toHaveText(/\$/);
   }
+});
+
+test("a device clock weeks ahead still shows the server's month, with what was spent in it", async ({
+  page,
+  request,
+  context,
+}) => {
+  const user = await freshUser(request, "budget-clock");
+  await signInAs(context, request, user);
+  const created = await request.post("/api/budgets", {
+    headers: { origin: APP },
+    data: {
+      name: "Everything",
+      color: "AMBER",
+      categoryIds: [],
+      type: "EXPENSE",
+      periodType: "MONTHLY",
+      amount: 250_000,
+    },
+  });
+  expect(created.status()).toBe(201);
+  const spent = await request.post("/api/transactions/quick", {
+    headers: { origin: APP },
+    data: { amount: 40_000 },
+  });
+  expect(spent.ok(), await spent.text()).toBe(true);
+
+  await page.clock.setSystemTime(new Date(Date.now() + 40 * 24 * 60 * 60 * 1000));
+  await page.goto("/budgets");
+  await expect(page.getByRole("heading", { level: 1, name: "Budgets" })).toBeVisible();
+
+  await expect(page.getByText(/210,000/).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("button", { name: "Next month" })).toBeDisabled();
+  await readyForOffline(page);
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("You’re offline.")).toBeVisible();
+  await expect(page.getByText(/210,000/).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Next month" })).toBeDisabled();
+  await page.goto("/transactions");
+  await expect(page.getByText(/^Today · /)).toBeVisible();
+  await expect(page.getByText(/40,000/).first()).toBeVisible();
 });
