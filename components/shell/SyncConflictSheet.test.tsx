@@ -247,7 +247,6 @@ describe("the Resolve sync conflict sheet", () => {
     expect(screen.queryByRole("button", { name: "Keep this device’s version" })).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Restore the account" }));
-    // The sheet closes once the restore and the drain it asks for are both done.
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();
     });

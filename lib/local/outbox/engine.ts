@@ -2,7 +2,7 @@ import { ApiError, isErrorCode, NetworkError } from "@/lib/api/errors";
 import { sessionIsFor } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
 import { reportError } from "@/lib/observability/reporter";
-import type { Account, SyncBatchResponse } from "@/types/api";
+import type { Account, Restamp, SyncBatchResponse } from "@/types/api";
 
 import { rememberServerTime } from "../clock";
 import { currentVault } from "../repository/read";
@@ -24,7 +24,7 @@ import {
   type WriteTransaction,
   writeTransaction,
 } from "./queue";
-import { reconcileCarried, reconcileRemoval, reconcileRow } from "./reconcile";
+import { reconcileCarried, reconcileRemoval, reconcileRow, reconcileServerRow } from "./reconcile";
 import { remint, swapMirror } from "./remint";
 import { applyRestamps, splitRestamps } from "./restamp";
 import { routeFor, serverBaseline } from "./routes";
@@ -161,19 +161,30 @@ const awaited = (seq: number): boolean => rollbacks.has(seq);
 async function settle(
   db: VaultDb,
   entry: Collapsed,
-  stamp: string | undefined,
+  restamped: readonly Restamp[],
   apply?: (tx: WriteTransaction) => Promise<void> | void,
 ): Promise<void> {
   const seqs = [entry.operation.seq, ...entry.absorbed];
   forget(seqs);
   const tx = writeTransaction(db);
-  const outbox = tx.objectStore("outbox");
-  for (const seq of seqs) {
-    await keepLanded(tx, await outbox.get(seq), stamp);
-    await outbox.delete(seq);
+  try {
+    const outbox = tx.objectStore("outbox");
+    for (const seq of seqs) {
+      await keepLanded(tx, await outbox.get(seq), restamped);
+      await outbox.delete(seq);
+    }
+    await apply?.(tx);
+    await tx.done;
+  } catch (error) {
+    // Half a settle would drop the operation and keep none of what it did to the mirror.
+    tx.done.catch(() => undefined);
+    try {
+      tx.abort();
+    } catch {
+      // Already gone: the failure that brought us here aborted it.
+    }
+    throw error;
   }
-  await apply?.(tx);
-  await tx.done;
 }
 
 // The row goes too: nothing on the server ever knew about it.
@@ -292,7 +303,7 @@ async function sendPlanned(
         ),
       );
       let rebased = 0;
-      await settle(db, entry, stampOf(row), async (tx) => {
+      await settle(db, entry, restamped, async (tx) => {
         await routeFor(entity, action).confirm(tx, row, operation);
         rebased = await rebaseGuards(tx, operation, stampOf(row));
         const moved = await applyRestamps(tx, restamped);
@@ -312,7 +323,7 @@ async function sendPlanned(
         return result;
       }
       if (isAlreadyGone(error, action)) {
-        await settle(db, entry, undefined, (tx) => reconcileRemoval(tx, operation));
+        await settle(db, entry, [], (tx) => reconcileRemoval(tx, operation));
         report.set(seq, { kind: "gone" });
         result.progressed = true;
         result.answered = true;
@@ -352,7 +363,7 @@ async function sendPlanned(
           "STALE_UPDATE",
           current === undefined ? {} : { serverRow: current },
           async (tx) => {
-            await reconcileRow(
+            await reconcileServerRow(
               tx,
               entity,
               entityId,
@@ -466,7 +477,7 @@ async function applyLanded(run: BatchRun, entry: Collapsed, answer: BatchAnswer)
   }));
   let rebased = 0;
   const landed = operation;
-  await settle(db, { ...entry, operation: landed }, stampOf(answer.result), async (tx) => {
+  await settle(db, { ...entry, operation: landed }, answer.restamped ?? [], async (tx) => {
     await confirmLanded(tx, landed, answer.result);
     rebased = await rebaseGuards(tx, landed, stampOf(answer.result));
     const moved = await applyRestamps(tx, answer.restamped ?? []);
@@ -538,8 +549,8 @@ async function applyConflict(run: BatchRun, entry: Collapsed, answer: BatchAnswe
         ? {}
         : { serverRow: current },
     async (tx) => {
-      if (archived !== undefined) await reconcileRow(tx, "account", archived.id, archived);
-      await reconcileRow(
+      if (archived !== undefined) await reconcileServerRow(tx, "account", archived.id, archived);
+      await reconcileServerRow(
         tx,
         entity,
         entityId,

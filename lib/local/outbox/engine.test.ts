@@ -299,7 +299,6 @@ describe("the sync engine", () => {
     await requestSync();
 
     expect(await pendingOperations(vault.db)).toEqual([]);
-    // The server's balance arrives with the pull behind the round; until then it is this device's.
     expect(outboxStatusStore.getSnapshot()).toEqual({
       ...EMPTY_OUTBOX,
       projected: { ...EMPTY_OUTBOX.projected, balances: true },

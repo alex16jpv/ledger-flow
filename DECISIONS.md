@@ -12,21 +12,25 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   landed the mirror held the old balance with nothing on top: the expense was missing. Usually that is
   the time of one request, but when that pull failed it lasted until the next good one, and any re-read
   (another screen, a reload) showed it.
-- **Decision:** `settle` keeps the effect of what it takes out of the queue in `meta`
-  (`landedEffects`), in the same transaction, and `projectBalances` (accounts and the loan check) adds
-  it. A feed page lets go of one when it brings the write's own row with `updatedAt` at least the
-  answer's stamp: that copy was read after the write, and the server commits the row and the balance
-  together. The last page of a pull that began after it lets go of the rest, which covers answers with
-  no row (`duplicate`, a `404` on a removal). Letting go counts as news, so the screens re-read, and the
-  balance keeps the projection mark until then (`design/spec/components.md` §24).
-- **Alternatives (not taken):** having the backend answer the balances each write moved — a change to
-  both repositories for what the next pull already brings; moving the mirror's account row by the
-  effect — the row would stop being the server's, and a pull already holding the write would count it
-  twice; a store of its own — a schema bump for a list that is empty almost always.
+- **Decision:** `settle` keeps what the operation did to each account (cents, `landedEffects` in
+  `meta`), in the same transaction, with the account's `updatedAt` from the answer's `restamped` — the
+  backend names every account a write moved, with the stamp it left (its `sync.md`, T-146), and keeps it
+  for a `duplicate`. `projectBalances` adds it, for the accounts and the loan check. A part goes when an
+  account row the server sent reaches that stamp (`reconcileServerRow`: the feed, an account write's
+  answer, a `409`'s `current`); the last page of a pull that began after the write lets go of the rest,
+  which covers answers that named no account (a create replayed by id, a `404` on a removal). Letting
+  go is news, so the screens re-read; every purge of the mirror forgets them; the balance is read with
+  the queue and these in one transaction; and it keeps the projection mark until they are gone
+  (`design/spec/components.md` §24, same tooltip).
+- **Alternatives (not taken):** releasing on the movement's own row in the feed — an account answered
+  in the same round (a rename, a new default) already brings the new balance, and an account written
+  again later lands on a later page; comparing the mirror account's `updatedAt` at read time — a
+  restamp moves it and leaves the old balance; adding the effect to the account row on a restamp — the
+  row would carry a figure the device worked out, from its own projection of the write; having the
+  backend answer the balances — both repositories for what `restamped` already says.
 - **Consequence:** an operation's effect is counted while queued, and after it until the server's
-  balance is in the mirror, never both. The feed orders every collection by `updatedAt` and cuts pages at
-  500 rows, so one write's row and its balance can fall on two pages of the same pull; between them the
-  balance shows the write twice or not at all, the edge T-162 already noted.
+  balance for each account it moved is in the mirror, never both. A part with no stamp waits for a whole
+  pull begun after it.
 
 ## 2026-10-05 · A queued create the feed already brings nets to nothing (T-162)
 

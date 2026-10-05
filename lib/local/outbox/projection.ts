@@ -2,7 +2,7 @@ import { type AccountBalance, type BalanceTransaction, deriveBalances } from "..
 import { fromCents, toCents } from "../derive/money";
 import type { OutboxOperation } from "../schema";
 import { type MoneyEffect, operationPayload } from "./envelope";
-import { landedIn } from "./landed";
+import { landedCents, landedFrom } from "./landed";
 import { refused } from "./projected";
 import type { WriteTransaction } from "./queue";
 import { willBeSent } from "./reproject";
@@ -16,17 +16,21 @@ export interface ProjectedAccount {
 export function projectBalances(
   accounts: ProjectedAccount[],
   operations: OutboxOperation[],
-  landed: readonly MoneyEffect[] = [],
+  landed: ReadonlyMap<string, number> = new Map(),
 ): AccountBalance[] {
-  const effects: MoneyEffect[] = [...landed];
+  const effects: MoneyEffect[] = [];
   for (const operation of operations) {
     const { effect } = operationPayload(operation);
     if (effect) effects.push(effect);
   }
-  return applyEffects(accounts, effects);
+  return applyEffects(accounts, effects, landed);
 }
 
-function applyEffects(accounts: ProjectedAccount[], effects: MoneyEffect[]): AccountBalance[] {
+function applyEffects(
+  accounts: ProjectedAccount[],
+  effects: MoneyEffect[],
+  landed: ReadonlyMap<string, number> = new Map(),
+): AccountBalance[] {
   const before: BalanceTransaction[] = [];
   const after: BalanceTransaction[] = [];
   for (const effect of effects) {
@@ -45,6 +49,7 @@ function applyEffects(accounts: ProjectedAccount[], effects: MoneyEffect[]): Acc
     accountId: account.id,
     balance: fromCents(
       toCents(account.balance) +
+        (landed.get(account.id) ?? 0) +
         toCents(added.get(account.id) ?? 0) -
         toCents(removed.get(account.id) ?? 0),
     ),
@@ -65,7 +70,7 @@ export async function refuseLoanInCredit(tx: WriteTransaction, effect: MoneyEffe
   }
   if (loans.length === 0) return;
   const queued = (await tx.objectStore("outbox").getAll()).filter(willBeSent);
-  const landed = (await landedIn(tx)).map((entry) => entry.effect);
+  const landed = landedCents(await landedFrom(tx.objectStore("meta")));
   for (const loan of loans) {
     const [now] = projectBalances([{ id: loan.id, balance: loan.balance }], queued, landed);
     const from = now?.balance ?? loan.balance;

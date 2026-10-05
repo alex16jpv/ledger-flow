@@ -123,9 +123,10 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
 24. **Projection mark (`projected`)** — a 16px `cloud-off` icon in `--warning` next to a figure (aligned
     to its baseline) or a bar (centred), with the tooltip "Includes changes not yet synced". It appears
     on **every amount, balance, `spent`, percentage or bar** that includes a write the server has not
-    confirmed, or one it confirmed before the device has its figure (a balance stays marked until the
-    pull behind the write brings it): a projection is never painted as a figure the server sent. It is never drawn inside the
-    number and it never changes the number's colour. The per-row equivalent is the "Pending sync" badge.
+    confirmed, or one it confirmed before the device has its figure: a balance stays marked, with the
+    same tooltip, until the pull behind the write brings the server's (T-260). A projection is never
+    painted as a figure the server sent. It is never drawn inside the number and it never changes the
+    number's colour. The per-row equivalent is the "Pending sync" badge.
 25. **Step dots (`step-dots`)** — 6px dots, the active one stretching to 22px in `--brand`; `role="img"` labelled
     "Step n of m". Used by onboarding.
 26. **Comparison card (`compare`)** — a section with an eyebrow ("On the server" / "On this device") and

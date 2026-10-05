@@ -3,6 +3,7 @@ import { openDB } from "idb";
 import { forgetOfflineReadyAnnouncement } from "@/lib/pwa/readiness";
 
 import { isVaultSupported, otherVaultUsers, vaultExists } from "./db";
+import { forgetLanded } from "./outbox/landed";
 import { advanceMirrorEpoch, MIRROR_STORES, vaultDatabaseName, type VaultSchema } from "./schema";
 import { markSuggestionsStale } from "./suggest/stale";
 
@@ -43,6 +44,7 @@ async function clearVault(userId: string, options: VaultPurgeOptions): Promise<V
       const meta = tx.objectStore("meta");
       await meta.delete("syncCursor");
       await meta.delete("syncedAt");
+      await forgetLanded(meta);
       await advanceMirrorEpoch(meta);
       if (discard) await meta.delete("outboxSeq");
     }

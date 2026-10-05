@@ -7,9 +7,9 @@ import type { SyncChangesResponse } from "@/types/api";
 
 import { rememberServerTime } from "./clock";
 import type { VaultHandle } from "./db";
-import { landedOpIds, releaseLanded } from "./outbox/landed";
+import { forgetLanded, landedOpIds, releaseLanded } from "./outbox/landed";
 import { type WriteTransaction, writeTransaction } from "./outbox/queue";
-import { reconcileContext, reconcileRow } from "./outbox/reconcile";
+import { reconcileContext, reconcileRow, reconcileServerRow } from "./outbox/reconcile";
 import {
   advanceMirrorEpoch,
   joinedExpenseRecord,
@@ -156,9 +156,10 @@ async function applyPage(
   }
   // D-23 (F-25): without this a movement deleted with no network comes back alive on the next pull.
   const context = await reconcileContext(tx);
+  let landed = false;
   for (const row of changes.accounts) {
     news ||= await isNews(tx.objectStore("accounts"), row.id, row.updatedAt);
-    await reconcileRow(tx, "account", row.id, row, context);
+    landed = (await reconcileServerRow(tx, "account", row.id, row, context)) || landed;
   }
   for (const row of changes.categories) {
     news ||= await isNews(tx.objectStore("categories"), row.id, row.updatedAt);
@@ -211,11 +212,9 @@ async function applyPage(
     news ||= dropped;
   }
 
-  const landed = await releaseLanded(tx, {
-    changes,
-    before: landedBefore,
-    finished: !pagination.hasMore && !readdressed,
-  });
+  if (!pagination.hasMore && !readdressed) {
+    landed = (await releaseLanded(tx, landedBefore)) || landed;
+  }
 
   const meta = tx.objectStore("meta");
   // Stored verbatim: the cursor is opaque, and the next run resumes from it whatever it encodes.
@@ -238,6 +237,7 @@ async function dropCopy(handle: VaultHandle, epoch: number): Promise<number> {
   for (const name of MIRROR_STORES) await tx.objectStore(name).clear();
   await meta.delete("syncCursor");
   await meta.delete("syncedAt");
+  await forgetLanded(meta);
   await advanceMirrorEpoch(meta);
   await tx.done;
   markSuggestionsStale();

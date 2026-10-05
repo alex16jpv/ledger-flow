@@ -5,7 +5,7 @@ import { forgetRollbacks, requestSync } from "./engine";
 import { operationPayload } from "./envelope";
 import { NotProjectableError } from "./projected";
 import { pendingOperations, type VaultDb, type WriteTransaction, writeTransaction } from "./queue";
-import { reconcileRow } from "./reconcile";
+import { reconcileServerRow } from "./reconcile";
 import { serverBaseline } from "./routes";
 import { refreshOutboxStatus } from "./status";
 import { enqueue } from "./write";
@@ -46,7 +46,7 @@ async function reconcileResolved(tx: WriteTransaction, operation: OutboxOperatio
     record?.server === undefined && serverRow !== undefined
       ? await serverBaseline(tx, entity, serverRow)
       : undefined;
-  await reconcileRow(tx, entity, entityId, baseline);
+  await reconcileServerRow(tx, entity, entityId, baseline);
 }
 
 // Only a create is named in a `dependsOn`, so only discarding one cascades, transitively.

@@ -225,7 +225,6 @@ describe("the Needs your attention tray", () => {
     expect(screen.queryByRole("button", { name: "Keep this device’s version" })).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Restore the account" }));
-    // Said once the restore and the drain it asks for are both done.
     expect(await screen.findByText("1 change back in the queue")).toBeInTheDocument();
 
     await waitFor(async () => {

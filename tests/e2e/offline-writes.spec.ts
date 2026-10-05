@@ -221,6 +221,7 @@ test("an expense the server took stays in the balance while the pull behind it f
   const user = await freshUser(request, "landed");
   const amount = uniqueAmount();
   const figure = (balance: number) => new Intl.NumberFormat("en-US").format(balance);
+  const projected = page.getByRole("img", { name: "Includes changes not yet synced" });
 
   await signInAs(context, request, user);
   await page.goto("/accounts");
@@ -252,6 +253,7 @@ test("an expense the server took stays in the balance while the pull behind it f
   await page.reload();
   await expect(page.getByText(figure(user.openingBalance - amount)).first()).toBeVisible();
   await expect(page.getByText(figure(user.openingBalance))).toHaveCount(0);
+  await expect(projected.first()).toBeVisible();
 
   pullsFail = false;
   await page.reload();
@@ -260,6 +262,7 @@ test("an expense the server took stays in the balance while the pull behind it f
     .toBe(user.openingBalance - amount);
   await expect(page.getByText(figure(user.openingBalance - amount)).first()).toBeVisible();
   await expect(page.getByText(figure(user.openingBalance - 2 * amount))).toHaveCount(0);
+  await expect(projected).toHaveCount(0);
 });
 
 // T-123: the one write whose movements the server mints, so the device mints its own and drops them.
