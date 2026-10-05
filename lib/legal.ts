@@ -3,12 +3,13 @@ interface PolicyVersion {
   effective: string;
 }
 
-export const CURRENT_POLICY: PolicyVersion = { version: 2, effective: "2026-10-04" };
+export const CURRENT_POLICY: PolicyVersion = { version: 3, effective: "2026-10-05" };
 
 export const TERMS_UPDATED = "2026-10-04";
 
 const POLICY_VERSIONS: readonly PolicyVersion[] = [
   { version: 1, effective: "2026-09-01" },
+  { version: 2, effective: "2026-10-04" },
   CURRENT_POLICY,
 ];
 
