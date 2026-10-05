@@ -44,10 +44,10 @@ async function emailALink(request: APIRequestContext, email: string): Promise<st
 async function chooseFromLink(page: Page, link: string): Promise<void> {
   await page.goto(link);
   await expect(page.getByRole("heading", { name: "Choose a new password" })).toBeVisible();
-  expect(page.url()).not.toContain("token=");
+  await expect(page).not.toHaveURL(/token=/);
   await page.getByLabel("New password", { exact: true }).fill(NEW_PASSWORD);
   await page.waitForTimeout(500);
-  expect(page.url()).not.toContain("token=");
+  await expect(page).not.toHaveURL(/token=/);
   await page.getByRole("button", { name: "Save password and sign in" }).click();
 }
 
@@ -145,7 +145,7 @@ test("the deleted email's Restore account signs out, and its code chooses a new 
   const tab = await inbox.newPage();
   await tab.goto(link);
   await expect(tab.getByRole("heading", { name: "Restore your account?" })).toBeVisible();
-  expect(tab.url()).not.toContain("token=");
+  await expect(tab).not.toHaveURL(/token=/);
   await expectNoAxeViolations(tab);
   await tab.getByRole("button", { name: "Restore account" }).click();
   await expect(tab.getByRole("heading", { name: "Account restored" })).toBeVisible();
