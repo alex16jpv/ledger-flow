@@ -18,7 +18,7 @@ import type {
 import type { OutboxEntity, OutboxOperation } from "../schema";
 import { type OperationPayload, operationPayload, type OutboxAction } from "./envelope";
 import type { WriteTransaction } from "./queue";
-import { reconcileCarried, reconcileRemoval, reconcileRow } from "./reconcile";
+import { reconcileCarried, reconcileRemoval, reconcileServerRow } from "./reconcile";
 import type { MirrorRow } from "./reproject";
 
 // O-B2: absent for a create and an unsent row — guarding an unprinted `updatedAt` is a 409.
@@ -128,7 +128,7 @@ export async function serverBaseline(
 
 async function confirmRow(tx: WriteTransaction, entity: OutboxEntity, raw: unknown): Promise<void> {
   const baseline = await serverBaseline(tx, entity, raw);
-  if (baseline) await reconcileRow(tx, entity, baseline.id, baseline);
+  if (baseline) await reconcileServerRow(tx, entity, baseline.id, baseline);
 }
 
 // A removal the server confirmed without the row: the baseline moves the way the operation asked.

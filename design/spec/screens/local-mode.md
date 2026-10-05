@@ -136,8 +136,10 @@ the session sheet or the stripe of a dead session simply comes back to life, wit
 ## Projected figures (`#projected-figures`)
 
 Every amount, balance, `spent`, percentage or bar that already includes a write the server has not
-confirmed carries the amber projection mark, and says why on hover or focus. The per-row equivalent is
-the "Pending sync" badge. A projection is never painted as a figure the server sent.
+confirmed carries the amber projection mark, and says why on hover or focus. A balance keeps it after
+the write is confirmed, with the same tooltip, until the pull behind it brings the server's figure:
+usually a moment, longer only when that pull fails (T-260). The per-row equivalent is the "Pending
+sync" badge. A projection is never painted as a figure the server sent.
 
 ## The offline fallback document (`#offline-document`)
 

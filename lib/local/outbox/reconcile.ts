@@ -23,6 +23,7 @@ import {
   transactionRecord,
 } from "../schema";
 import { type MoneyEffect, type OperationPayload, operationPayload } from "./envelope";
+import { releaseByAccount } from "./landed";
 import { balanceOf } from "./projected";
 import type { WriteTransaction } from "./queue";
 import {
@@ -172,6 +173,18 @@ export async function reconcileCarried(
     applyOperation("sharedExpense", baseline, operation, context.queued),
     context,
   );
+}
+
+// The row exactly as the server sent it, so an account's balance there holds what landed before it.
+export async function reconcileServerRow(
+  tx: WriteTransaction,
+  entity: OutboxEntity,
+  id: string,
+  server: MirrorRow | undefined,
+  context?: ReconcileContext,
+): Promise<boolean> {
+  await reconcileRow(tx, entity, id, server, context);
+  return entity === "account" && server !== undefined && releaseByAccount(tx, server as Account);
 }
 
 // The server did it and nothing else says so until the next pull, so the baseline moves.

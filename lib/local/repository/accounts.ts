@@ -1,9 +1,11 @@
 import { api } from "@/lib/api/client";
 import type { Account, AccountList } from "@/types/api";
 
+import { landedCents, landedFrom } from "../outbox/landed";
 import { projectBalances } from "../outbox/projection";
-import { pendingOperations, type VaultDb } from "../outbox/queue";
+import type { VaultDb } from "../outbox/queue";
 import { willBeSent } from "../outbox/reproject";
+import type { AccountRecord } from "../schema";
 import { mirrorPage, read } from "./read";
 
 export const ACCOUNT_PAGE_LIMIT = 100;
@@ -13,14 +15,30 @@ export interface AccountListParams {
   limit?: number;
 }
 
-// Invariant 2 with D-23: the server's `balance` plus the effect of what it has not applied yet.
-async function withProjectedBalances(db: VaultDb, rows: Account[]): Promise<Account[]> {
-  const operations = (await pendingOperations(db)).filter(willBeSent);
-  if (operations.length === 0) return rows;
+// Invariant 2 with D-23: the server's `balance` plus what it has not applied, or has and no pull brought.
+async function projectedRecords(db: VaultDb, id?: string): Promise<AccountRecord[]> {
+  // One transaction: a settle between two reads would count a write both queued and landed.
+  const tx = db.transaction(["accounts", "outbox", "meta"]);
+  const accounts = tx.objectStore("accounts");
+  const [found, queue, landed] = await Promise.all([
+    id === undefined ? accounts.getAll() : accounts.get(id).then((record) => [record]),
+    tx.objectStore("outbox").getAll(),
+    landedFrom(tx.objectStore("meta")),
+  ]);
+  const records = found.filter((record) => record !== undefined);
+  const operations = queue.filter(willBeSent);
+  if (operations.length === 0 && landed.length === 0) return records;
   const projected = new Map(
-    projectBalances(rows, operations).map((entry) => [entry.accountId, entry.balance]),
+    projectBalances(
+      records.map((record) => record.row),
+      operations,
+      landedCents(landed),
+    ).map((entry) => [entry.accountId, entry.balance]),
   );
-  return rows.map((row) => ({ ...row, balance: projected.get(row.id) ?? row.balance }));
+  return records.map((record) => ({
+    ...record,
+    row: { ...record.row, balance: projected.get(record.id) ?? record.row.balance },
+  }));
 }
 
 export function readAccounts(params: AccountListParams = {}): Promise<AccountList> {
@@ -31,11 +49,10 @@ export function readAccounts(params: AccountListParams = {}): Promise<AccountLis
         query: { includeArchived: params.includeArchived ? "true" : undefined, limit },
       }),
     async (db) => {
-      const records = await db.getAll("accounts");
-      const rows = records
+      const rows = (await projectedRecords(db))
         .filter((record) => params.includeArchived === true || record.archived === 0)
         .map((record) => record.row);
-      return mirrorPage(await withProjectedBalances(db, rows), limit);
+      return mirrorPage(rows, limit);
     },
   );
 }
@@ -44,9 +61,6 @@ export function readAccounts(params: AccountListParams = {}): Promise<AccountLis
 export function readAccount(id: string): Promise<Account> {
   return read<Account>(
     () => api<Account>(`/accounts/${id}`),
-    async (db) => {
-      const record = await db.get("accounts", id);
-      return record && (await withProjectedBalances(db, [record.row]))[0];
-    },
+    async (db) => (await projectedRecords(db, id))[0]?.row,
   );
 }

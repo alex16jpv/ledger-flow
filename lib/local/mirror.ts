@@ -114,6 +114,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
           lastPullError = error instanceof Error ? error : new Error(String(error));
           console.warn("ledger-flow: the mirror could not fetch the profile it lacks", error);
         }
+        if (result.landed) await refreshOutboxStatus(vault.db);
         if (result.changed || stored || forced) options.onChanged?.();
         return false;
       })

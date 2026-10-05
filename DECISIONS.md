@@ -5,6 +5,33 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-05 · A write the server applied stays in the balance until a pull brings it (T-260)
+
+- **Context:** settling an operation took its effect out of the projection, but no answer carries the
+  balance it moved (`POST /sync` and the routes return the row), so until the pull behind the round
+  landed the mirror held the old balance with nothing on top: the expense was missing. Usually that is
+  the time of one request, but when that pull failed it lasted until the next good one, and any re-read
+  (another screen, a reload) showed it.
+- **Decision:** `settle` keeps what the operation did to each account (cents, `landedEffects` in
+  `meta`), in the same transaction, with the account's `updatedAt` from the answer's `restamped` — the
+  backend names every account a write moved, with the stamp it left (its `sync.md`, T-146), and keeps it
+  for a `duplicate`. `projectBalances` adds it, for the accounts and the loan check. A part goes when an
+  account row the server sent reaches that stamp (`reconcileServerRow`: the feed, an account write's
+  answer, a `409`'s `current`); the last page of a pull that began after the write lets go of the rest,
+  which covers answers that named no account (a create replayed by id, a `404` on a removal). Letting
+  go is news, so the screens re-read; every purge of the mirror forgets them; the balance is read with
+  the queue and these in one transaction; and it keeps the projection mark until they are gone
+  (`design/spec/components.md` §24, same tooltip).
+- **Alternatives (not taken):** releasing on the movement's own row in the feed — an account answered
+  in the same round (a rename, a new default) already brings the new balance, and an account written
+  again later lands on a later page; comparing the mirror account's `updatedAt` at read time — a
+  restamp moves it and leaves the old balance; adding the effect to the account row on a restamp — the
+  row would carry a figure the device worked out, from its own projection of the write; having the
+  backend answer the balances — both repositories for what `restamped` already says.
+- **Consequence:** an operation's effect is counted while queued, and after it until the server's
+  balance for each account it moved is in the mirror, never both. A part with no stamp waits for a whole
+  pull begun after it.
+
 ## 2026-10-05 · A queued create the feed already brings nets to nothing (T-162)
 
 - **Context:** coming back online starts the pull and the drain together. When the pull read the feed
