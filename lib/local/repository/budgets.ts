@@ -3,6 +3,7 @@ import type { IDBPDatabase } from "idb";
 import { api } from "@/lib/api/client";
 import type { Budget, BudgetList, SyncBudget } from "@/types/api";
 
+import { serverNow } from "../clock";
 import {
   budgetExpired,
   type BudgetTransaction,
@@ -146,7 +147,7 @@ async function listing(
 }
 
 function referenceOf(reference: string | undefined): Date {
-  return reference ? new Date(reference) : new Date();
+  return reference ? new Date(reference) : new Date(serverNow());
 }
 
 async function viewsOf(

@@ -3,7 +3,7 @@
 import { CalendarDays, ChartColumn, ChartLine, ChartPie, Download, Scale } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 import { PageHeader } from "@/components/shell/PageHeader";
 import { Alert } from "@/components/ui/Alert";
@@ -69,6 +69,7 @@ import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
+import { useServerNow } from "@/lib/local/useServerNow";
 
 function parseType(value: string | null): StatsType {
   return (STATS_TYPES as readonly string[]).includes(value ?? "")
@@ -90,7 +91,7 @@ export function StatsScreen() {
   const dates = useDates();
   const money = useMoney();
   const { formatLocale } = useFormatSettings();
-  const [now] = useState(() => new Date());
+  const now = useServerNow();
   const view = useSyncExternalStore(
     dayViewStore.subscribe,
     dayViewStore.getSnapshot,

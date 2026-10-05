@@ -17,6 +17,7 @@ import { parseMonthKey } from "@/features/budgets/reference";
 import { useCategoriesQuery } from "@/features/categories/hooks";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useRouter } from "@/lib/i18n/navigation";
+import { useServerNow } from "@/lib/local/useServerNow";
 
 function useCategoryMap() {
   const categories = useCategoriesQuery(undefined, true, true);
@@ -31,7 +32,7 @@ export function BudgetsScreen() {
   const router = useRouter();
   const params = useSearchParams();
   const { timeZone } = useFormatSettings();
-  const [now] = useState(() => new Date());
+  const now = useServerNow();
   const monthKey = parseMonthKey(params.get("reference"), now, timeZone);
   const period = parseBudgetPeriod(params.get("period"));
   const categories = useCategoryMap();
@@ -96,10 +97,12 @@ export function PastBudgetsScreen() {
   const params = useSearchParams();
   const tab: PastTab = params.get("tab") === "archived" ? "archived" : "ended";
   const categories = useCategoryMap();
+  const now = useServerNow();
   return (
     <PastBudgetsView
       tab={tab}
       categories={categories}
+      now={now}
       onTabChange={(next) => {
         router.replace({ pathname: "/budgets/past", query: next === "ended" ? {} : { tab: next } });
       }}

@@ -15,6 +15,7 @@ import { splitAccounts } from "@/lib/accounts/debt";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
+import { useServerNow } from "@/lib/local/useServerNow";
 import { useStoredData } from "@/lib/local/useStoredData";
 import { useAppUser } from "@/lib/session";
 
@@ -37,7 +38,7 @@ export function HomeView({ onCreateAccount, onCreateBudget, recent, owed }: Home
   const t = useTranslations();
   const user = useAppUser();
   const dates = useDates();
-  const month = useMonthContext();
+  const month = useMonthContext(useServerNow());
   const data = useHomeData(month);
   const firstName = user?.name.split(" ")[0] ?? "";
   const categoriesById = useMemo(

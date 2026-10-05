@@ -5,6 +5,27 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-05 · The current period follows the server's clock (T-163)
+
+- **Context:** the mirror's budgets took "now" from `new Date()`, and the screens did the same before
+  asking anybody: `BudgetsScreen`, the detail, Stats and Trends froze `new Date()` and sent the current
+  month's `reference` from it, Home's month context too. With the phone's clock wrong the current
+  period came out different — offline from the mirror, and online as well, since the server was handed
+  the device's `reference`.
+- **Decision:** `useServerNow()` (`lib/local/useServerNow.ts`) is the time the screen opened, corrected
+  by the offset to the server's clock that every answer updates (F-66); it moves when the offset does
+  and stays put between renders. The budget screens, Past budgets, Home's month, Stats, Trends and
+  `useLastMonthSpending` read it, and `repository/budgets.ts` defaults to `serverNow()` when no
+  `reference` is given. Taken by the session with the owner away (he asked it to choose and report).
+- **Alternatives (not taken):** only the mirror's default, as the audit proposed — every screen sends a
+  `reference`, so it would change nothing anyone sees; the device's clock everywhere and a warning — the
+  server judges expiry and periods by its own clock, so the two would disagree; the server's clock for
+  the dates forms propose and the "Today"/"Yesterday" labels — those are read against the clock the user
+  sees on the phone, and T-192 and F-66 already cover a form whose clock is off.
+- **Consequence:** until the first answer of a session teaches the offset (it is kept in the vault, so
+  normally from the start), "now" is the device's; when it is learned the screens move to the server's
+  period and re-read. A new screen that picks "the current period" uses `useServerNow()`.
+
 ## 2026-10-05 · A write the server applied stays in the balance until a pull brings it (T-260)
 
 - **Context:** settling an operation took its effect out of the projection, but no answer carries the
