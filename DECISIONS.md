@@ -25,8 +25,12 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   operation queued while the next pull brings the row; and invalidating on settle would show, between the
   answer and the pull behind it, the mirror's old balance with the operation already gone.
 - **Consequence:** the pull and the drain may still overlap, and whichever lands first the balance
-  counts each write once. A create's effect only changes when the row it names comes from the server, so
-  a locally projected row (whose `server` copy is the device's own) never zeroes it.
+  counts each write once. A create's effect only changes when `reconcileRow` is handed a row, and every
+  caller that hands one hands the server's (the feed, a write's answer, a 409's `current`, a restamp the
+  server made): a locally projected row, whose `server` copy is the device's own, never zeroes it. The
+  feed reads each collection on its own and cuts pages at 500 rows, so one page can bring the movement
+  before the balance that holds it; until the rest arrives the balance shows it not spent, where before
+  it showed it spent twice.
 
 ## 2026-10-05 · The privacy policy describes data by kind, not field by field (T-259)
 

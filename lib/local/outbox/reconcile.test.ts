@@ -321,6 +321,25 @@ describe("a queued write the feed shows already applied (T-162)", () => {
     expect(await balance()).toBe(950);
   });
 
+  it("counts nothing for a create the feed brings already deleted by another device", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    await createTransaction(lunch, "t2");
+
+    await pullChanges(vault, {
+      fetchPage: () =>
+        Promise.resolve(
+          feedOf({
+            transactions: [{ ...landed, deletedAt: T1 }],
+            accounts: [{ ...cash, updatedAt: T1 }],
+          }),
+        ),
+    });
+
+    expect(await statuses(vault.db)).toEqual(["pending"]);
+    expect(await balance()).toBe(1000);
+  });
+
   it("restates an edit queued behind that create from the row the server holds", async () => {
     const vault = await vaultWith();
     reportOnline(false);

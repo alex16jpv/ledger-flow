@@ -200,6 +200,8 @@ test("a pull that lands while the expense is on its way counts it once, then and
     .poll(async () => (await mirrorRow(page, "accounts", user.accountId))?.balance)
     .toBe(user.openingBalance - amount);
   expect((await outbox(page)).map((operation) => operation.status)).toEqual(["sending"]);
+  await expect(page.getByText(figure(user.openingBalance - amount)).first()).toBeVisible();
+  await expect(page.getByText(figure(user.openingBalance - 2 * amount))).toHaveCount(0);
 
   release();
   await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);

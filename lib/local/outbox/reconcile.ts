@@ -73,7 +73,6 @@ async function restatePayment(
     const landed = isCreate(operation.action) || row.deletedAt !== null;
     const payload = operationPayload(operation);
     if (!landed || (payload.effect === undefined && payload.minted === undefined)) continue;
-    // The server's own movements came with it, so the ones minted here would repeat them.
     for (const id of payload.minted ?? []) await tx.objectStore("transactions").delete(id);
     const restated: OperationPayload = { ...payload };
     delete restated.effect;
@@ -144,7 +143,6 @@ export async function reconcileRow(
   if (server === undefined && mine.some((op) => isCreate(op.action))) return;
   const outboxStore = tx.objectStore("outbox");
   for (const step of steps) {
-    // A payment's movements share its one effect, which only the payment's own row restates.
     if (step.operation.entity !== "transaction") continue;
     const effect: MoneyEffect = {
       before: balanceOf(step.before as SyncTransaction),
