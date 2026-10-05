@@ -175,6 +175,7 @@ test("a point typed in Spanish is the decimal, not a thousands group", async ({
     email: uniqueEmail("decimal"),
     password: "LedgerFlow!2026",
     currency: "USD",
+    locale: "es",
   });
   expect(signedUp.ok()).toBe(true);
   await page.context().addCookies((await request.storageState()).cookies);

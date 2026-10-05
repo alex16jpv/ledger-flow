@@ -102,7 +102,7 @@ test("the email's link confirms from a browser with no session, after one tap", 
   const other = await elsewhere.newPage();
   await other.goto(link);
   await expect(other.getByRole("heading", { name: "Confirm your email" })).toBeVisible();
-  expect(other.url()).not.toContain("token=");
+  await expect(other).not.toHaveURL(/token=/);
   await expectNoAxeViolations(other);
   await other.getByRole("button", { name: "Confirm email" }).click();
   await expect(other.getByRole("heading", { name: "Email confirmed" })).toBeVisible();

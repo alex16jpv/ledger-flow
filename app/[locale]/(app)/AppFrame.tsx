@@ -18,6 +18,7 @@ import {
 } from "@/components/shell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useAccountCount, useCategorySummary } from "@/features/settings/hooks";
+import { useProfilePreferences } from "@/features/settings/preferences";
 import { useSharedSection, useWaitingInvitationCount } from "@/features/shared/hooks";
 import { usePendingCount } from "@/features/transactions/hooks";
 import { readSessionMarker, vaultUserFor } from "@/lib/auth/marker";
@@ -73,6 +74,7 @@ function Frame({ children }: { children: ReactNode }) {
   // F-41: closing the sheet in local mode closes it for good; a new session remounts it clear.
   const [sheetDismissed, setSheetDismissed] = useState(false);
   useEffect(() => startHeartbeat(), []);
+  useProfilePreferences();
   const userId = session.user?.id;
   const sessionStatus = session.status;
   // Read once per mount: the marker only changes on a sign-in or a sign-out, and both remount this.

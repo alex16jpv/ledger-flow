@@ -8,6 +8,7 @@ import type {
   AuthTokens,
   DeleteUserInput,
   Session,
+  Theme,
   UpdateUserInput,
   User,
 } from "@/types/api";
@@ -17,6 +18,10 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
   // The zone `lib/local/derive` buckets by comes from the profile row, which a pull refreshes.
   await pullAfterDirectSend();
   return answer;
+}
+
+export function saveTheme(id: string, theme: Theme): Promise<User> {
+  return api<User>(`/users/${id}`, { method: "PUT", body: { theme } });
 }
 
 export function deleteUser(id: string, input: DeleteUserInput): Promise<AccountDeleted> {

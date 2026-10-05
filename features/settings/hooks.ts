@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { refreshSession } from "@/lib/api/refresh";
 import { type AppLocale } from "@/lib/i18n/routing";
+import { appliedProfile } from "@/lib/session/applied-profile";
 import { tabChannel } from "@/lib/session/channel";
 import { useSetEmailChange } from "@/lib/session/email-change";
 import { useSession } from "@/lib/session/SessionProvider";
@@ -139,6 +140,7 @@ export function useUpdateLocale() {
       return updateUser(user.id, { locale });
     },
     onSuccess: (updated) => {
+      appliedProfile.note(updated.id, "locale", updated.updatedAt);
       setUser(updated);
       tabChannel.post({ type: "locale", locale: updated.locale });
     },

@@ -16,6 +16,7 @@ import { useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
 import { MODES, PALETTES, useTheme } from "@/lib/theme";
 
+import { useChooseTheme } from "../preferences";
 import { PaletteCard } from "./PaletteCard";
 
 const MODE_ICONS = { light: Sun, dark: Moon, system: Monitor } as const;
@@ -24,6 +25,7 @@ export function AppearanceView() {
   const t = useTranslations();
   const theme = useTheme();
   const router = useRouter();
+  const choose = useChooseTheme();
 
   return (
     <>
@@ -37,7 +39,9 @@ export function AppearanceView() {
         <Segment
           label={t("settings.appearance.mode")}
           value={theme.mode}
-          onChange={theme.setMode}
+          onChange={(mode) => {
+            choose({ mode });
+          }}
           options={MODES.map((mode) => {
             const Icon = MODE_ICONS[mode];
             return {
@@ -57,7 +61,9 @@ export function AppearanceView() {
               name={t(`settings.appearance.palettes.${palette}.name`)}
               description={t(`settings.appearance.palettes.${palette}.description`)}
               selected={theme.palette === palette}
-              onSelect={theme.setPalette}
+              onSelect={(palette) => {
+                choose({ palette });
+              }}
             />
           ))}
         </div>

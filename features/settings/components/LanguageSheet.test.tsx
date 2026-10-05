@@ -93,9 +93,8 @@ describe("LanguageSheet", () => {
     connectivityStore.reset();
   });
 
-  it("stores the device mode without calling the API when the device already matches", async () => {
+  it("offers the two languages and no device mode, closing without a write on the current one", async () => {
     fetchMock.mockResolvedValue(json({ user: { id: "u1", name: "John", locale: "en" } }));
-    vi.spyOn(navigator, "language", "get").mockReturnValue("en-US");
     const onClose = vi.fn();
     renderWithProviders(
       <QueryProvider>
@@ -104,12 +103,15 @@ describe("LanguageSheet", () => {
         </SessionProvider>
       </QueryProvider>,
     );
-    await userEvent.click(await screen.findByRole("option", { name: /Follow device/ }));
     await waitFor(() => {
-      expect(onClose).toHaveBeenCalled();
+      expect(screen.getByRole("option", { name: /English/ })).toBeEnabled();
     });
-    expect(window.localStorage.getItem("lf.localeMode")).toBe("device");
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "EnglishDefault",
+      "EspañolSpanish",
+    ]);
+    await userEvent.click(screen.getByRole("option", { name: /English/ }));
+    expect(onClose).toHaveBeenCalled();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
-    vi.restoreAllMocks();
   });
 });

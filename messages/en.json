@@ -352,8 +352,6 @@
     "language": {
       "title": "Language",
       "subtitle": "App language",
-      "followDevice": "Follow device",
-      "followDeviceHelp": "Uses your phone or browser language",
       "en": "English",
       "es": "Español",
       "esHelp": "Spanish",

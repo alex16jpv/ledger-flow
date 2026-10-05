@@ -46,7 +46,7 @@ time you sign in on this device." — and two ways out: "Sign out and keep them"
 and sign out" (`danger`).
 
 **Sheets that write to the server, offline** (`#language-offline`; the same for currency, time zone,
-profile and security, and delete account): a `warning` alert on top, "Changing this needs a connection:
+profile and security, and delete account — Appearance is the exception, below): a `warning` alert on top, "Changing this needs a connection:
 it is saved on the server.", and the save control disabled. The sheet can be read, not changed. The
 confirmation of "Sign out all other sessions" does the same with the page's own words, "Signing out
 needs a connection: your session lives on the server.", when the connection drops with it open.
@@ -204,12 +204,21 @@ drops `Android` from the user agent — is still an Android: a Linux user agent 
 
 ## The rest of the screens
 
-- **Language** (`#language`): three rows with a check — Follow device (uses `navigator.language`,
-  falling back to English), English (default), Español. It changes instantly without a reload, with a
-  note that dates and amounts follow the language, the currency and the zone.
+- **Language** (`#language`): two rows with a check — English (default), Español. It changes instantly
+  without a reload, with a note that dates and amounts follow the language, the currency and the zone.
+  **The language is the account's** (the owner's decision of 2026-09-26): there is no "Follow device",
+  and the device's language is only proposed when signing up ([access.md](access.md)). It follows the
+  user to every device: one signing in opens in it, and one already open learns of it when it next
+  reads the profile — coming back to the app after a few minutes, or reloading — and switches at the
+  next screen the user opens, never under a half-filled form.
 - **Appearance** (`#appearance`): a segmented control for Light / Dark / System; palette cards with five
-  sample dots (brand plus four seeds) and a check on the active one; a live preview. Persisted locally,
-  immediately.
+  sample dots (brand plus four seeds) and a check on the active one; a live preview. **Saved on the
+  account**, so it follows the user to every device the way the language does. Until one is ever
+  picked, each device keeps its own, and the first one to open the app saves what it shows. **It is the
+  one profile setting that changes offline**: the change applies here at once and goes to the server
+  when the connection is back; if another device changed it meanwhile, the last one to reach the server
+  wins. A device that opens the app paints its own choice first and takes the account's once the
+  profile arrives.
 - **Active sessions** (`#active-sessions`): an explanatory alert (30 days), rows with an icon per user
   agent (smartphone, laptop, monitor), "This device" for the current refresh family or a "Sign out"
   button (`DELETE /auth/sessions/:id`, idempotent), last activity and expiry; and "Sign out all other

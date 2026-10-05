@@ -3152,7 +3152,7 @@ const languageSheet = ({ offline = false } = {}) => {
   const notice = offline
     ? `<div class="alert warning">${iconSvg("wifi-off")}<span>Changing this needs a connection: it is saved on the server.</span></div>`
     : "";
-  const inner = `${notice}<div class="list" style="margin:0 -16px;${offline ? "opacity:.5;pointer-events:none" : ""}">${opt("Follow device", "Uses your phone or browser language", false)}${opt("English", "Default", true)}${opt("Español", "Spanish", false)}</div>
+  const inner = `${notice}<div class="list" style="margin:0 -16px;${offline ? "opacity:.5;pointer-events:none" : ""}">${opt("English", "Default", true)}${opt("Español", "Spanish", false)}</div>
 <p class="small muted" style="margin:0">Dates and amounts follow your language, your currency (COP) and your time zone.</p>`;
   return screen(settingsBodyDim(), {
     tab: "",
@@ -8341,9 +8341,15 @@ const PAGES = [
         notificationSettings({ offline: true }),
         { added: "2026-09-22" },
       ),
-      plate("appearance", "Appearance", "Mode and palette, with a live preview.", appearance(), {
-        added: "2026-09-01",
-      }),
+      plate(
+        "appearance",
+        "Appearance",
+        "Mode and palette, with a live preview. Saved on the account, and changes offline too.",
+        appearance(),
+        {
+          added: "2026-09-01",
+        },
+      ),
       plate("active-sessions", "Active sessions", "", sessions(), { added: "2026-09-01" }),
       plate(
         "sign-out-everywhere-failed",

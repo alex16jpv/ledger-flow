@@ -6545,7 +6545,7 @@ export type paths = {
         };
         /**
          * Update a user
-         * @description Changing `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again — cancels a change of email that waits, and emails `password-changed` when the account's email is confirmed. `currency` can only change while the user has no accounts (mono-currency mode). The email does not change here: a body with `email` is refused whole, before its password or its fields are checked, and nothing is written; it changes through `POST /users/{id}/email-change`, once the new address confirms it.
+         * @description Changing `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again — cancels a change of email that waits, and emails `password-changed` when the account's email is confirmed. `currency` can only change while the user has no accounts (mono-currency mode). The email does not change here: a body with `email` is refused whole, before its password or its fields are checked, and nothing is written; it changes through `POST /users/{id}/email-change`, once the new address confirms it. `theme` goes whole (`palette` and `mode`) and replaces the saved one: the last write to arrive wins.
          */
         put: {
             parameters: {
@@ -8298,6 +8298,18 @@ export type components = {
         TagList: {
             data: string[];
         };
+        Theme: {
+            /**
+             * @example brisa
+             * @enum {string}
+             */
+            palette: "brisa" | "tinta";
+            /**
+             * @example system
+             * @enum {string}
+             */
+            mode: "light" | "dark" | "system";
+        };
         Transaction: {
             /** Format: uuid */
             id: string;
@@ -8490,6 +8502,12 @@ export type components = {
             currency?: string;
             /** @enum {string} */
             locale?: "en" | "es";
+            theme?: {
+                /** @enum {string} */
+                palette: "brisa" | "tinta";
+                /** @enum {string} */
+                mode: "light" | "dark" | "system";
+            };
         };
         User: {
             /** Format: uuid */
@@ -8516,6 +8534,8 @@ export type components = {
              * @enum {string}
              */
             locale: "en" | "es";
+            /** @description The palette and mode the user picked, set by PUT /users/{id}. Null until one was ever picked: each device keeps its own until then. */
+            theme: components["schemas"]["Theme"] | null;
             /** Format: date-time */
             lastLoginAt: string | null;
             /** Format: date-time */
@@ -8681,6 +8701,7 @@ export type SyncOpResult = components['schemas']['SyncOpResult'];
 export type SyncSharedGroup = components['schemas']['SyncSharedGroup'];
 export type SyncTransaction = components['schemas']['SyncTransaction'];
 export type TagList = components['schemas']['TagList'];
+export type Theme = components['schemas']['Theme'];
 export type Transaction = components['schemas']['Transaction'];
 export type TransactionConflict = components['schemas']['TransactionConflict'];
 export type TransactionList = components['schemas']['TransactionList'];

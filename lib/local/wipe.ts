@@ -1,6 +1,8 @@
 import { SESSION_COOKIE, sessionMarkerCookie } from "@/lib/auth/cookies";
 import { forgetOfflineReadyAnnouncement } from "@/lib/pwa/readiness";
 import { purgePersistedCaches } from "@/lib/query/purge";
+import { appliedProfile } from "@/lib/session/applied-profile";
+import { unsentTheme } from "@/lib/theme/unsent";
 
 import { isVaultSupported } from "./db";
 import { forgetVaultsOpened } from "./evicted";
@@ -37,6 +39,8 @@ export async function wipeThisDevice(): Promise<void> {
   clearSessionMarker();
   forgetVaultsOpened();
   forgetOfflineReadyAnnouncement();
+  unsentTheme.clear();
+  appliedProfile.forget();
   await purgePersistedCaches();
   if (!isVaultSupported() || typeof indexedDB.databases !== "function") return;
   const names = (await indexedDB.databases())

@@ -102,7 +102,7 @@ test("the email's link moves the account from a browser with no session, after o
   await expect(
     page.getByRole("heading", { name: "Move your account to this address?" }),
   ).toBeVisible();
-  expect(page.url()).not.toContain("token=");
+  await expect(page).not.toHaveURL(/token=/);
   await expectNoAxeViolations(page);
   await page.getByRole("button", { name: "Confirm new email" }).click();
   await expect(page.getByRole("heading", { name: "Your email changed" })).toBeVisible();
@@ -225,7 +225,7 @@ test("the old address's Undo the change takes the account back after one tap, an
   const tab = await inbox.newPage();
   await tab.goto(link);
   await expect(tab.getByRole("heading", { name: "Undo the change?" })).toBeVisible();
-  expect(tab.url()).not.toContain("token=");
+  await expect(tab).not.toHaveURL(/token=/);
   await expectNoAxeViolations(tab);
   await tab.getByRole("button", { name: "Undo the change" }).click();
   await expect(tab.getByRole("heading", { name: "Change undone" })).toBeVisible();

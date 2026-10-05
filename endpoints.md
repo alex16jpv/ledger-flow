@@ -2,7 +2,7 @@
 
 # lag-money-manager API endpoints
 
-Version 1.0.0 · 93 operations · 128 schemas.
+Version 1.0.0 · 93 operations · 129 schemas.
 
 Regenerate with `npm run gen:api-types` against a running backend. The client never calls these
 URLs directly: every request goes through the BFF under `/api/*` (`lib/api`), which adds the
@@ -2202,7 +2202,7 @@ The profile, and while its email is not confirmed, what the sheet that confirms 
 
 ### `PUT /users/{id}`
 
-Changing `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again — cancels a change of email that waits, and emails `password-changed` when the account's email is confirmed. `currency` can only change while the user has no accounts (mono-currency mode). The email does not change here: a body with `email` is refused whole, before its password or its fields are checked, and nothing is written; it changes through `POST /users/{id}/email-change`, once the new address confirms it.
+Changing `password` requires `currentPassword` (re-authentication) and revokes every refresh token — other devices must log in again — cancels a change of email that waits, and emails `password-changed` when the account's email is confirmed. `currency` can only change while the user has no accounts (mono-currency mode). The email does not change here: a body with `email` is refused whole, before its password or its fields are checked, and nothing is written; it changes through `POST /users/{id}/email-change`, once the new address confirms it. `theme` goes whole (`palette` and `mode`) and replaces the saved one: the last write to arrive wins.
 
 **Path**
 

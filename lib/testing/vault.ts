@@ -33,6 +33,7 @@ export function profile(overrides: Partial<User> = {}): User {
     currency: "COP",
     timezone: PROFILE_TIME_ZONE,
     locale: "en",
+    theme: null,
     lastLoginAt: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-08-01T00:00:00.000Z",
