@@ -7,6 +7,8 @@ import {
   freshUser,
   listAccounts,
   listTransactions,
+  mirrorRow,
+  outbox,
   readyForOffline,
   signInAs,
   uniqueAmount,
@@ -141,6 +143,72 @@ test("a reply lost after the server applied it replays as a duplicate, not as a 
   expect(after[0]?.amount).toBe(amount);
   const [account] = await listAccounts(request);
   expect(account?.balance).toBe(user.openingBalance - amount);
+});
+
+// T-162: coming back online starts the pull and the drain together, and the pull can see the write first.
+test("a pull that lands while the expense is on its way counts it once, then and after", async ({
+  page,
+  request,
+  context,
+}) => {
+  test.setTimeout(180_000);
+  const user = await freshUser(request, "race");
+  const amount = uniqueAmount();
+  const figure = (balance: number) => new Intl.NumberFormat("en-US").format(balance);
+
+  await signInAs(context, request, user);
+  await page.goto("/accounts");
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  await readyForOffline(page);
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("You’re offline.")).toBeVisible();
+  await addButton(page).click();
+  const sheet = page.getByRole("dialog", { name: "Add" });
+  await expect(sheet.getByRole("textbox", { name: "Amount" })).toBeFocused();
+  await page.keyboard.type(String(amount));
+  await sheet.getByRole("button", { name: "Save" }).click();
+  await expect(sheet).toBeHidden();
+  await expectPending(page, 1);
+  await expect(page.getByText(figure(user.openingBalance - amount)).first()).toBeVisible();
+
+  // The server applies the batch, its answer is held, and only then the pull may read the feed.
+  let applied = (): void => undefined;
+  const appliedOnServer = new Promise<void>((resolve) => {
+    applied = resolve;
+  });
+  let release = (): void => undefined;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await context.route("**/api/sync", async (route) => {
+    const answered = await route.fetch();
+    applied();
+    await released;
+    await route.fulfill({ response: answered });
+  });
+  await context.route("**/api/sync/changes**", async (route) => {
+    await appliedOnServer;
+    await route.continue();
+  });
+  const pulled = page.waitForResponse("**/api/sync/changes**");
+
+  await context.setOffline(false);
+  await pulled;
+  await expect
+    .poll(async () => (await mirrorRow(page, "accounts", user.accountId))?.balance)
+    .toBe(user.openingBalance - amount);
+  expect((await outbox(page)).map((operation) => operation.status)).toEqual(["sending"]);
+  await expect(page.getByText(figure(user.openingBalance - amount)).first()).toBeVisible();
+  await expect(page.getByText(figure(user.openingBalance - 2 * amount))).toHaveCount(0);
+
+  release();
+  await expect.poll(async () => (await vaultState(page))?.pending, { timeout: 90_000 }).toBe(0);
+  const [account] = await listAccounts(request);
+  expect(account?.balance).toBe(user.openingBalance - amount);
+  await expect(page.getByText(figure(user.openingBalance - amount)).first()).toBeVisible();
+  await expect(page.getByText(figure(user.openingBalance - 2 * amount))).toHaveCount(0);
 });
 
 // T-123: the one write whose movements the server mints, so the device mints its own and drops them.
