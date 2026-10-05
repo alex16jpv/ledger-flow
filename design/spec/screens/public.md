@@ -48,11 +48,14 @@
 - **Legal** (`#privacy-policy`, `#terms`): a 720px column, an eyebrow with the date of the last update,
   an `h1` and `h2` sections. The privacy policy has: who is responsible, what we store, who sees what,
   why we use it, who helps us run it, cookies and your device, how long we keep it, your rights,
-  security, changes, data processing (Ley 1581) and contact. It names every kind of record the server
-  keeps (shared groups, the people you add and invitations included), the IP and user agent it keeps,
-  every company that processes data with what it does and where (the data is kept in the United States; Vercel and Cloudflare also answer each visit near the visitor), the
-  retention of each kind and the legal response times. A policy that forgets a feature or a provider is
-  wrong about it. The controller is **alexpiral**, the brand that runs Ledger Flow, reached at
+  security, changes, data processing (Ley 1581) and contact. It describes the data by **kind** — the account and its
+  settings, what you record, shared expenses, and the technical data the service needs (devices, the IP against abuse, the
+  emails sent) — and keeps by kind too: while the account lives, 30 days after deleting it, and technical data no more than
+  30 days, except the addresses that reject our email. It never lists fields one by one, nor how passwords, limits or
+  fingerprints work inside, nor each cookie's lifetime: those change with the code, and a policy is about kinds and purposes
+  (the owner's decision of 2026-10-05, T-259). It still names every company that processes data with what it does and
+  where (the data is kept in the United States), because the law asks who receives the data. A policy that forgets a kind
+  of data, a feature or a provider is wrong about it. The controller is **alexpiral**, the brand that runs Ledger Flow, reached at
   `ledgerflow@alexpiral.com`: no personal data of the owner is published (the owner's decision of 2026-10-03).
   The policy is written for anyone anywhere and names only Colombian law, because the app is not aimed
   at any country. Turnstile's privacy addendum is linked, as Cloudflare requires for its invisible mode.

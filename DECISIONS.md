@@ -5,6 +5,28 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-05 · The privacy policy describes data by kind, not field by field (T-259)
+
+- **Context:** the policy of T-253 listed the account's fields one by one (language, time zone,
+  currency…), how passwords, sign-in limits and email fingerprints work inside, and each cookie's
+  lifetime. That is more than a privacy policy publishes — YNAB, Monarch, BudgetBakers and Fintonic,
+  read that day, describe data by kind with a few examples and keep security generic — and every new
+  field (the theme of T-212) asked for a new version.
+- **Decision (the owner's, 2026-10-05):** version 3 describes four kinds of data (the account and its
+  settings, what you record, shared expenses, the technical data the service needs), keeps by kind
+  (while the account lives — what you delete in the app included —, 30 days after deleting it, technical
+  data 30 days at most except a mark of the addresses that reject our email), names cookies by what they
+  are for and says security in one line. What the law asks stays whole: the controller and contact,
+  purposes, rights and their times, every provider by name with what it does and what it receives
+  (Cloudflare's own use included), that the data is kept in the United States, and Turnstile's addendum.
+  The line about Vercel and Cloudflare answering each visit near the visitor goes: it is how a network
+  works, not where the data is kept.
+- **Alternatives (not taken):** naming the providers only by kind (they are five, Colombian law asks
+  who receives the data, and Cloudflare requires Turnstile to be named); keeping the detail in a
+  separate security or cookie page (nothing asks for it).
+- **Consequence:** adding a field to an existing kind no longer changes the policy; a new kind of data,
+  a new purpose or a new provider still does. `design/spec/screens/public.md` says so.
+
 ## 2026-10-05 · The language and the theme are the account's, and the theme still changes offline (T-213)
 
 - **Context:** the owner's decision 9 (2026-09-26): the language is the one the user picks, and the

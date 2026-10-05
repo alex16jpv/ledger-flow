@@ -93,7 +93,7 @@ test("the privacy policy names its controller and every provider, and the terms 
     "href",
     "https://www.sic.gov.co",
   );
-  await expect(page.locator("#data-processing")).toContainText("It applies from October 4, 2026");
+  await expect(page.locator("#data-processing")).toContainText("It applies from October 5, 2026");
   await expectNoAxeViolations(page);
 
   await page.goto("/es/terms");

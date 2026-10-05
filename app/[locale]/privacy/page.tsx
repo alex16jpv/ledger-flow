@@ -60,14 +60,7 @@ export default async function PrivacyPage() {
           { title: t("controllerTitle"), body: <p>{t("controllerBody")}</p> },
           {
             title: t("storeTitle"),
-            body: list([
-              t("store1"),
-              t("store2"),
-              t("store3"),
-              t("store4"),
-              t("store5"),
-              t("store6"),
-            ]),
+            body: list([t("store1"), t("store2"), t("store3"), t("store4")]),
           },
           { title: t("sharedTitle"), body: list([t("shared1"), t("shared2"), t("shared3")]) },
           { title: t("whyTitle"), body: <p>{t("whyBody")}</p> },
