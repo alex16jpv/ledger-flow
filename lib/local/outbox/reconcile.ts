@@ -22,7 +22,7 @@ import {
   sharedGroupRecord,
   transactionRecord,
 } from "../schema";
-import { type MoneyEffect, operationPayload } from "./envelope";
+import { type MoneyEffect, type OperationPayload, operationPayload } from "./envelope";
 import { balanceOf } from "./projected";
 import type { WriteTransaction } from "./queue";
 import {
@@ -32,6 +32,7 @@ import {
   queuedMirror,
   reprojectWalk,
   rowKey,
+  willBeSent,
 } from "./reproject";
 
 const STORE_OF = {
@@ -61,6 +62,25 @@ export async function reconcileContext(tx: WriteTransaction): Promise<ReconcileC
 
 const sameEffect = (left: MoneyEffect | undefined, right: MoneyEffect): boolean =>
   JSON.stringify(left ?? null) === JSON.stringify(right);
+
+// The server's row already holds what a queued payment did, so the queue stops adding it.
+async function restatePayment(
+  tx: WriteTransaction,
+  row: Settlement,
+  mine: OutboxOperation[],
+): Promise<void> {
+  for (const operation of mine.filter(willBeSent)) {
+    const landed = isCreate(operation.action) || row.deletedAt !== null;
+    const payload = operationPayload(operation);
+    if (!landed || (payload.effect === undefined && payload.minted === undefined)) continue;
+    // The server's own movements came with it, so the ones minted here would repeat them.
+    for (const id of payload.minted ?? []) await tx.objectStore("transactions").delete(id);
+    const restated: OperationPayload = { ...payload };
+    delete restated.effect;
+    delete restated.minted;
+    await tx.objectStore("outbox").put({ ...operation, payload: restated });
+  }
+}
 
 // D-24: everything that learns something about a row comes through here, so nothing drifts.
 export async function reconcileRow(
@@ -115,10 +135,17 @@ export async function reconcileRow(
     await reconcileRow(tx, "sharedExpense", carried, undefined, { outbox, queued });
   }
 
+  if (entity === "settlement") {
+    if (server !== undefined) await restatePayment(tx, server as Settlement, mine);
+    return;
+  }
   // Each effect starts from the server's row just brought, and only when the server has it.
-  if (entity !== "transaction" || mine.some((op) => isCreate(op.action))) return;
+  if (entity !== "transaction") return;
+  if (server === undefined && mine.some((op) => isCreate(op.action))) return;
   const outboxStore = tx.objectStore("outbox");
   for (const step of steps) {
+    // A payment's movements share its one effect, which only the payment's own row restates.
+    if (step.operation.entity !== "transaction") continue;
     const effect: MoneyEffect = {
       before: balanceOf(step.before as SyncTransaction),
       after: balanceOf(step.after as SyncTransaction),

@@ -182,7 +182,10 @@ snapshot down the same code path.
   refused projection in the mirror with no pull that would ever correct it (its stamp never moved).
   The same walk restates each queued movement's money `effect` from the server's row, so the
   projected balance telescopes from the server's figure; a create still in the queue keeps its own
-  `before: null`. An archive or delete confirmed without the row (`{ message }`, F-22; a `404` on a
+  `before: null` until the feed brings its row, which means the server applied it: from then on its
+  effect is restated from that row too, so it nets to nothing (T-162). A payment's movements share the
+  payment's one effect, so only the payment's own row restates it: once the feed shows the payment
+  recorded, or undone, that effect goes, and so do the movements this device minted for it. An archive or delete confirmed without the row (`{ message }`, F-22; a `404` on a
   removal) moves the baseline the way the operation asked (`reconcileRemoval`). A `MIRROR_VERSION`
   bump introduced the field: the mirror is re-pulled, the outbox is untouched.
 

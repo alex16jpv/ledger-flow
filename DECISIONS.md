@@ -5,6 +5,29 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-05 · A queued create the feed already brings nets to nothing (T-162)
+
+- **Context:** coming back online starts the pull and the drain together. When the pull read the feed
+  after the server applied a queued create, but before the answer settled the operation, the mirror held
+  the server's balance — which already counted the movement — plus the create's own effect: the expense
+  came off twice. A lost answer kept it that way until the retry settled it, and when the answer did
+  arrive, the pull that followed had no news, so nothing re-read the figure on screen. A payment
+  (`settlement:create`) did the same with its net effect, and kept the movements this device minted next
+  to the ones the server minted. Undoing a payment had a sibling: each of its movements in the feed
+  overwrote the payment's one effect with its own, so a payment with two movements projected wrong.
+- **Decision:** the create's effect is restated like any other once the feed brings its row
+  (`reconcileRow`): the row is the server's, so `before` and `after` are the same movement and the effect
+  nets to nothing; an edit queued behind it is restated from that row. A payment's row in the feed drops
+  the create's effect and minted movements, and the undo's effect once the row shows it deleted; a
+  movement no longer restates an operation that is not its own.
+- **Alternatives (not taken):** making the pull wait for the drain and invalidating the money screens
+  when a drain settles, as the audit suggested. Waiting does not cover a lost answer, which leaves the
+  operation queued while the next pull brings the row; and invalidating on settle would show, between the
+  answer and the pull behind it, the mirror's old balance with the operation already gone.
+- **Consequence:** the pull and the drain may still overlap, and whichever lands first the balance
+  counts each write once. A create's effect only changes when the row it names comes from the server, so
+  a locally projected row (whose `server` copy is the device's own) never zeroes it.
+
 ## 2026-10-05 · The privacy policy describes data by kind, not field by field (T-259)
 
 - **Context:** the policy of T-253 listed the account's fields one by one (language, time zone,

@@ -2,6 +2,7 @@ import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import {
   answerBatch,
   applied,
+  batchResponse,
   conflictWith,
   operationsOf,
   rejectedWith,
@@ -12,6 +13,7 @@ import {
   changes as feedChanges,
   openTestVault,
   profile,
+  settlement,
   transaction,
   wipeVaults,
 } from "@/lib/testing/vault";
@@ -20,12 +22,19 @@ import type { SyncChangesResponse } from "@/types/api";
 import { pullChanges } from "../pull";
 import { readAccounts } from "../repository/accounts";
 import { setCurrentVault } from "../repository/read";
-import { accountRecord, type OutboxOperation, profileRecord, transactionRecord } from "../schema";
+import {
+  accountRecord,
+  type OutboxOperation,
+  profileRecord,
+  settlementRecord,
+  transactionRecord,
+} from "../schema";
 import { requestSync, resetSyncEngine } from "./engine";
 import { pendingOperations, type VaultDb } from "./queue";
 import { discardOperation } from "./resolve";
+import { deleteSettlement, recordSettlement } from "./shared";
 import { refreshOutboxStatus, resetOutboxStatus } from "./status";
-import { deleteTransaction, updateTransaction } from "./transactions";
+import { createTransaction, deleteTransaction, updateTransaction } from "./transactions";
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), {
@@ -275,5 +284,194 @@ describe("the row the mirror keeps while its queue is not empty", () => {
     const [create] = await pendingOperations(vault.db);
     expect((create?.payload as { effect: { before: unknown } }).effect.before).toBeNull();
     expect((await readAccounts()).data[0]?.balance).toBe(995);
+  });
+});
+
+// T-162: the feed can bring a write the server applied while it is still in line, or sending.
+describe("a queued write the feed shows already applied (T-162)", () => {
+  const lunch = {
+    id: "t2",
+    type: "EXPENSE" as const,
+    amount: 50,
+    date: "2026-09-04T11:00:00.000Z",
+    categoryId: "c1",
+    fromAccountId: "a1",
+    toAccountId: null,
+    description: "Coffee",
+    tags: [],
+    note: null,
+  };
+  const landed = transaction({ ...lunch, updatedAt: T1 });
+  const balance = async () => (await readAccounts()).data[0]?.balance;
+
+  it("counts a create once when the feed brings its row and the balance that holds it", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    await createTransaction(lunch, "t2");
+    expect(await balance()).toBe(950);
+
+    await pullChanges(vault, {
+      fetchPage: () =>
+        Promise.resolve(
+          feedOf({ transactions: [landed], accounts: [{ ...cash, balance: 950, updatedAt: T1 }] }),
+        ),
+    });
+
+    expect(await statuses(vault.db)).toEqual(["pending"]);
+    expect(await balance()).toBe(950);
+  });
+
+  it("restates an edit queued behind that create from the row the server holds", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    await createTransaction(lunch, "t2");
+    await updateTransaction("t2", { amount: 80 });
+    expect(await balance()).toBe(920);
+
+    await pullChanges(vault, {
+      fetchPage: () =>
+        Promise.resolve(
+          feedOf({ transactions: [landed], accounts: [{ ...cash, balance: 950, updatedAt: T1 }] }),
+        ),
+    });
+
+    expect(await balance()).toBe(920);
+  });
+
+  it("counts it once when the pull lands while the create is on its way, and after it settles", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    await createTransaction(lunch, "t2");
+    let midway: number | undefined;
+    fetchMock.mockImplementation(async (_input, init) => {
+      await pullChanges(vault, {
+        fetchPage: () =>
+          Promise.resolve(
+            feedOf({
+              transactions: [landed],
+              accounts: [{ ...cash, balance: 950, updatedAt: T1 }],
+            }),
+          ),
+      });
+      expect(await statuses(vault.db)).toEqual(["sending"]);
+      midway = await balance();
+      return batchResponse(init, () => applied(landed));
+    });
+    reportOnline(true);
+    await requestSync();
+
+    expect(midway).toBe(950);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    expect(await balance()).toBe(950);
+  });
+
+  it("counts a payment once, and drops the movements it minted for the server's own", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    const payment = await recordSettlement({
+      groupId: null,
+      counterparty: { contactId: "k1", expenseId: null },
+      date: "2026-09-04T11:00:00.000Z",
+      collected: 600,
+      paid: 0,
+      outsideApp: false,
+      accountId: "a1",
+      lines: [],
+      refunded: 0,
+    });
+    expect(await balance()).toBe(1600);
+    const theirs = transaction({
+      id: "m-server",
+      type: "SETTLEMENT",
+      amount: 600,
+      categoryId: null,
+      fromAccountId: null,
+      toAccountId: "a1",
+      sharedSettlementId: payment.id,
+      updatedAt: T1,
+    });
+
+    await pullChanges(vault, {
+      fetchPage: () =>
+        Promise.resolve(
+          feedOf({
+            settlements: [{ ...payment, updatedAt: T1 }],
+            transactions: [theirs],
+            accounts: [{ ...cash, balance: 1600, updatedAt: T1 }],
+          }),
+        ),
+    });
+
+    expect(await statuses(vault.db)).toEqual(["pending"]);
+    expect(await balance()).toBe(1600);
+    const movements = (await vault.db.getAll("transactions")).map((record) => record.id);
+    expect(movements.sort()).toEqual(["m-server", "t1"]);
+  });
+
+  it("counts an undone payment once when the feed already shows it undone", async () => {
+    const vault = await vaultWith();
+    const theirs = transaction({
+      id: "m-server",
+      type: "SETTLEMENT",
+      amount: 600,
+      categoryId: null,
+      fromAccountId: null,
+      toAccountId: "a1",
+      sharedSettlementId: "p1",
+    });
+    await vault.db.put("accounts", accountRecord({ ...cash, balance: 1600 }));
+    await vault.db.put("settlements", settlementRecord(settlement({ collected: 600 })));
+    await vault.db.put("transactions", transactionRecord(theirs));
+    reportOnline(false);
+    await deleteSettlement("p1");
+    expect(await balance()).toBe(1000);
+
+    await pullChanges(vault, {
+      fetchPage: () =>
+        Promise.resolve(
+          feedOf({
+            settlements: [settlement({ collected: 600, deletedAt: T1, updatedAt: T1 })],
+            transactions: [{ ...theirs, deletedAt: T1, updatedAt: T1 }],
+            accounts: [{ ...cash, balance: 1000, updatedAt: T1 }],
+          }),
+        ),
+    });
+
+    expect(await statuses(vault.db)).toEqual(["pending"]);
+    expect(await balance()).toBe(1000);
+  });
+
+  it("keeps an undone payment's one effect whole while the feed still brings its movements", async () => {
+    const vault = await vaultWith();
+    const settled = transaction({
+      id: "m1",
+      type: "SETTLEMENT",
+      amount: 600,
+      categoryId: null,
+      fromAccountId: null,
+      toAccountId: "a1",
+      sharedSettlementId: "p1",
+    });
+    const covered = transaction({ id: "m2", amount: 300, sharedSettlementId: "p1" });
+    await vault.db.put("accounts", accountRecord({ ...cash, balance: 1300 }));
+    await vault.db.put("settlements", settlementRecord(settlement({ collected: 600, paid: 300 })));
+    await vault.db.put("transactions", transactionRecord(settled));
+    await vault.db.put("transactions", transactionRecord(covered));
+    reportOnline(false);
+    await deleteSettlement("p1");
+    expect(await balance()).toBe(1000);
+
+    await pullChanges(vault, {
+      fetchPage: () =>
+        Promise.resolve(
+          feedOf({
+            settlements: [settlement({ collected: 600, paid: 300 })],
+            transactions: [settled, covered],
+            accounts: [{ ...cash, balance: 1300 }],
+          }),
+        ),
+    });
+
+    expect(await balance()).toBe(1000);
   });
 });
