@@ -39,8 +39,7 @@
   data (Ley 1581)", each a link opening in a new tab; the button is disabled until it is ticked), **language** (a "Language" picker row
   showing what `navigator.language` detected: "Detected from your device" and "English"; help: "The
   language of your account. You can change it any time in Settings."; it opens a sheet with **English**
-  and **Español**, without "Follow device" — that is a local mode of Settings, not a value of the
-  contract — and the note "The whole screen changes right away. Dates and amounts follow this language,
+  and **Español** — the same two as Settings, which has no "Follow device" either — and the note "The whole screen changes right away. Dates and amounts follow this language,
   your currency and your time zone."; the frame's chip and this row **are the same value**: changing
   either changes the other, and whatever is set on submit is the registration's `locale`), the currency
   (a picker with what `Intl.NumberFormat().resolvedOptions()` detected, with help explaining the later

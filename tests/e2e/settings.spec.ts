@@ -56,6 +56,100 @@ test("switching the language moves to /es, persists on reload and is stored on t
   expect(consoleErrors).toEqual([]);
 });
 
+async function anotherDevice(
+  browser: Parameters<Parameters<typeof test>[2]>[0]["browser"],
+  email: string,
+  password: string,
+) {
+  const context = await browser.newContext({ baseURL: APP });
+  const login = await context.request.post(`${APP}/api/auth/login`, {
+    headers: { origin: APP },
+    data: { email, password },
+  });
+  expect(login.ok(), await login.text()).toBe(true);
+  return { context, page: await context.newPage() };
+}
+
+async function savedTheme(request: Parameters<Parameters<typeof test>[2]>[0]["request"]) {
+  const me = (await (await request.get("/api/auth/me")).json()) as {
+    user: { theme: { palette: string; mode: string } | null };
+  };
+  return me.user.theme;
+}
+
+test("the theme follows the account to another device, and one picked offline goes when the connection is back [T-213]", async ({
+  page,
+  request,
+  browser,
+}) => {
+  const { email, password } = await signedInPage(page, request);
+  await page.goto("/settings/appearance");
+  await page.getByRole("button", { name: "Dark" }).click();
+  await page.getByRole("button", { name: /Tinta/ }).click();
+  await expect.poll(() => savedTheme(request)).toEqual({ palette: "tinta", mode: "dark" });
+
+  const other = await anotherDevice(browser, email, password);
+  await other.page.goto("/settings");
+  await expect(other.page.locator("html")).toHaveAttribute("data-palette", "tinta");
+  await expect(other.page.locator("html")).toHaveAttribute("data-mode", "dark");
+
+  await page.context().setOffline(true);
+  await page.getByRole("button", { name: "Light" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-mode", "light");
+  expect(await savedTheme(request)).toEqual({ palette: "tinta", mode: "dark" });
+  await page.context().setOffline(false);
+  await expect
+    .poll(() => savedTheme(request), { timeout: 15_000 })
+    .toEqual({
+      palette: "tinta",
+      mode: "light",
+    });
+  await other.context.close();
+});
+
+test("an account that never picked a theme takes the one this device shows [T-213]", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/login");
+  await page.evaluate(() => {
+    window.localStorage.setItem("lf.palette", "tinta");
+    window.localStorage.setItem("lf.mode", "dark");
+  });
+  await signedInPage(page, request);
+  expect(await savedTheme(request)).toBeNull();
+  await page.goto("/settings");
+  await expect.poll(() => savedTheme(request)).toEqual({ palette: "tinta", mode: "dark" });
+});
+
+test("a device signed in earlier takes the language the account changed to elsewhere at its next screen [T-213]", async ({
+  page,
+  request,
+  browser,
+}) => {
+  const { email, password } = await signedInPage(page, request);
+  const other = await anotherDevice(browser, email, password);
+  await other.page.goto("/settings");
+  await expect(other.page.getByRole("heading", { level: 1 })).toHaveText("Settings");
+
+  await page.goto("/settings");
+  await page.getByRole("button", { name: /^Language/ }).click();
+  await expect(page.getByRole("option")).toHaveCount(2);
+  await page.getByRole("option", { name: /Español/ }).click();
+  await expect(page).toHaveURL(`${APP}/es/settings`, { timeout: 15_000 });
+
+  const read = other.page.waitForResponse(
+    (response) => response.url().endsWith("/api/auth/me") && response.ok(),
+  );
+  await other.page.reload();
+  await read;
+  await expect(other.page.getByRole("heading", { level: 1 })).toHaveText("Settings");
+  await other.page.getByRole("link", { name: /Appearance/ }).click();
+  await expect(other.page).toHaveURL(`${APP}/es/settings/appearance`, { timeout: 15_000 });
+  await expect(other.page.getByRole("heading", { level: 1 })).toHaveText("Apariencia");
+  await other.context.close();
+});
+
 test("sign out clears the session and returns to login", async ({ page, request }) => {
   await signedInPage(page, request);
   await page.goto("/settings");
@@ -164,6 +258,8 @@ test("a sign-out everywhere with no session left lands on Sign in saying the oth
   await signedInPage(page, request);
   await page.goto("/settings/sessions");
   await expect(page.getByText("This device", { exact: true })).toBeVisible();
+  // A new account saves this device's theme on opening the app: that write must land before the session dies.
+  await expect.poll(() => savedTheme(request)).not.toBeNull();
   await page.context().clearCookies({ name: /^(__Host-access|__Secure-refresh)$/ });
   await page.getByRole("button", { name: "Sign out all other sessions" }).click();
   await page.getByRole("button", { name: "Sign out everywhere" }).click();

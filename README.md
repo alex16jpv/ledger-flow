@@ -238,7 +238,9 @@ answers 404 before anything renders — `npm run check-dev-routes` proves it on 
 - **Add a palette:** copy `tokens/palette.tinta.css`, change the selector to
   `:root[data-palette="<name>"]` and the 18 seeds, run `npm run contrast-check`, import it in
   `app/globals.css` and add the name to `PALETTES` in `lib/theme/palettes.ts`. The user's choice
-  lives in `localStorage` (`lf.palette`, `lf.mode`) and is applied by an inline script before paint.
+  lives in `localStorage` (`lf.palette`, `lf.mode`) and is applied by an inline script before paint;
+  it is also the account's `theme`, which `features/settings/preferences.ts` keeps in step. The
+  backend keeps its own copy of the list and refuses a palette it does not know: it needs the name too.
 - **Use an icon:** interface icons are imported by name from `lucide-react` with `iconProps(size)`
   from `lib/icons`; category icons go through `<CategoryIcon icon={category.icon} />`, account
   types through `accountTypeIcon(type)`. Never add an icon key outside `CATEGORY_ICONS`.

@@ -5,6 +5,51 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-05 · The language and the theme are the account's, and the theme still changes offline (T-213)
+
+- **Context:** the owner's decision 9 (2026-09-26): the language is the one the user picks, and the
+  device's only proposes one at sign-up. Settings › Language still offered "Follow device", a local
+  mode the account knew nothing about, and a device already open never noticed a language changed on
+  another one: only the tabs of the same browser heard of it. The theme lived only in `localStorage`;
+  T-212 (backend #59) gave the profile `theme: { palette, mode } | null`, whole, the last write to
+  arrive winning, `null` until one is picked.
+- **Decision:** "Follow device" goes, with `lib/i18n/locale-preference` (its only user), and the old
+  `lf.localeMode` key is removed on the next load. `useProfilePreferences`
+  (`features/settings/preferences.ts`), mounted by the app frame, follows the profile `/me` brings, but
+  only a profile that is **news**: its `updatedAt` (the server moves it on every write to the account)
+  must be later than the last one this device applied or wrote, kept per account and per field in
+  `lf.profileApplied` (`lib/session/applied-profile.ts`). So a read that left before a write — in this
+  tab or in another one still mounting, after the tab channel already told it of the change — loses on
+  its own instead of bringing the old value back to every tab.
+  - **Theme:** a news profile's theme is applied at once; one still `null` gets this device's. A choice
+    in Appearance (`useChooseTheme`) is applied and stored here at once — offline too — and kept as
+    **unsent** for that user (`lib/theme/unsent.ts`, `lf.themeUnsent`; before the profile arrives, for
+    the user of the session marker). While it is unsent the profile's theme is not applied. It is sent
+    with `PUT /users/:id` (no sync pull: nothing else changed) whenever there is a session and a
+    connection: on a choice, on reconnecting and on every new `/me` read, inside a Web Lock that one tab
+    holds at a time; the holder re-reads the latest choice and keeps sending until nothing newer is
+    waiting, and clears only the value the server took. A failure keeps it for the next try; a 4xx that
+    will refuse the same body again (not 401, 408 or 429) drops it, is reported, and lets the account's
+    theme apply. An account that has to confirm its email first is left alone.
+  - **Language:** a news profile in another language switches the screen at the next screen the user
+    opens, never under the one on display: the profile can arrive after the screen was painted from the
+    copy on the device and the user started typing, and the switch remounts everything under the
+    locale. The screen it waits on is kept in `sessionStorage` (`lf.localeSwitch`): a row of Settings
+    is a plain link, so the next screen may be a whole new document. The switch keeps the query string
+    and the hash. Signing in needs none of this: the login sets the language cookie from the profile.
+  - Signing out, and wiping the device, forget `lf.profileApplied` and `lf.themeUnsent`.
+- **Alternatives (not taken):** comparing the profile with the screen on every render, or reacting to
+  any change of the cached profile (a stale read in another tab switched the language or the theme back
+  in every tab); cancelling `/me` reads around each write (only covers the tab that writes); electing
+  the tab that sends by who chose (a tab that closed left its choice unsent); a theme operation in
+  `POST /sync` (the backend has none, and the last write wins anyway); refusing the change offline,
+  like the other profile sheets (the plan makes the theme the exception: it is a look, not data).
+- **Consequence:** a device already open picks up another device's change when it next reads `/me` —
+  on focus once it is five minutes old, or on a reload — not at once, and the language one screen
+  later. A shared link in the other language opens in it and switches at the next screen. A device
+  opening the app paints its own theme first and the account's once the profile arrives. "Follow
+  device" (2026-09-01, Minimal settings) is reversed.
+
 ## 2026-10-03 · One privacy policy for everyone, under alexpiral, that names every provider (T-253, T-220, T-201)
 
 - **Context:** the legal pages were the drafts of W-31 plus the Shared lines of T-199. They promised
@@ -2265,7 +2310,7 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   message to the other tabs and navigates to the same path under the other prefix; the next-intl
   middleware refreshes the `lf_locale` cookie on that navigation, so the choice survives reloads and
   follows the user to other devices through `user.locale`.
-- **"Follow device"** has no backend value (`user.locale` is `en|es`), so it is a local mode
+- **"Follow device"** (reversed on 2026-10-05, T-213: the language is the account's) has no backend value (`user.locale` is `en|es`), so it is a local mode
   (`lf.localeMode`) that resolves `navigator.language` to a supported locale and saves that locale
   exactly like a fixed choice; the row stays checked while the mode is "device".
 - **Palette cards** show five sample dots per palette from `tokens/samples.css` (brand + four seeds):

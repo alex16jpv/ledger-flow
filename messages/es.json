@@ -352,8 +352,6 @@
     "language": {
       "title": "Idioma",
       "subtitle": "Idioma de la app",
-      "followDevice": "Seguir el dispositivo",
-      "followDeviceHelp": "Usa el idioma de tu teléfono o navegador",
       "en": "English",
       "es": "Español",
       "esHelp": "Español",

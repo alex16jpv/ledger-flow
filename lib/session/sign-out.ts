@@ -3,8 +3,10 @@ import type { QueryClient } from "@tanstack/react-query";
 import { noteSessionEnded } from "@/lib/api/refresh";
 import { purgeVault } from "@/lib/local/purge";
 import { purgePersistedCaches } from "@/lib/query/purge";
+import { unsentTheme } from "@/lib/theme/unsent";
 
 import { requestLogout } from "./api";
+import { appliedProfile } from "./applied-profile";
 import { tabChannel } from "./channel";
 
 export interface SignOutOptions {
@@ -19,6 +21,8 @@ export async function forgetSessionHere(
   { discardPendingWork = false }: SignOutOptions = {},
 ): Promise<void> {
   queryClient.clear();
+  unsentTheme.clear();
+  appliedProfile.forget();
   await purgePersistedCaches();
   if (!userId) return;
   await purgeVault(userId, { discardPendingWork });

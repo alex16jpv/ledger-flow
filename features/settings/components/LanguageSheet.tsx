@@ -8,12 +8,6 @@ import { List, RowBody, RowButton, RowMeta, RowTitle } from "@/components/ui/Row
 import { Sheet } from "@/components/ui/Sheet";
 import { presentError } from "@/lib/api/errors";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
-import {
-  deviceLocale,
-  type LocaleMode,
-  readLocaleMode,
-  writeLocaleMode,
-} from "@/lib/i18n/locale-preference";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { type AppLocale, LOCALES } from "@/lib/i18n/routing";
 import { iconProps } from "@/lib/icons/sizes";
@@ -25,16 +19,6 @@ import { useUpdateLocale } from "../hooks";
 interface LanguageSheetProps {
   open: boolean;
   onClose: () => void;
-}
-
-type Choice = "device" | AppLocale;
-
-function storage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
 }
 
 export function LanguageSheet({ open, onClose }: LanguageSheetProps) {
@@ -50,13 +34,8 @@ export function LanguageSheet({ open, onClose }: LanguageSheetProps) {
   // The preference lives on the user's profile: it needs the server, and says so (§13 of the plan).
   const ready = session.status === "authenticated" && !offline;
   const failure = update.error ? presentError(update.error) : null;
-  const mode: LocaleMode = readLocaleMode(storage());
-  const selected: Choice = mode === "device" ? "device" : current;
 
-  async function choose(choice: Choice) {
-    const nextMode: LocaleMode = choice === "device" ? "device" : "fixed";
-    const locale = choice === "device" ? deviceLocale(navigator.language) : choice;
-    writeLocaleMode(storage(), nextMode);
+  async function choose(locale: AppLocale) {
     if (locale === current) {
       onClose();
       return;
@@ -70,14 +49,11 @@ export function LanguageSheet({ open, onClose }: LanguageSheetProps) {
     onClose();
   }
 
-  const options: { value: Choice; title: string; meta: string }[] = [
-    { value: "device", title: t("followDevice"), meta: t("followDeviceHelp") },
-    ...LOCALES.map((locale) => ({
-      value: locale,
-      title: t(locale),
-      meta: locale === "en" ? t("default") : t("esHelp"),
-    })),
-  ];
+  const options = LOCALES.map((locale) => ({
+    value: locale,
+    title: t(locale),
+    meta: locale === "en" ? t("default") : t("esHelp"),
+  }));
 
   return (
     <Sheet layout="dialog" open={open} onClose={onClose} title={t("title")}>
@@ -89,7 +65,7 @@ export function LanguageSheet({ open, onClose }: LanguageSheetProps) {
             <RowButton
               key={option.value}
               role="option"
-              aria-selected={selected === option.value}
+              aria-selected={current === option.value}
               disabled={!ready || update.isPending}
               onClick={() => {
                 void choose(option.value);
@@ -102,7 +78,7 @@ export function LanguageSheet({ open, onClose }: LanguageSheetProps) {
                 </RowTitle>
                 <RowMeta items={[option.meta]} />
               </RowBody>
-              {selected === option.value && (
+              {current === option.value && (
                 <CircleCheck {...iconProps("sm")} className="text-brand-text" />
               )}
             </RowButton>

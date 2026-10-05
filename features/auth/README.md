@@ -37,8 +37,8 @@ question. The queue is held, not refused: `lib/local/README.md`.
 The frame carries a language chip (F-02) and the register form a **Language** row; both open the same
 sheet and both switch the screen's language, which _is_ the `locale` the account is created with —
 there is no third value to keep in step. The switch carries the query string, so a `?reauth=1&next=…`
-login does not lose its way back (§2.6). No "Follow device" here: that is a local mode of Settings,
-not a value the contract takes.
+login does not lose its way back (§2.6). No "Follow device" here, nor in Settings since T-213: the
+language is the account's.
 
 A successful sign-in — a login, a restore or the code that creates an account — **ends "this device
 only"** (P-36). The mode is a

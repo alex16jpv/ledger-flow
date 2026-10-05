@@ -4,6 +4,12 @@ Hub with profile, preferences (language, currency, time zone, appearance, catego
 data and sign out. W-15 ships the hub, the language sheet, appearance and sign out; W-30 completes
 profile, sessions, currency, time zone, "Your data" and account deletion.
 
+The language and the theme are the account's (T-213). Language offers English and Español, nothing
+local; Appearance applies a choice here at once, offline too, and `preferences.ts` sends it to the
+profile when it can, and makes the device follow a profile `/me` brings that is newer than the last one
+it applied: the theme at once, the language at the next screen the user opens. The
+why, and what another tab does meanwhile, is in `DECISIONS.md`.
+
 W-30 completes the hub: the currency sheet (read-only with the `CURRENCY_LOCKED` explanation once the
 user has accounts, a searchable picker otherwise), the time-zone sheet (saves and refreshes the access
 token so budgets and stats use the new zone at once), `ProfileView` (`/settings/profile`: name, email and

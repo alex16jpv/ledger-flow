@@ -41,6 +41,7 @@ const user: User = {
   timezone: "America/Bogota",
   currency: "COP",
   locale: "en",
+  theme: null,
   lastLoginAt: null,
   confirmBy: null,
   emailConfirmationRequired: false,
