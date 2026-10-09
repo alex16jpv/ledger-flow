@@ -534,6 +534,12 @@ the only way in.
 - **Single flight.** One drain runs at a time; every trigger that arrives while it runs joins it. A
   request that lands _after_ the running pass took its last look at the queue is not lost — the pass
   records which request it served, and a later one asks for a pass of its own.
+- **One tab at a time** (T-165). Every tab of the user reads the same queue, so a pass sends under
+  the Web Lock `lf-outbox-<userId>`; another tab's pass waits for it, and after
+  `OUTBOX_LOCK_WAIT_MS` gives up and backs off rather than hold a form behind a frozen tab; a stop
+  calls the wait off. The pull after a round runs outside the lock. A change to the queue in one tab
+  (a write, a drain) tells the others on the tab channel, and they re-read their pending count and
+  their screens.
 - **Order is `seq` and only `seq`.** Nothing is reordered and nothing is dropped for taking too long
   (invariant 7). A network failure, a 5xx, a 429 or a 401 ends the pass where it stands and the whole
   batch comes back to the queue: every operation in it counts an attempt, because a request that

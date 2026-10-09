@@ -5,6 +5,38 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-08 · One tab drains the queue at a time (T-165)
+
+- **Context:** every tab of a user opens the same vault, but the engine's single flight lived in each
+  tab's memory, and every tab drains on the same triggers (back online, the worker's sync). Two tabs
+  could read and fold the one queue at once. In the window between tab A reading the queue and
+  marking `op1` as sending, tab B could fold `op1+op2` into an operation carrying `op1`'s `opId`; the
+  server answered the second of the two `duplicate` from its registry, and if that was B's fold, `op2`
+  was dropped without reaching the server. A create and a delete cancelled in B while A sent the create
+  brought the movement back on the next pull. Outside that window, B sent what A was already sending
+  (the same `opId` twice in flight, or a delete beside the create it needs), and a tab that did not
+  drain kept its old pending count and rows.
+- **Decision:** a pass takes the Web Lock `lf-outbox-<userId>` around its sending loop
+  (`withOutboxLock` in `engine.ts`); the pull that follows a round runs outside it. A tab that waits
+  more than `OUTBOX_LOCK_WAIT_MS` (10 s) gives up, answers whoever joined it with nothing and comes
+  back on the shortest backoff without counting a failure, so a form never hangs behind a frozen tab;
+  the wait is shorter than one request's timeout (15 s), so a slow holder costs a retry, not a stall.
+  Stopping the engine (a sign-out) calls the wait off and schedules nothing. `refreshOutboxStatus`
+  posts `outbox:changed` on the tab channel when the status it computed changed, and every other tab
+  of that vault re-reads its count (`followOutboxStatus`, which does not post again) and invalidates
+  its mirror-backed screens (`othersChanged`). Taken by the session (technical).
+- **Alternatives (not taken):** a fold minting a new `opId` — after a lost answer the next pass sends
+  `op1` alone, and only its original `opId` lets the server recognise the fold that already landed;
+  the server keeping a hash per `opId` and refusing one that comes back with another body — the same
+  lost-answer path legitimately resends `op1` with a smaller body than the fold that landed, so that
+  check would turn a safe replay into a refusal. With one drain at a time the conflicting fold can no
+  longer be built, so the backend needs no change.
+- **Consequence:** a write queued in one tab may be sent by another tab's pass. The form that queued
+  it then shows its projection, and the "synced" stripe appears in the tab that sent it; if the server
+  refuses it for good, the sending tab holds no undo for it, so it stays `failed` in the tray — the
+  same path as an operation that outlived its tab. Without `navigator.locks` (very old browsers) the
+  engine drains as it did before.
+
 ## 2026-10-05 · The current period follows the server's clock (T-163)
 
 - **Context:** the mirror's budgets took "now" from `new Date()`, and the screens did the same before
