@@ -402,13 +402,15 @@ describe("the fifth kind of movement", () => {
 });
 
 describe("the vendored copy", () => {
-  it("holds the five scenarios", () => {
+  it("holds the seven scenarios", () => {
     expect(PARITY_FIXTURES.map((fixture) => fixture.id)).toEqual([
       "cop-bogota",
       "cop-shared",
       "eur-madrid",
       "jpy-tokyo",
       "usd-new-york",
+      "usd-havana",
+      "pyg-asuncion",
     ]);
   });
 

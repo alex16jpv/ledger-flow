@@ -13,6 +13,8 @@ import copBogota from "./fixtures/cop-bogota.json";
 import copShared from "./fixtures/cop-shared.json";
 import eurMadrid from "./fixtures/eur-madrid.json";
 import jpyTokyo from "./fixtures/jpy-tokyo.json";
+import pygAsuncion from "./fixtures/pyg-asuncion.json";
+import usdHavana from "./fixtures/usd-havana.json";
 import usdNewYork from "./fixtures/usd-new-york.json";
 import { fromCents, toCents } from "./money";
 
@@ -234,7 +236,9 @@ export const PARITY_FIXTURES = [
   eurMadrid,
   jpyTokyo,
   usdNewYork,
-] as unknown[] as [ParityFixture, ParityFixture, ParityFixture, ParityFixture, ParityFixture];
+  usdHavana,
+  pygAsuncion,
+] as unknown[] as ParityFixture[];
 
 // A settle-up's movements carry ids the server mints, so no fixture names them; it moved the default.
 function settlementRows(fixture: ParityFixture): FixtureTransaction[] {
