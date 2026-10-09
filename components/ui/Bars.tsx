@@ -102,7 +102,7 @@ export function Bars({ bars, label, height = 56, onSelect, summary, className }:
                   onClick={open?.(index)}
                   onMouseEnter={onMouseEnter}
                   {...roving}
-                  className="group/slot flex h-full w-full cursor-pointer items-end"
+                  className="group/slot flex h-full w-full items-end"
                 >
                   {body}
                 </button>

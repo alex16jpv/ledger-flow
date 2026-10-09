@@ -91,7 +91,7 @@ export function ChartSlots({
                   onClick={open?.(index)}
                   onMouseEnter={onMouseEnter}
                   {...rest}
-                  className="group/slot flex h-full w-full cursor-pointer items-end"
+                  className="group/slot flex h-full w-full items-end"
                 >
                   {children(index)}
                 </button>

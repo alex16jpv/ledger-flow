@@ -233,7 +233,7 @@ export function DatePickerSheet({
                   parts.month === shown.month ? "text-text" : "text-text opacity-55",
                   day === today && draft !== day && "ring-1 ring-border-strong",
                   draft === day ? "bg-brand text-on-brand" : "hover:bg-surface-2",
-                  disabled && "cursor-not-allowed opacity-30 hover:bg-transparent",
+                  disabled && "opacity-30 hover:bg-transparent",
                 )}
               >
                 {parts.day}

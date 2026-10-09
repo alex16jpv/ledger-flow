@@ -136,7 +136,7 @@ export function Heat({
                   onClick={open?.(index)}
                   onMouseEnter={onMouseEnter}
                   {...roving}
-                  className={cn(paint, "cursor-pointer")}
+                  className={paint}
                 >
                   {cell.text}
                 </button>

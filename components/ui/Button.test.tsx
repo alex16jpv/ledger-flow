@@ -35,6 +35,19 @@ describe("Button", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it("stays blocked while loading even when the caller passes disabled={false} (T-261)", async () => {
+    const onClick = vi.fn();
+    render(
+      <Button loading disabled={false} onClick={onClick}>
+        Undo the payment
+      </Button>,
+    );
+    const button = screen.getByRole("button", { name: "Undo the payment" });
+    expect(button).toBeDisabled();
+    await userEvent.click(button);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
   it("defaults to type=button", () => {
     render(<Button>Go</Button>);
     expect(screen.getByRole("button")).toHaveAttribute("type", "button");

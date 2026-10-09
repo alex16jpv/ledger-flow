@@ -58,6 +58,23 @@
   ::selection {
     background: var(--brand-soft);
   }
+
+  :where(
+    button,
+    [role="button"],
+    summary,
+    select,
+    input:is([type="checkbox"], [type="radio"]),
+    label:has(button, input:is([type="checkbox"], [type="radio"]))
+  ) {
+    cursor: pointer;
+  }
+
+  :is(button, select, input, textarea):disabled,
+  [aria-disabled="true"],
+  label:has(:disabled) {
+    cursor: not-allowed;
+  }
 }
 
 @keyframes shimmer {
