@@ -54,7 +54,7 @@ export function StatsRow({ have, owe, accountCount, income, spent }: StatsRowPro
           }
         />
       </Card>
-      <Card className="hidden min-[600px]:block">
+      <Card>
         <Stat
           label={t("estimatedSavings")}
           value={
