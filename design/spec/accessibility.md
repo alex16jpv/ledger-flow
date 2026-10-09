@@ -13,6 +13,9 @@
   `no-restricted-syntax` in `eslint.config.mjs` fails on any that is missing it. What this buys is the
   name — a reader that reaches the region hears "Loading". It is **not** an announcement: `Skeleton` is
   `aria-hidden`, so the live region has no text to announce and nothing is read out on its own.
+- **The cursor says whether a control acts** (T-261): every button, link, switch, chip, summary and
+  label that toggles a control shows the pointer; a disabled one shows `not-allowed`. A control
+  never needs a click to find out whether it is enabled.
 - Keyboard: a logical order, `Enter` saves in quick capture, `Esc` closes sheets.
 - **A chart is one tab stop, not one per slot.** Thirty bars would be thirty stops between the period
   and the rest of the page, so the charts that have slots (components 18, 30, 32, 33) use the roving `tabindex`

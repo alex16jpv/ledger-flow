@@ -24,7 +24,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
     <div className="flex flex-col gap-1.5">
       <label
         htmlFor={inputId}
-        className={cn("flex cursor-pointer items-start gap-3 text-sm text-text-2", className)}
+        className={cn("flex items-start gap-3 text-sm text-text-2", className)}
       >
         <input
           ref={ref}

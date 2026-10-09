@@ -5,6 +5,26 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-09 · Controls get their cursor from the base layer (T-261)
+
+- **Context:** Tailwind v4's preflight no longer gives a button the pointer, and nothing in the app
+  put it back: "Undo the payment", Quick add, Sign out or Delete my account looked the same enabled
+  or disabled until clicked. The design's plates always had it.
+- **Decision:** one rule in `@layer base` (`app/globals.css`) gives the pointer to buttons,
+  `role="button"`, `summary`, `select`, checkboxes, radios and any label that wraps one of them, and
+  `not-allowed` to whatever is disabled (`:disabled`, `aria-disabled="true"`, or a label wrapping a
+  disabled control). The pointer list sits in `:where()` so the disabled rule always beats it. A
+  utility on the element still wins over both, because utilities sit in a later layer, so the
+  components drop their own `cursor-*` classes. `tests/e2e/cursor.spec.ts` sweeps the component
+  catalog enabled and disabled.
+- **Found on the way:** `Button` disabled itself with `disabled ?? loading`, so a caller passing
+  `disabled={false}` (Pay, Settle up, Write off, Sign in…) left the button clickable while it was
+  saving. It is `disabled || loading` now.
+- **Alternatives (not taken):** a `cursor-pointer` class on each control — it is what was missing in
+  the first place, and every new control would have to remember it.
+- **Consequence:** a new control is right by default; one that must not show the pointer says so
+  with its own utility.
+
 ## 2026-10-09 · A form keeps the time zone it opened with (T-192)
 
 - **Context:** offline, a form starts with the mirror's profile zone. If `/auth/me` then brings another

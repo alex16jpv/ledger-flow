@@ -10,7 +10,7 @@ import { cn } from "./cn";
 
 const ROW =
   "flex w-full min-h-[60px] items-center gap-3 px-4 py-3 text-left transition-[background] duration-(--dur-1) ease-(--ease) [&+&]:border-t [&+&]:border-border";
-const INTERACTIVE = "cursor-pointer hover:bg-surface-2";
+const INTERACTIVE = "hover:bg-surface-2";
 const PENDING = "bg-[linear-gradient(90deg,var(--warning-soft),transparent_40%)]";
 
 interface RowBaseProps {
