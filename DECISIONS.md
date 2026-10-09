@@ -5,6 +5,20 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-09 · There are no income budgets (T-37)
+
+- **Context:** the contract let a budget be `EXPENSE` or `INCOME`. The form only ever sent
+  `EXPENSE`, but one created through the API was read backwards on every screen: «Remaining»,
+  «Over», «Spending per day», «Nothing spent yet this period».
+- **Decision:** the owner's call (2026-10-08): the product has no income budgets. The backend refuses
+  `INCOME` with `VALIDATION` and its OpenAPI gives `type` the single value `EXPENSE`, so the generated
+  `Budget["type"]` is `"EXPENSE"` and nothing here can hold another. The offline projection counts
+  expenses only, and the parity fixtures dropped their income budget.
+- **Alternatives (not taken):** wording every budget screen per type — a second product nobody asked
+  for; dropping `type` from the contract — a copy of the app still cached in a browser filters the
+  rows by `budget.type`, and without the field it would project nothing spent.
+- **Consequence:** the forms still send `type: "EXPENSE"`, which the backend accepts and defaults to.
+
 ## 2026-10-08 · Every screen reads every account, not the first page (T-38)
 
 - **Context:** the account list was read as one page of 100 (`readAccounts`, and the mirror cut its

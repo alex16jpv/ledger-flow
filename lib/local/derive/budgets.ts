@@ -47,10 +47,9 @@ export function deriveBudgetView(
 
   const spentCents = transactions.reduce((cents, transaction) => {
     if (transaction.deletedAt) return cents;
-    // The budget's own type filters the rows: an INCOME budget ignores every expense in its window.
     if (transaction.type !== budget.type) return cents;
     if (!withinDays(transaction, days)) return cents;
-    // No categories means global: the window's whole spend of that type, uncategorized included.
+    // No categories means global: the window's whole spend, uncategorized included.
     if (
       budget.categoryIds.length > 0 &&
       (transaction.categoryId === null || !budget.categoryIds.includes(transaction.categoryId))

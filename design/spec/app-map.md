@@ -110,12 +110,10 @@ flagged when archived, note, `effectiveFrom`). ⬜ **What the period is doing**:
 the budget's own period, the cumulative curve against the pace with where it ends at this rate, the
 last six periods against their limits, the biggest movements, and — for a budget of several categories
 — which of them is eating it. All but the pace curve need the backend first (`categoryIds` on
-`GET /stats/spending`, an order on `GET /transactions`). ✅ New and edit: name, type EXPENSE (INCOME hidden,
-backend-ready), several categories or global, period (WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY,
+`GET /stats/spending`, an order on `GET /transactions`). ✅ New and edit: name, several categories or global, period (WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY,
 CUSTOM with dates), amount, colour, note, effective from; warnings when the period or the dates change
 (overrides are cleared); errors `BUDGET_PERIOD_OVERLAP` and `CATEGORY_TYPE_MISMATCH` (TRANSFER
-categories are never offered). ✅ Past (`includeExpired`) and archived budgets. 🔮 Income goals,
-rollover, an alert threshold, SEMIMONTHLY.
+categories are never offered). ✅ Past (`includeExpired`) and archived budgets. No income budgets (T-37). 🔮 Rollover, an alert threshold, SEMIMONTHLY.
 
 ## Stats ✅
 

@@ -41,12 +41,7 @@ export function useMonthContext(now = new Date()): MonthContext {
 }
 
 export function isGlobalMonthlyBudget(budget: Budget): boolean {
-  return (
-    budget.categoryIds.length === 0 &&
-    budget.periodType === "MONTHLY" &&
-    budget.type === "EXPENSE" &&
-    !budget.archivedAt
-  );
+  return budget.categoryIds.length === 0 && budget.periodType === "MONTHLY" && !budget.archivedAt;
 }
 
 // The API returns only the days with spending; the chart shows every day of the month with gaps at 0.
