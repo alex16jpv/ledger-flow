@@ -33,6 +33,7 @@ import { iconProps } from "@/lib/icons/sizes";
 import type { JoinedGroupStanding, JoinedLine, JoinedPerson } from "@/lib/local/derive";
 import { useBackNavigation } from "@/lib/navigation/history";
 import { useOffline } from "@/lib/network/useOffline";
+import { useAppUser } from "@/lib/session/useAppUser";
 import { featureColorStyle } from "@/lib/theme/feature-color";
 import type { JoinedExpense, JoinedGroup } from "@/types/api";
 
@@ -201,6 +202,7 @@ function JoinedBody({
   expenses: JoinedExpense[];
 }) {
   const t = useTranslations();
+  const userId = useAppUser()?.id;
   const money = useMoney();
   const router = useRouter();
   const toast = useToast();
@@ -295,7 +297,7 @@ function JoinedBody({
                     .join(" · ");
               return (
                 <Row key={participant.contactId ?? "owner"}>
-                  <Avatar name={participant.name} color={participant.color} />
+                  <Avatar seed={participant.you ? userId : (participant.contactId ?? group.id)} />
                   <RowBody>
                     <RowTitle>
                       <span>{participant.you ? t("shared.joined.you") : participant.name}</span>

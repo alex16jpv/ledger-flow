@@ -1,7 +1,6 @@
 import { currencyFractionDigits } from "@/lib/format/currency";
 import { parseDecimal } from "@/lib/format/money";
 import { resolveShares, type SplitMode, type SplitRow } from "@/lib/local/derive";
-import type { ColorToken } from "@/lib/theme/feature-color";
 import type { SharedShare, SharedSplit } from "@/types/api";
 
 export const SPLIT_MODES = ["EQUAL", "PERCENT", "EXACT", "FIXED_REST"] as const;
@@ -15,7 +14,6 @@ export interface SplitParty {
   party: SharedShare["party"];
   contactId: string | null;
   name: string;
-  color: ColorToken | null;
   // One for a person; the head count for the block of guests, which weighs as many shares.
   units: number;
 }
@@ -42,7 +40,6 @@ export function partiesOf(
     party: person.contactId === null ? "USER" : "CONTACT",
     contactId: person.contactId,
     name: person.name,
-    color: person.color,
     units: 1,
   }));
   if (guests && guests.count > 0) {
@@ -51,7 +48,6 @@ export function partiesOf(
       party: "GUESTS",
       contactId: null,
       name: guests.name ?? "",
-      color: "GRAY",
       units: guests.count,
     });
   }

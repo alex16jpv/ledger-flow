@@ -80,7 +80,7 @@ export function SplitThisSheet({ open, onClose, transaction, onDone }: SplitThis
       title={t("shared.split.looseTitle", { description: name })}
       total={transaction.amount}
       currency={transaction.currency}
-      people={[{ contactId: null, name: t("shared.group.you"), color: null }]}
+      people={[{ contactId: null, name: t("shared.group.you") }]}
       payerContactId={null}
       choosePeople
       note={t("shared.split.creates", { name })}

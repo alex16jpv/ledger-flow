@@ -13,6 +13,7 @@ const ANA = "k1";
 const BETO = "k2";
 const fetchMock = vi.fn<typeof fetch>();
 
+vi.mock("@/lib/session/useAppUser", () => ({ useAppUser: () => ({ id: "user-1" }) }));
 vi.mock("@/lib/i18n/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/shared",
@@ -37,9 +38,9 @@ afterEach(() => {
 });
 
 const people = [
-  { contactId: null, name: "You", color: null },
-  { contactId: ANA, name: "Ana Ruiz", color: null },
-  { contactId: BETO, name: "Beto Cano", color: null },
+  { contactId: null, name: "You" },
+  { contactId: ANA, name: "Ana Ruiz" },
+  { contactId: BETO, name: "Beto Cano" },
 ];
 
 function open(

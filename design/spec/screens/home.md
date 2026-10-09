@@ -7,11 +7,11 @@
   ([notifications.md](notifications.md)), and the avatar, which leads to Settings.
 
   **Where the name comes from, and what happens when there is none** (`#home-without-a-name`): the
-  name and the avatar's initials come from the session **or, with no session, from the profile the
-  local mirror saved** — the same source that already provides the currency and the time zone offline
+  name and the user id the avatar is drawn from come from the session **or, with no session, from the
+  profile the local mirror saved** — the same source that already provides the currency and the time zone offline
   — so without a connection the greeting is still "Hi, Alex". **With neither** — a device that never
   finished a pull — the greeting **is not left with a dangling comma**: it becomes plain "Hi" and the
-  avatar shows its `user` icon instead of empty initials. The general rule: **no text in the app shows
+  avatar shows its `user` icon instead of an empty circle. The general rule: **no text in the app shows
   the punctuation of a fact it does not have**; the sentence is rewritten without it.
 
 - **Review inbox:** a clickable `warning` alert with the count and, after it, what the entries

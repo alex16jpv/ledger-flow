@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Avatar } from "@/components/shell/Avatar";
 import { Field, Input } from "@/components/ui/Field";
 import { Segment } from "@/components/ui/Segment";
-import type { ColorToken } from "@/lib/theme/feature-color";
+import { useAppUser } from "@/lib/session/useAppUser";
 import type { DefaultSplit } from "@/types/api";
 
 import { parsePercent, PERCENT_SCALE, percentLeft, USER_KEY } from "../split";
@@ -13,7 +13,6 @@ import { parsePercent, PERCENT_SCALE, percentLeft, USER_KEY } from "../split";
 export interface DefaultSplitPerson {
   contactId: string | null;
   name: string;
-  color: ColorToken | null;
 }
 
 // The server adds these as basis points, and so does the sheet: in floats three thirds miss 100.
@@ -38,6 +37,7 @@ export function DefaultSplitFields({
   onPercent,
 }: DefaultSplitFieldsProps) {
   const t = useTranslations();
+  const userId = useAppUser()?.id;
   const left = leftOf(people, percent);
 
   return (
@@ -59,7 +59,7 @@ export function DefaultSplitFields({
             const key = person.contactId ?? USER_KEY;
             return (
               <div key={key} className="flex items-center gap-3">
-                <Avatar name={person.name} color={person.color} />
+                <Avatar seed={person.contactId ?? userId} />
                 <span className="min-w-0 flex-1 truncate font-medium">{person.name}</span>
                 <span className="w-[112px] shrink-0">
                   <Input

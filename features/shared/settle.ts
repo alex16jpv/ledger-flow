@@ -1,6 +1,5 @@
 import { imputeCounterparty, type OwedLine } from "@/lib/local/derive";
 import { fromCents, toCents } from "@/lib/local/derive/money";
-import type { ColorToken } from "@/lib/theme/feature-color";
 import type { SharedExpense } from "@/types/api";
 
 import type { GroupView, PartyView, SharedSection } from "./ledger";
@@ -29,7 +28,6 @@ export interface SettleParty {
   // A block of guests lives in one expense, which is the only thing there is to settle with it.
   expenseId: string | null;
   name: string;
-  color: ColorToken | null;
   owedToYou: number;
   youOwe: number;
   net: number;
@@ -109,7 +107,6 @@ interface PartySeed {
   contactId: string | null;
   expenseId: string | null;
   name: string;
-  color: ColorToken | null;
   owedToYou: number;
   youOwe: number;
   surplus: number;
@@ -132,7 +129,6 @@ export function settlePerson(section: SharedSection, contactId: string): SettleP
     contactId,
     expenseId: null,
     name: person.name,
-    color: person.color,
     owedToYou: person.owesYou,
     youOwe: person.youOwe,
     surplus: person.surplus,
@@ -146,7 +142,6 @@ const guestParty = (section: SharedSection, view: GroupView, person: PartyView):
     contactId: null,
     expenseId: person.expenseId,
     name: person.name,
-    color: person.color,
     owedToYou: person.owesYou,
     // A block that paid ahead is money of theirs in your account, and giving it back is a payment.
     youOwe: fromCents(toCents(person.youOwe) + toCents(person.surplus)),
@@ -177,7 +172,6 @@ export function settleParty(
       contactId: person.contactId,
       expenseId: null,
       name: person.name,
-      color: person.color,
       owedToYou: person.owesYou,
       youOwe: person.youOwe,
       surplus: person.surplus,

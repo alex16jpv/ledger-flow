@@ -7,7 +7,6 @@ import { RowBody, rowClasses, RowMeta, RowRight, RowTitle } from "@/components/u
 import { formatMoney } from "@/lib/format/money";
 import { formatLocaleFor } from "@/lib/i18n/format-locale";
 import { iconProps } from "@/lib/icons/sizes";
-import type { ColorToken } from "@/lib/theme/feature-color";
 
 const CURRENCY = "COP";
 const OWED_TO_YOU = 552_600;
@@ -19,10 +18,10 @@ export async function SharedMock() {
   const locale = await getLocale();
   const money = (amount: number) =>
     formatMoney(amount, { currency: CURRENCY, locale: formatLocaleFor(locale, null) });
-  const people: { name: string; color: ColorToken; groups: string; amount: number; owesYou: boolean }[] = [
-    { name: "Beto Cano", color: "TEAL", groups: sample("trip"), amount: 526_300, owesYou: true },
-    { name: "Ana Ruiz", color: "PINK", groups: sample("trip"), amount: 26_300, owesYou: true },
-    { name: "Diego Pardo", color: "INDIGO", groups: sample("rent"), amount: 60_000, owesYou: false },
+  const people: { name: string; seed: string; groups: string; amount: number; owesYou: boolean }[] = [
+    { name: "Beto Cano", seed: "b3f0c2a1-5d4e-4f6a-8b7c-9d0e1f2a3b4c", groups: sample("trip"), amount: 526_300, owesYou: true },
+    { name: "Ana Ruiz", seed: "a1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b", groups: sample("trip"), amount: 26_300, owesYou: true },
+    { name: "Diego Pardo", seed: "d4c3b2a1-9e8f-4a7b-9c6d-5e4f3a2b1c0d", groups: sample("rent"), amount: 60_000, owesYou: false },
   ];
   const face =
     "inline-flex h-[34px] items-center justify-center gap-1.5 rounded-[8px] px-2 text-sm font-medium text-text-2";
@@ -54,7 +53,7 @@ export async function SharedMock() {
       <Card flush>
         {people.map((person) => (
           <div key={person.name} className={rowClasses()}>
-            <Avatar name={person.name} color={person.color} />
+            <Avatar seed={person.seed} />
             <RowBody>
               <RowTitle>
                 <span>{person.name}</span>

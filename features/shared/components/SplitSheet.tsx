@@ -17,6 +17,7 @@ import { formatPlainNumber } from "@/lib/format/money";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { SplitInvalidError } from "@/lib/local/derive";
+import { useAppUser } from "@/lib/session/useAppUser";
 import type { SharedShare, SharedSplit } from "@/types/api";
 
 import { MAX_GUESTS } from "../limits";
@@ -38,7 +39,6 @@ import { ContactPickerSheet } from "./ContactPickerSheet";
 export interface SplitPerson {
   contactId: string | null;
   name: string;
-  color: SplitParty["color"];
 }
 
 export interface SplitResult {
@@ -87,6 +87,7 @@ export function SplitSheet({
   onUseGroupSplit,
 }: SplitSheetProps) {
   const t = useTranslations("shared.split");
+  const userId = useAppUser()?.id;
   const money = useMoney();
   const [draft, setDraft] = useState<SplitDraft>(
     initial ?? { mode: "EQUAL", guests: null, inputs: {} },
@@ -173,7 +174,7 @@ export function SplitSheet({
                     setChosen((was) => was.filter((one) => one.contactId !== person.contactId));
                   }}
                 >
-                  <Avatar name={person.name} color={person.color} size="sm" />
+                  <Avatar seed={person.contactId ?? userId} size="sm" />
                   {person.name}
                   {person.contactId !== null && <X {...iconProps("sm")} />}
                 </Chip>
@@ -262,7 +263,7 @@ export function SplitSheet({
                   <Users {...iconProps("sm")} />
                 </Tile>
               ) : (
-                <Avatar name={party.name} color={party.color} />
+                <Avatar seed={party.contactId ?? userId} />
               )}
               <span className="min-w-0 flex-1 truncate font-medium">
                 {party.party === "GUESTS" ? t("guests.row", { count: party.units }) : party.name}
@@ -351,7 +352,6 @@ export function SplitSheet({
               ...added.map((one) => ({
                 contactId: one.id,
                 name: one.name,
-                color: one.color ?? null,
               })),
             ]);
             setPicking(false);

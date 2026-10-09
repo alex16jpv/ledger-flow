@@ -51,7 +51,7 @@ Above both, one card with **Owed to you** and **You owe** — the same two-figur
 Home, and for the same reason (T-85): **there is no net figure**, here or anywhere else.
 
 **People** lists the net per person across every group, in two sections, `Owes you` and `You owe`, with
-the settled ones folded away. Each row: the person's initials in their colour, their name, the groups
+the settled ones folded away. Each row: the person's avatar, their name, the groups
 they appear in, and the net.
 
 **Colour is data, so the direction is a word.** These amounts are drawn neutral and unsigned. Green

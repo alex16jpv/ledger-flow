@@ -134,7 +134,7 @@ function PersonRow({
 
   return (
     <Row>
-      <Avatar name={contact.name} color={contact.color ?? null} />
+      <Avatar seed={contact.id} />
       <RowBody>
         <RowTitle>
           <span>{contact.name}</span>

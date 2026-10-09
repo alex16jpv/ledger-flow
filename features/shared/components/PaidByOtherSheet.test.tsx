@@ -29,8 +29,8 @@ const group = sharedGroup({
 });
 
 const people = [
-  { contactId: ANA, name: "Ana Ruiz", color: "TEAL" as const },
-  { contactId: BETO, name: "Beto Cano", color: "PURPLE" as const },
+  { contactId: ANA, name: "Ana Ruiz" },
+  { contactId: BETO, name: "Beto Cano" },
 ];
 
 let vault: VaultHandle;

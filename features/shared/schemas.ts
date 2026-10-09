@@ -10,7 +10,6 @@ export const contactFormSchema = z.object({
     .trim()
     .min(1, { error: "validation.required" })
     .max(CONTACT_NAME_MAX, { error: "validation.nameMax" }),
-  color: z.enum(COLOR_TOKENS, { error: "validation.required" }),
   // An identifier for inviting them later, never an address anything is sent to.
   email: z.union([z.literal(""), z.email({ error: "validation.email" })]),
 });

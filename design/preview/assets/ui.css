@@ -380,10 +380,10 @@ body[data-device="tablet"] .row .btn.icon-sm .label, body[data-device="desktop"]
 .stackbar i { display: block; background: var(--f); }
 .period-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
 .period-nav .label { font-weight: var(--fw-semibold); font-size: var(--fs-md); color: var(--text); }
-.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-text); display: grid; place-items: center; font-weight: var(--fw-semibold); font-size: var(--fs-sm); flex: none; border: 1px solid var(--border); }
-.avatar.person { background: var(--f-soft); color: var(--f-text); border-color: var(--f-border); }
-.avatar.sm { width: 24px; height: 24px; font-size: var(--fs-xs); }
-.avatar.lg { width: 56px; height: 56px; font-size: var(--fs-md); }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-text); display: grid; place-items: center; flex: none; border: 1px solid var(--border); overflow: hidden; }
+.avatar > img { width: 100%; height: 100%; display: block; }
+.avatar.sm { width: 24px; height: 24px; }
+.avatar.lg { width: 56px; height: 56px; }
 .kbd { font-family: var(--font-mono); font-size: var(--fs-xs); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border-strong); color: var(--text-2); }
 .account-card { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4); border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-1); min-width: 0; position: relative; overflow: hidden; }
 .account-card::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--f); }

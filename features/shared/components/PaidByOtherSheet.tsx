@@ -24,7 +24,6 @@ import { useMoney } from "@/lib/i18n/useMoney";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
 import { newEntityId } from "@/lib/local/outbox/envelope";
-import type { ColorToken } from "@/lib/theme/feature-color";
 
 import { useCreateSharedExpense } from "../hooks";
 import { EXPENSE_DESCRIPTION_MAX, paidByOtherSchema, type PaidByOtherValues } from "../schemas";
@@ -33,7 +32,6 @@ import { expensePaidByOther, inheritedSplit, type SplittingGroup } from "../writ
 export interface PaidByOtherPerson {
   contactId: string;
   name: string;
-  color: ColorToken | null;
 }
 
 export interface PaidByOtherSheetProps {
@@ -204,7 +202,7 @@ function PaidByOtherFields({ open, onClose, group, people }: PaidByOtherSheetPro
             label={t("shared.paidByOther.whoPaid")}
             placeholder={t("shared.paidByOther.whoPaidPlaceholder")}
             value={payer?.name}
-            leading={payer && <Avatar name={payer.name} color={payer.color} />}
+            leading={payer && <Avatar seed={payer.contactId} />}
             className={payerError ? "border-danger-solid" : undefined}
             onClick={() => {
               setPickingPayer(true);
@@ -246,7 +244,7 @@ function PaidByOtherFields({ open, onClose, group, people }: PaidByOtherSheetPro
           options={people.map((person) => ({
             value: person.contactId,
             label: person.name,
-            leading: <Avatar name={person.name} color={person.color} />,
+            leading: <Avatar seed={person.contactId} />,
           }))}
           value={payerId || null}
           onSelect={(value) => {

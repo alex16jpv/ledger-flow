@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { blobOf } from "@/components/shell/Avatar";
 import { ToastProvider } from "@/components/ui/Toast";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { json, urlOf } from "@/lib/testing/http";
@@ -54,6 +55,7 @@ const page = (data: unknown[]) =>
 const fetchMock = vi.fn<typeof fetch>();
 const replace = vi.fn();
 
+vi.mock("@/lib/session/useAppUser", () => ({ useAppUser: () => ({ id: "user-1" }) }));
 vi.mock("@/lib/i18n/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn(), replace }),
   usePathname: () => "/shared/joined/g9",
@@ -112,6 +114,14 @@ describe("JoinedGroupScreen", () => {
     await screen.findByText("You owe Ana Ruiz");
     expect(screen.getByText("You")).toBeInTheDocument();
     expect(screen.getByText(/Has not joined · the name Ana Ruiz gave them/)).toBeInTheDocument();
+  });
+
+  it("draws you from your id, the owner from the group's and the others from their contact's", async () => {
+    view();
+
+    await screen.findByText("You owe Ana Ruiz");
+    const drawn = [...document.querySelectorAll("img")].map((img) => img.getAttribute("src"));
+    expect(drawn).toEqual([blobOf("g9"), blobOf("user-1"), blobOf("k3")]);
   });
 
   it("says where each line stands from your side", async () => {

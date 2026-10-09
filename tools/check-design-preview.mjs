@@ -4,8 +4,9 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 
 const PREVIEW = "design/preview";
-// Only the pages and this index are generated; the rest of assets/ (ui.css, the fonts, the icons) is written by hand.
+// Only the pages, this index and the avatars are generated; the rest of assets/ (ui.css, the fonts, the icons) is written by hand.
 const INDEX = join("assets", "plates.js");
+const AVATARS = join("assets", "avatars");
 
 function files(dir, root = dir) {
   return readdirSync(dir).flatMap((entry) => {
@@ -30,7 +31,9 @@ try {
       );
     }),
     ...files(PREVIEW).filter(
-      (name) => (name.endsWith(".html") || name === INDEX) && !fresh.includes(name),
+      (name) =>
+        (name.endsWith(".html") || name === INDEX || name.startsWith(AVATARS)) &&
+        !fresh.includes(name),
     ),
   ];
   if (stale.length > 0) {

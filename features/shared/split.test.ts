@@ -18,9 +18,9 @@ const ANA = "k1";
 const BETO = "k2";
 
 const three = [
-  { contactId: null, name: "You", color: null },
-  { contactId: ANA, name: "Ana", color: null },
-  { contactId: BETO, name: "Beto", color: null },
+  { contactId: null, name: "You" },
+  { contactId: ANA, name: "Ana" },
+  { contactId: BETO, name: "Beto" },
 ];
 
 const draft = (over: Partial<SplitDraft> = {}): SplitDraft => ({

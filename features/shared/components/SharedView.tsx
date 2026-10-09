@@ -51,7 +51,7 @@ function PersonRowLink({ person, pending }: { person: PersonView; pending: Share
   const sync = rowSync(pending, person.contactId);
   return (
     <Link href={`/shared/people/${person.contactId}`} className={rowClasses({ interactive: true })}>
-      <Avatar name={person.name} color={person.color} />
+      <Avatar seed={person.contactId} />
       <RowBody>
         <RowTitle>
           <span>{person.name}</span>

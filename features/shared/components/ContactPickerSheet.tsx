@@ -131,7 +131,7 @@ export function ContactPickerSheet({
               if (reads) {
                 return (
                   <Row key={contact.id}>
-                    <Avatar name={contact.name} color={contact.color} />
+                    <Avatar seed={contact.id} />
                     <RowBody>
                       <RowTitle>
                         <span>{contact.name}</span>
@@ -161,7 +161,7 @@ export function ContactPickerSheet({
                   }}
                 >
                   <span className="flex min-w-0 flex-1 items-center gap-3">
-                    <Avatar name={contact.name} color={contact.color} />
+                    <Avatar seed={contact.id} />
                     <RowBody>
                       <RowTitle>
                         <span>{contact.name}</span>

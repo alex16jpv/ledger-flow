@@ -10,6 +10,7 @@ import { Sidebar } from "./Sidebar";
 import { TabBar } from "./TabBar";
 
 interface AppShellProps {
+  userId?: string;
   userName: string;
   pendingCount: number;
   invitations?: number;
@@ -24,6 +25,7 @@ interface AppShellProps {
 export const MAIN_ID = "main";
 
 export function AppShell({
+  userId,
   userName,
   pendingCount,
   invitations = 0,
@@ -44,6 +46,7 @@ export function AppShell({
         {t("skipToContent")}
       </a>
       <Sidebar
+        userId={userId}
         userName={userName}
         pendingCount={pendingCount}
         invitations={invitations}

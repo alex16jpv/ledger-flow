@@ -186,13 +186,18 @@ Exact sizes and states live in `preview/assets/ui.css`; this is the behaviour.
     when it is over. A period still running is **hatched** and is excluded from any count in the line
     underneath.
 
-34. **Person avatar (`avatar person`)** — the 36px `avatar` with the contact’s own feature colour
-    instead of the brand one: `--f-soft` behind, `--f-text` for the initials, `--f-border` around.
-    Two more sizes: 22px inside a chip or a stack, 56px as the hero of a person’s screen. The initials
-    are decoration — the name is always written next to it — so it is `aria-hidden`, and a person with
-    one word for a name gets one letter rather than an invented second. It is the only avatar that is
-    not the signed-in user, and it is what keeps a person from ever looking like an account: no tile,
-    no type, no balance.
+34. **Avatar (`avatar`)** — the signed-in user and every person are drawn the same way: a DiceBear
+    **Blobs** drawing (CC0, no attribution) generated from an **id**, never from the name, so a rename
+    changes nothing. It keeps the style's own colours, not the feature colours: a photo will take its
+    place one day, and nobody chooses the colours of a photo. 36px inside a `--border` circle, plus
+    24px inside a chip or a stack and 56px as the hero of a person’s screen. The seed: you, your user
+    id; a contact, theirs; the owner of a group you joined, the group's id; a block of guests, its
+    expense's id, where it is listed as somebody to settle with (everywhere else it is the `users`
+    tile). The same person can look different in two people's books, because each draws their own
+    contact. It is decoration — the name is always written next to it — so it is `aria-hidden` with an
+    empty `alt`. With no id yet (a device that never finished a pull) it is the `user` icon on
+    `--brand-soft`. It is what keeps a person from ever looking like an account: no tile, no type, no
+    balance.
 35. **Selectable row (`row` with a `box`)** — the same 60px row every list already draws, with a 20px
     checkbox first. Used where a screen picks from something that already exists — the transactions
     that go into a shared group — so the thing being picked is shown exactly as the list shows it,

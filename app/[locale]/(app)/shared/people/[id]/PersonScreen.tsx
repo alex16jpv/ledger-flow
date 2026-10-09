@@ -90,7 +90,7 @@ function PersonBody({
   return (
     <>
       <Card className="flex flex-col items-center gap-2 py-6 text-center">
-        <Avatar name={contact.name} color={contact.color} size="lg" />
+        <Avatar seed={contact.id} size="lg" />
         <h2 className="text-xl font-semibold tracking-[-0.02em]">{contact.name}</h2>
         {contact.email && <span className="text-sm text-text-3">{contact.email}</span>}
         <Projected when={pending.people.has(contact.id)}>
