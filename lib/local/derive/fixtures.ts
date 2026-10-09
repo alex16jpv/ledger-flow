@@ -63,7 +63,7 @@ export interface FixtureBudget {
   key: string;
   id: string;
   name: string;
-  type: "EXPENSE" | "INCOME";
+  type: SyncBudget["type"];
   categoryIds: string[];
   amount: number;
   amountOverrides: Record<string, number>;

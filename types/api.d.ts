@@ -1776,6 +1776,7 @@ export type paths = {
          *     (uncategorized and quick-adds included); only one global budget per period type
          *     can exist. `periodStartDate`/`periodEndDate` are required with `periodType=CUSTOM`
          *     and rejected for any other period type. `currency` is stamped from the user.
+         *     There are no income budgets: `type` only takes EXPENSE.
          *
          *     Accepts an optional client-minted `id` (UUID). An id the user already
          *     owns replays with 200 and the stored budget, whatever the payload
@@ -7089,7 +7090,7 @@ export type components = {
             /** @description Subset of categoryIds the user archived. */
             archivedCategoryIds: string[];
             /** @enum {string} */
-            type: "EXPENSE" | "INCOME";
+            type: "EXPENSE";
             /** @example COP */
             currency: string;
             /** @enum {string} */
@@ -7213,7 +7214,7 @@ export type components = {
             color: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
             categoryIds: string[];
             /** @enum {string} */
-            type?: "EXPENSE" | "INCOME";
+            type?: "EXPENSE";
             amount: number;
             /** @enum {string} */
             periodType: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
@@ -8097,7 +8098,7 @@ export type components = {
             /** @description Empty array = global budget (all spending counts). */
             categoryIds: string[];
             /** @enum {string} */
-            type: "EXPENSE" | "INCOME";
+            type: "EXPENSE";
             /** @example COP */
             currency: string;
             /** @description Base amount, before any override. */
@@ -8418,7 +8419,7 @@ export type components = {
             color?: "RED" | "ORANGE" | "AMBER" | "YELLOW" | "LIME" | "GREEN" | "TEAL" | "CYAN" | "BLUE" | "INDIGO" | "PURPLE" | "PINK" | "ROSE" | "GRAY" | "BROWN" | "BLACK";
             categoryIds?: string[];
             /** @enum {string} */
-            type?: "EXPENSE" | "INCOME";
+            type?: "EXPENSE";
             amount?: number;
             /** @enum {string} */
             periodType?: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";

@@ -69,16 +69,15 @@ export function isGlobalBudget(budget: Pick<Budget, "categoryIds">): boolean {
   return budget.categoryIds.length === 0;
 }
 
-// Mirrors the backend overlap rule: same type and period type, sharing a category or both global.
+// Mirrors the backend overlap rule: same period type, sharing a category or both global.
 export function findOverlapping(
-  budget: Pick<Budget, "id" | "type" | "periodType" | "categoryIds">,
+  budget: Pick<Budget, "id" | "periodType" | "categoryIds">,
   candidates: readonly Budget[],
 ): Budget | undefined {
   return candidates.find(
     (other) =>
       other.id !== budget.id &&
       !other.archivedAt &&
-      other.type === budget.type &&
       other.periodType === budget.periodType &&
       (isGlobalBudget(budget)
         ? isGlobalBudget(other)
