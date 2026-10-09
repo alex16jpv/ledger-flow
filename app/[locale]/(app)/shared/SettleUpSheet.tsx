@@ -29,7 +29,7 @@ import {
 } from "@/features/shared/settle";
 import { presentError } from "@/lib/api/errors";
 import { dayKey, localNoon } from "@/lib/format/dates";
-import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
+import { FrozenTimeZone, useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
@@ -152,7 +152,15 @@ function GroupFirst({ party, scope }: { party: SettleParty; scope: SettleScope }
   );
 }
 
-export function SettleUpSheet({ party, open, onClose, onWriteOff }: SettleUpSheetProps) {
+export function SettleUpSheet(props: SettleUpSheetProps) {
+  return (
+    <FrozenTimeZone open={props.open}>
+      <SettleUpFields {...props} />
+    </FrozenTimeZone>
+  );
+}
+
+function SettleUpFields({ party, open, onClose, onWriteOff }: SettleUpSheetProps) {
   const t = useTranslations();
   const money = useMoney();
   const toast = useToast();
