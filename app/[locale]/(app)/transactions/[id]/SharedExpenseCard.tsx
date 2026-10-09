@@ -26,6 +26,7 @@ import { iconProps } from "@/lib/icons/sizes";
 import type { PersonState } from "@/lib/local/derive";
 import { fromCents, toCents } from "@/lib/local/derive/money";
 import { countsAsYours as countsAsYoursOf } from "@/lib/local/derive/shared";
+import { useAppUser } from "@/lib/session/useAppUser";
 import type { Settlement, SharedExpense, SharedHistoryEntry, Transaction } from "@/types/api";
 
 import { PaymentRows } from "../../shared/PaymentRows";
@@ -49,7 +50,7 @@ export interface SharedExpenseCardProps {
 interface ShareRow {
   key: string;
   name: string;
-  color: PartyView["color"];
+  contactId: string | null;
   guests: boolean;
   share: number;
   paid: number;
@@ -77,7 +78,7 @@ function sharesOf(section: SharedSection, view: GroupView, expense: SharedExpens
     rows.push({
       key,
       name: person?.name ?? "",
-      color: person?.color ?? null,
+      contactId: share.contactId ?? null,
       guests: share.party === "GUESTS",
       share: share.amount,
       paid,
@@ -148,6 +149,7 @@ export function SharedExpenseCard({
 }: SharedExpenseCardProps) {
   const t = useTranslations("transactions.detail.shared");
   const whole = useTranslations();
+  const userId = useAppUser()?.id;
   const money = useMoney();
   const dates = useDates();
   const [editing, setEditing] = useState(false);
@@ -227,7 +229,7 @@ export function SharedExpenseCard({
         <List>
           {/* You are a row like everybody else, with a share of your own. */}
           <Row>
-            <Avatar name={t("you")} />
+            <Avatar seed={userId} />
             <RowBody>
               <RowTitle>
                 <span>{t("you")}</span>
@@ -249,7 +251,7 @@ export function SharedExpenseCard({
                   <Users {...iconProps("md")} />
                 </Tile>
               ) : (
-                <Avatar name={one.name} color={one.color} />
+                <Avatar seed={one.contactId} />
               )}
               <RowBody>
                 <RowTitle>

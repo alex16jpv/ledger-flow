@@ -1,6 +1,6 @@
 export { AccountSwitch } from "./AccountSwitch";
 export { AppShell, MAIN_ID } from "./AppShell";
-export { Avatar, initialsOf } from "./Avatar";
+export { Avatar } from "./Avatar";
 export { ConnectionBanner } from "./ConnectionBanner";
 export { MoreSheet } from "./MoreSheet";
 export { ADD_HREF, type AddOptions, isActive, type NavItem, type NavKey } from "./nav";

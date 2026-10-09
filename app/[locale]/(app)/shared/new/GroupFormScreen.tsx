@@ -33,6 +33,7 @@ import { iconProps } from "@/lib/icons/sizes";
 import { sumAmounts } from "@/lib/local/derive/money";
 import { newEntityId } from "@/lib/local/outbox/envelope";
 import { useBackNavigation } from "@/lib/navigation/history";
+import { useAppUser } from "@/lib/session/useAppUser";
 import { randomColorToken } from "@/lib/theme/feature-color";
 import type { Contact, Transaction } from "@/types/api";
 
@@ -41,6 +42,7 @@ import { WhatChangesSheet } from "../WhatChangesSheet";
 
 export function GroupFormScreen() {
   const t = useTranslations();
+  const userId = useAppUser()?.id;
   const money = useMoney();
   const router = useRouter();
   const back = useBackNavigation();
@@ -67,8 +69,8 @@ export function GroupFormScreen() {
 
   const shares = [null, ...people.map((one) => one.id)];
   const splitPeople: DefaultSplitPerson[] = [
-    { contactId: null, name: t("shared.group.you"), color: null },
-    ...people.map((one) => ({ contactId: one.id, name: one.name, color: one.color ?? null })),
+    { contactId: null, name: t("shared.group.you") },
+    ...people.map((one) => ({ contactId: one.id, name: one.name })),
   ];
   const pickedTotal = sumAmounts(picked.map((row) => row.amount));
 
@@ -157,7 +159,7 @@ export function GroupFormScreen() {
         <Field label={t("shared.form.whoWasIn")} help={t("shared.form.whoWasInHelp")}>
           <div className="flex flex-wrap gap-2">
             <Chip selected disabled>
-              <Avatar name={t("shared.group.you")} size="sm" />
+              <Avatar seed={userId} size="sm" />
               {t("shared.group.you")}
             </Chip>
             {people.map((person) => (
@@ -168,7 +170,7 @@ export function GroupFormScreen() {
                   setPeople((was) => was.filter((one) => one.id !== person.id));
                 }}
               >
-                <Avatar name={person.name} color={person.color} size="sm" />
+                <Avatar seed={person.id} size="sm" />
                 {person.name}
                 <X {...iconProps("sm")} />
               </Chip>

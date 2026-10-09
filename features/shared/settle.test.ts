@@ -506,7 +506,6 @@ describe("writing off while deleting a movement", () => {
     contactId,
     expenseId: null,
     name: contactId,
-    color: null,
     share: 0,
     paid: 0,
     owesYou,

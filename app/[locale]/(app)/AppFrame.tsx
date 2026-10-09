@@ -145,6 +145,7 @@ function Frame({ children }: { children: ReactNode }) {
         expired={sessionStatus === "expired"}
       />
       <AppShell
+        userId={user?.id}
         userName={user?.name ?? ""}
         pendingCount={pendingCount}
         invitations={invitations}
@@ -170,6 +171,7 @@ function Frame({ children }: { children: ReactNode }) {
         onClose={() => {
           setMoreOpen(false);
         }}
+        userId={user?.id}
         userName={user?.name ?? ""}
         userEmail={user?.email ?? ""}
         accountCount={accountCount.data}

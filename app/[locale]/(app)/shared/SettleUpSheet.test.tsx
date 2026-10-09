@@ -51,7 +51,6 @@ const party = (over: Partial<SettleParty> = {}): SettleParty => ({
   contactId: "k1",
   expenseId: null,
   name: "Ana Ruiz",
-  color: null,
   owedToYou: 60_000,
   youOwe: 0,
   net: 60_000,

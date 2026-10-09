@@ -24,6 +24,7 @@ export interface CategoryCounts {
 interface MoreSheetProps {
   open: boolean;
   onClose: () => void;
+  userId?: string;
   userName: string;
   userEmail: string;
   accountCount?: number;
@@ -43,6 +44,7 @@ const TILE_COLOR: Partial<Record<NavKey, ColorToken>> = {
 export function MoreSheet({
   open,
   onClose,
+  userId,
   userName,
   userEmail,
   accountCount,
@@ -122,7 +124,7 @@ export function MoreSheet({
               onClick={onClose}
               className={rowClasses({ interactive: true })}
             >
-              <Avatar name={userName} size="sm" />
+              <Avatar seed={userId} className="size-8" />
               <RowBody>
                 <RowTitle>
                   <span>{userName}</span>

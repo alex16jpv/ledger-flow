@@ -160,7 +160,7 @@ export function SettingsHub() {
   const [sheet, setSheet] = useState<
     "language" | "currency" | "timeZone" | "delete" | "signOut" | null
   >(null);
-  // F-82: the profile card greets and draws initials, so it reads the mirror too.
+  // F-82: the profile card names and draws the user, so it reads the mirror too.
   const user = useAppUser();
   const unconfirmed = isEnabled("emailVerification") && emailUnconfirmed(user);
   const currencyLocked = hasAccounts.data !== false;
@@ -169,7 +169,7 @@ export function SettingsHub() {
     <>
       <PageHeader title={t("settings.title")} />
       <Card className="flex items-center gap-3.5">
-        <Avatar name={user?.name ?? ""} className="size-[52px] text-lg" />
+        <Avatar seed={user?.id} className="size-[52px]" />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="text-md font-semibold">{user?.name}</span>
           <span className="text-sm text-text-2">{user?.email}</span>

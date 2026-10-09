@@ -1,7 +1,6 @@
 import { deriveShared, fromCents, partyKey, type PersonState, toCents } from "@/lib/local/derive";
 import type { SharedLedgerRows } from "@/lib/local/repository";
 import type { SharedExpenseLookup, SharedLookup, SharedPaymentLookup } from "@/lib/shared/lookup";
-import type { ColorToken } from "@/lib/theme/feature-color";
 import type { Contact, Settlement, SharedExpense, SharedGroup, SharedShare } from "@/types/api";
 
 export interface PartyView {
@@ -10,7 +9,6 @@ export interface PartyView {
   // A block of guests lives in one expense and is named after it; it is never a contact.
   expenseId: string | null;
   name: string;
-  color: ColorToken | null;
   share: number;
   paid: number;
   owesYou: number;
@@ -38,7 +36,6 @@ export interface GroupView {
 export interface PersonView {
   contactId: string;
   name: string;
-  color: ColorToken | null;
   owesYou: number;
   youOwe: number;
   net: number;
@@ -64,8 +61,6 @@ export interface SharedSection {
   owedToYou: number;
   youOwe: number;
 }
-
-const GUESTS_COLOR: ColorToken = "GRAY";
 
 // Both lists read newest first, keyset over `(date, id)`, which is how the endpoints answer them.
 const newestFirst = (a: { date: string; id: string }, b: { date: string; id: string }): number =>
@@ -155,7 +150,6 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
         expenseId: person.expenseId,
         name:
           person.expenseId === null ? (contact?.name ?? "") : guestName(expenses, person.expenseId),
-        color: person.expenseId === null ? (contact?.color ?? null) : GUESTS_COLOR,
         share: fromCents(held.share),
         paid: fromCents(held.paid),
         owesYou: person.owesYou,
@@ -238,7 +232,6 @@ export function sectionOf(rows: SharedLedgerRows, contacts: readonly Contact[]):
     return {
       contactId,
       name: contact?.name ?? "",
-      color: contact?.color ?? null,
       owesYou: fromCents(held.owesYou),
       youOwe: fromCents(youOwe),
       net: fromCents(held.owesYou - youOwe),

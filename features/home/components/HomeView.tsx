@@ -55,7 +55,7 @@ export function HomeView({ onCreateAccount, onCreateBudget, recent, owed }: Home
       title={firstName ? t("home.greeting", { name: firstName }) : t("home.greetingPlain")}
       actions={
         <Link href="/settings" aria-label={t("nav.settings")} className="rounded-full">
-          <Avatar name={user?.name ?? ""} />
+          <Avatar seed={user?.id} />
         </Link>
       }
     />

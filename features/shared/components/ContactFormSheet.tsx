@@ -3,19 +3,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AtSign, User } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/Alert";
 import { Field, Input } from "@/components/ui/Field";
 import { Sheet, SheetAction, SheetCancel, useUnsavedGuard } from "@/components/ui/Sheet";
-import { SwatchGrid } from "@/components/ui/Swatch";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError, fieldErrors, presentError } from "@/lib/api/errors";
 import { changedOnly, nothingChanged } from "@/lib/form/changes";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
-import { randomColorToken } from "@/lib/theme/feature-color";
 import type { Contact } from "@/types/api";
 
 import { useCreateContact, useUpdateContact } from "../hooks";
@@ -35,12 +32,10 @@ export function ContactFormSheet({ open, onClose, contact, onSaved }: ContactFor
   const create = useCreateContact();
   const update = useUpdateContact(contact?.id ?? "");
   const mutation = contact ? update : create;
-  const [suggested] = useState(() => randomColorToken());
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
       name: contact?.name ?? "",
-      color: contact?.color ?? suggested,
       email: contact?.email ?? "",
     },
   });
@@ -54,7 +49,7 @@ export function ContactFormSheet({ open, onClose, contact, onSaved }: ContactFor
       : null;
 
   function done(saved: Contact) {
-    form.reset({ name: saved.name, color: saved.color ?? suggested, email: saved.email ?? "" });
+    form.reset({ name: saved.name, email: saved.email ?? "" });
     onSaved?.(saved);
     onClose();
     toast.show({ message: t(contact ? "shared.form.saved" : "shared.form.created") });
@@ -64,7 +59,7 @@ export function ContactFormSheet({ open, onClose, contact, onSaved }: ContactFor
     try {
       if (contact) {
         const changes = changedOnly(
-          { name: values.name, color: values.color, email: values.email || null },
+          { name: values.name, email: values.email || null },
           dirtyFields,
         );
         done(nothingChanged(changes) ? contact : await update.mutateAsync(changes));
@@ -73,7 +68,6 @@ export function ContactFormSheet({ open, onClose, contact, onSaved }: ContactFor
       done(
         await create.mutateAsync({
           name: values.name,
-          color: values.color,
           ...(values.email === "" ? {} : { email: values.email }),
         }),
       );
@@ -126,22 +120,6 @@ export function ContactFormSheet({ open, onClose, contact, onSaved }: ContactFor
             {...form.register("name")}
           />
         </Field>
-        <Controller
-          control={form.control}
-          name="color"
-          render={({ field }) => (
-            <Field
-              label={t("shared.form.color")}
-              error={validationMessage(t, errors.color?.message)}
-            >
-              <SwatchGrid
-                value={field.value}
-                onChange={field.onChange}
-                label={t("shared.form.color")}
-              />
-            </Field>
-          )}
-        />
         <Field
           label={t("shared.form.email")}
           optional

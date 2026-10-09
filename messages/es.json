@@ -2474,7 +2474,6 @@
     "mock": {
       "date": "Martes, 22 de septiembre",
       "greeting": "Hola, John",
-      "initials": "JD",
       "pending": "3 capturas rápidas por revisar · {amount} en total",
       "spending": "Gasto de septiembre",
       "dayOf": "Día 22 de 30",

@@ -18,6 +18,7 @@ import { presentError } from "@/lib/api/errors";
 import { formatPlainNumber } from "@/lib/format/money";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { useOffline } from "@/lib/network/useOffline";
+import { useAppUser } from "@/lib/session/useAppUser";
 import type { Contact, DefaultSplit } from "@/types/api";
 
 import {
@@ -45,6 +46,7 @@ export interface AddPeopleSheetProps {
 export function AddPeopleSheet({ view, open, onClose }: AddPeopleSheetProps) {
   const t = useTranslations("shared.addPeople");
   const root = useTranslations();
+  const userId = useAppUser()?.id;
   const money = useMoney();
   const toast = useToast();
   const offline = useOffline();
@@ -74,18 +76,14 @@ export function AddPeopleSheet({ view, open, onClose }: AddPeopleSheetProps) {
   const mode: DefaultSplit["mode"] = view.group.defaultSplit.mode;
   // A percentage group must send the new percentages: the old ones no longer cover everybody.
   const splitPeople: DefaultSplitPerson[] = [
-    { contactId: null, name: root("shared.group.you"), color: null },
+    { contactId: null, name: root("shared.group.you") },
     ...view.group.participants
       .flatMap((one) => (one.contactId ? [one.contactId] : []))
       .map((contactId) => {
         const contact = byId.get(contactId);
-        return { contactId, name: contact?.name ?? "", color: contact?.color ?? null };
+        return { contactId, name: contact?.name ?? "" };
       }),
-    ...picked.map((one) => ({
-      contactId: one.id,
-      name: one.name,
-      color: one.color ?? null,
-    })),
+    ...picked.map((one) => ({ contactId: one.id, name: one.name })),
   ];
   const needsPercent = mode === "PERCENT" && picked.length > 0;
   const percentReady = !needsPercent || percentIsWhole(mode, splitPeople, percent);
@@ -250,10 +248,7 @@ export function AddPeopleSheet({ view, open, onClose }: AddPeopleSheetProps) {
                     <List>
                       {rows.map((row) => (
                         <Row key={row.key}>
-                          <Avatar
-                            name={row.contactId === null ? root("shared.group.you") : row.name}
-                            color={row.color}
-                          />
+                          <Avatar seed={row.contactId ?? userId} />
                           <RowBody>
                             <RowTitle>
                               <span>

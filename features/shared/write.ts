@@ -45,7 +45,6 @@ export function inheritedSplit(
     group.participants.map((participant) => ({
       contactId: participant.contactId,
       name: "",
-      color: null,
     })),
     null,
   );

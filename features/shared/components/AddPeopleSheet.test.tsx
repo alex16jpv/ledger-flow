@@ -15,6 +15,7 @@ const ANA = "k1";
 const DIEGO = "k3";
 const fetchMock = vi.fn<typeof fetch>();
 
+vi.mock("@/lib/session/useAppUser", () => ({ useAppUser: () => ({ id: "user-1" }) }));
 vi.mock("@/lib/i18n/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/shared",

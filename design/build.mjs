@@ -3,6 +3,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { Avatar, Style } from "@dicebear/core";
+import blobs from "@dicebear/styles/blobs.json" with { type: "json" };
+
 const OUT = process.env.DESIGN_OUT
   ? pathToFileURL(`${resolve(process.env.DESIGN_OUT)}/`)
   : new URL("./preview/", import.meta.url);
@@ -27,6 +30,16 @@ const pad2 = (n) => String(n).padStart(2, "0");
 
 const iconSvg = (name, cls = "") =>
   `<svg class="icon ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+
+// T-263 · the app draws each avatar from an id; every plate's seed is written once to assets/avatars.
+const BLOBS = new Style(blobs);
+const AVATARS = new Map();
+const blob = (seed) => {
+  const file = `assets/avatars/${seed}.svg`;
+  if (!AVATARS.has(file)) AVATARS.set(file, new Avatar(BLOBS, { seed }).toString());
+  return `<img src="${file}" alt="">`;
+};
+const USER_SEED = "5e0a7c1d-2b3f-4e6a-9c8d-7f1e2d3c4b5a";
 
 const docHead = (title) =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -117,7 +130,7 @@ ${navlink("chart-pie", "Budgets", active == "pres")}${navlink("wallet", "Account
 ${navlink("users", "Shared", active == "shared", invites, "waiting")}
 ${navlink("chart-column", "Stats", active == "stats")}${navlink("tags", "Categories", active == "cat")}
 <div class="footer">${navlink("settings", "Settings", active == "ajustes")}
-<a class="navlink" href="#"><span class="avatar" style="width:28px;height:28px;font-size:11px">JD</span><span class="truncate">John Doe</span></a></div></aside>`;
+<a class="navlink" href="#"><span class="avatar" style="width:28px;height:28px">${blob(USER_SEED)}</span><span class="truncate">John Doe</span></a></div></aside>`;
 
 const row = (icon, color, title, meta, amt, kind = "expense", o = {}) => {
   const subh = o.sub ? `<span class="sub">${o.sub}</span>` : "";
@@ -524,7 +537,7 @@ ${row("car", "BLUE", "Uber to work", "Yesterday 18:10 · Visa Gold", 18400)}
   const greet = unnamed ? "Hi" : "Hi, John";
   const av = unnamed
     ? `<a class="avatar" href="#" aria-label="Settings">${iconSvg("user", "sm")}</a>`
-    : '<a class="avatar" href="#" aria-label="Settings">JD</a>';
+    : `<a class="avatar" href="#" aria-label="Settings">${blob(USER_SEED)}</a>`;
   const header = `<header class="page-header"><div class="title"><span class="eyebrow">Tuesday, September 22</span><h1 class="h1">${greet}</h1></div>
 <div class="actions"><button class="btn ghost icon-only round desktop-only" aria-label="Search">${iconSvg("search")}</button>${bell(news)}${av}</div></header>`;
   const mobile = `${header}${pend}${installCard}${hero}${stats}${budgetsSection}${accountsSection}${recent}`;
@@ -2894,7 +2907,7 @@ const settings = ({
   const banner = offline
     ? `<div class="banner offline" role="status">${iconSvg("wifi-off")}<span class="txt"><b>You’re offline.</b> Changes are saved on this device and will sync when you’re back online.<span class="sub">2 changes waiting</span></span></div>`
     : "";
-  const top = `<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:17px">JD</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">John Doe</span><span class="small muted">john@example.com</span><span class="xs faint">Last sign-in today 8:40</span></span>${iconSvg("chevron-right", "sm")}</div>
+  const top = `<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px">${blob(USER_SEED)}</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">John Doe</span><span class="small muted">john@example.com</span><span class="xs faint">Last sign-in today 8:40</span></span>${iconSvg("chevron-right", "sm")}</div>
 <span class="eyebrow">Preferences</span>
 <div class="list card flush">${settingsRow("globe", "Language", "App language", '<span class="small muted">English</span>', "TEAL")}${settingsRow("coins", "Currency", "Locked: you already have accounts", '<span class="badge">COP</span>', "GREEN")}${settingsRow("clock", "Time zone", "Defines your days and periods", '<span class="small muted">Bogotá</span>', "BLUE")}${settingsRow("palette", "Appearance", "Palette and mode", '<span class="small muted">Tinta · System</span>', "PURPLE")}${settingsRow("bell", "Notifications", "What reaches you, and where", "", "INDIGO")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}</div>
 <span class="eyebrow">Security</span>
@@ -2989,7 +3002,7 @@ ${afterSave ? field("Current password", null, "", { icon: "lock" }) : field("Cur
 };
 
 const settingsBodyDim = () =>
-  '<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px;font-size:17px">JD</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">John Doe</span><span class="small muted">john@example.com</span></span></div><div class="skeleton" style="height:180px"></div><div class="skeleton" style="height:120px"></div>';
+  `<div class="card hstack" style="gap:14px"><span class="avatar" style="width:52px;height:52px">${blob(USER_SEED)}</span><span class="body" style="flex:1;display:flex;flex-direction:column"><span class="h3">John Doe</span><span class="small muted">john@example.com</span></span></div><div class="skeleton" style="height:180px"></div><div class="skeleton" style="height:120px"></div>`;
 
 const deleteAccountScreen = (state = "") => {
   const inner = `<div class="alert danger">${iconSvg("circle-alert")}<span>Your account and everything in it are kept for <b>30 days</b>, until <b>October 28, 2026</b>, and then <b>erased for good</b>. Until then, signing in with your email and password restores it. You leave your shared groups now, and restoring doesn’t bring you back into them. You’ll be signed out now.</span></div>
@@ -4460,7 +4473,7 @@ const navMenuSheet = (withAccounts, news = 0, invites = 0) => {
   );
   return fullWrap(
     `<div class="list card flush">${acc}${settingsRow("users", "Shared", invites ? `${invites} invitation${invites > 1 ? "s" : ""} waiting for you` : `${moneyText(OWED_TO_YOU)} owed to you`, invites ? `<span class="badge brand">${invites}<span class="sr-only"> waiting</span></span>` : "", "PURPLE")}${notif}${settingsRow("chart-column", "Stats", "Where the money went", "", "TEAL")}${settingsRow("tags", "Categories", "13 active · 1 archived", "", "ORANGE")}${settingsRow("settings", "Settings", "Profile, currency, appearance", "", "GRAY")}</div>
-<div class="list card flush"><a class="row" href="#"><span class="avatar" style="width:32px;height:32px;font-size:12px">JD</span><span class="body"><span class="title">John Doe</span><span class="meta">john@example.com</span></span>${iconSvg("chevron-right", "sm")}</a></div>`,
+<div class="list card flush"><a class="row" href="#"><span class="avatar" style="width:32px;height:32px">${blob(USER_SEED)}</span><span class="body"><span class="title">John Doe</span><span class="meta">john@example.com</span></span>${iconSvg("chevron-right", "sm")}</a></div>`,
     "More",
   );
 };
@@ -4478,7 +4491,7 @@ const mobileNavVariant = (kind) => {
     return home({ nav: navBar(["inicio", "mov", null, "pres", "cuentas", "mas"], "inicio") });
   return accounts({
     nav: barBeforeMore("cuentas"),
-    actions: `<button class="btn primary desktop-only">${iconSvg("plus", "sm")}New account</button><button class="btn secondary icon-only round mobile-only" aria-label="New account">${iconSvg("plus")}</button><a class="avatar" href="#" aria-label="More">JD</a>`,
+    actions: `<button class="btn primary desktop-only">${iconSvg("plus", "sm")}New account</button><button class="btn secondary icon-only round mobile-only" aria-label="New account">${iconSvg("plus")}</button><a class="avatar" href="#" aria-label="More">${blob(USER_SEED)}</a>`,
     sheet: kind === "avatar-open" ? navMenuSheet(false) : "",
   });
 };
@@ -4829,19 +4842,17 @@ ${row("shopping-bag", "PINK", "Falabella", "Visa Gold", 89900)}
 
 // ── Shared expenses · T-110 and T-111 ───────────────────────────────────────
 const PEOPLE = {
-  You: ["JD", "GRAY"],
-  "Ana Ruiz": ["AR", "PINK"],
-  "Beto Cano": ["BC", "TEAL"],
-  "Lucía Mesa": ["LM", "AMBER"],
-  "Diego Pardo": ["DP", "INDIGO"],
-  "Marta Ríos": ["MR", "PURPLE"],
-  Carlitos: ["CA", "ORANGE"],
+  You: USER_SEED,
+  "Ana Ruiz": "a1e2d3c4-b5a6-4978-8a9b-0c1d2e3f4a5b",
+  "Beto Cano": "b3f0c2a1-5d4e-4f6a-8b7c-9d0e1f2a3b4c",
+  "Lucía Mesa": "c7d6e5f4-a3b2-4c1d-8e0f-1a2b3c4d5e6f",
+  "Diego Pardo": "d4c3b2a1-9e8f-4a7b-9c6d-5e4f3a2b1c0d",
+  "Marta Ríos": "e9f8a7b6-c5d4-4e3f-a2b1-0c9d8e7f6a5b",
+  Carlitos: "f2e1d0c9-b8a7-4f6e-9d5c-4b3a2f1e0d9c",
 };
 
-const face = (name, size = "") => {
-  const [initials, color] = PEOPLE[name];
-  return `<span class="avatar person ${size} color-${color}" aria-hidden="true">${initials}</span>`;
-};
+const face = (name, size = "") =>
+  `<span class="avatar ${size}" aria-hidden="true">${blob(PEOPLE[name])}</span>`;
 
 const personRow = (name, meta, amt, note, badge = "", pending = false) =>
   `<a class="row" href="#">${face(name)}
@@ -5019,7 +5030,7 @@ ${archived ? "" : inviteDoor()}
 
 const personDetail = ({ sheet = "", pending = false } = {}) =>
   screen(
-    `<div class="card color-TEAL stack-sm" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${face("Beto Cano", "lg")}
+    `<div class="card stack-sm" style="align-items:center;text-align:center;gap:8px;padding:24px 16px">${face("Beto Cano", "lg")}
 <span class="h2">Beto Cano</span><span class="small muted">beto@example.com</span>
 ${pendingFigure(`<span class="amount-hero" style="font-size:36px">${money(526300 - (pending ? PENDING_PAYMENT : 0))}</span>`, pending)}
 <span class="small muted">owes you, across 2 shared groups</span>
@@ -5061,7 +5072,6 @@ const newContact = () =>
   sharedScreen(sharedPeopleBody(), {
     sheet: fullWrap(
       `<div class="stack">${field("Name", "Beto Cano", null, { icon: "user" })}
-<div class="field"><span class="label">Colour</span>${swatches("TEAL")}</div>
 ${field("Email", null, "beto@example.com", { icon: "globe", opt: true, help: "So you can invite them to a shared group. Nothing is emailed: the invitation waits in their Shared." })}
 <div class="alert neutral">${iconSvg("info")}<span>Up to <b>200 people</b> in all.</span></div>
 <div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button><button class="btn primary lg" style="flex:1.2">Add person</button></div></div>`,
@@ -5428,7 +5438,7 @@ ${person("Ana Ruiz", "Owes you $26,300", true)}${person("Beto Cano", "Owes you $
 };
 
 const blockRow = (label, value) =>
-  `<div class="hstack" style="gap:12px"><span class="avatar person color-GRAY" aria-hidden="true">${iconSvg("users", "sm")}</span>
+  `<div class="hstack" style="gap:12px">${tile("users", "GRAY", "sm")}
 <span class="truncate" style="flex:1;min-width:0;font-weight:500">${label}</span>
 <span class="input" style="width:132px;height:40px;justify-content:flex-end"><span class="value amount">${value}</span></span></div>`;
 
@@ -7774,9 +7784,9 @@ const PAGES = [
       plate(
         "new-person",
         "New person",
-        "Name, colour and an optional email. The email is what an invitation is addressed to — nothing is emailed, and the sheet says so rather than leaving the field to be guessed at. The limit is said here too, never discovered by a save that fails.",
+        "A name and an optional email, and no colour: the avatar is drawn from the person's id (T-263). The email is what an invitation is addressed to — nothing is emailed, and the sheet says so rather than leaving the field to be guessed at. The limit is said here too, never discovered by a save that fails.",
         newContact(),
-        { added: "2026-09-20", updated: "2026-09-22" },
+        { added: "2026-09-20", updated: "2026-10-09" },
       ),
       plate(
         "pick-people",
@@ -10038,4 +10048,6 @@ write("index.html", startHere());
 write("in-review.html", inReview());
 write("changes.html", whatChanged());
 for (const page of PAGES) write(page.file, renderPage(page));
+mkdirSync(new URL("assets/avatars/", OUT), { recursive: true });
+for (const [file, svg] of AVATARS) write(file, svg);
 console.log(`preview: ${PAGES.length + 3} pages, ${ALL_PLATES.length} plates`);

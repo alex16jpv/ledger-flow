@@ -1,49 +1,50 @@
+import { Avatar as Drawing, Style } from "@dicebear/core";
+import blobs from "@dicebear/styles/blobs.json";
 import { User } from "lucide-react";
 
 import { cn } from "@/components/ui/cn";
 import { iconProps } from "@/lib/icons/sizes";
-import { type ColorToken, featureColorStyle, isColorToken } from "@/lib/theme/feature-color";
-
-export function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
-  return `${first}${last}`.toUpperCase();
-}
 
 export type AvatarSize = "sm" | "md" | "lg";
 
 export interface AvatarProps {
-  name: string;
+  seed: string | null | undefined;
   size?: AvatarSize;
-  // A person carries their own colour; the signed-in user wears the brand's.
-  color?: ColorToken | null;
   className?: string;
 }
 
 const SIZE: Record<AvatarSize, string> = {
-  sm: "size-7 text-xs",
-  md: "size-9 text-sm",
-  lg: "size-16 text-xl",
+  sm: "size-6",
+  md: "size-9",
+  lg: "size-14",
 };
 
-export function Avatar({ name, size = "md", color, className }: AvatarProps) {
-  const own = isColorToken(color);
-  return (
-    <span
-      aria-hidden="true"
-      style={featureColorStyle(color)}
-      className={cn(
-        "grid shrink-0 place-items-center rounded-full border font-semibold",
-        own
-          ? "border-(--f-border) bg-(--f-soft) text-(--f-text)"
-          : "border-border bg-brand-soft text-brand-text",
-        SIZE[size],
-        className,
-      )}
-    >
-      {/* F-82: a device with no name yet shows the icon, never two empty initials. */}
-      {initialsOf(name) || <User {...iconProps(size === "sm" ? "sm" : "md")} />}
-    </span>
-  );
+let style: Style<typeof blobs> | undefined;
+// lazy: a server render meets every user's ids, so the cache starts over past this many.
+const MAX_DRAWN = 500;
+const drawn = new Map<string, string>();
+
+export function blobOf(seed: string): string {
+  const cached = drawn.get(seed);
+  if (cached !== undefined) return cached;
+  style ??= new Style(blobs);
+  const uri = new Drawing(style, { seed }).toDataUri();
+  if (drawn.size >= MAX_DRAWN) drawn.clear();
+  drawn.set(seed, uri);
+  return uri;
+}
+
+export function Avatar({ seed, size = "md", className }: AvatarProps) {
+  const shape = cn("shrink-0 rounded-full border border-border", SIZE[size], className);
+  if (!seed)
+    return (
+      <span
+        aria-hidden="true"
+        className={cn("grid place-items-center bg-brand-soft text-brand-text", shape)}
+      >
+        <User {...iconProps(size === "sm" ? "sm" : "md")} />
+      </span>
+    );
+  // eslint-disable-next-line @next/next/no-img-element -- a data: URI drawn here has nothing for next/image to optimise
+  return <img alt="" aria-hidden="true" src={blobOf(seed)} className={shape} />;
 }

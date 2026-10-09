@@ -5,6 +5,35 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-09 · Every avatar is a DiceBear Blobs drawing seeded by an id (T-263, the owner's call)
+
+- **Context:** avatars were initials on the person's feature colour, and the owner does not want to
+  pay for storing profile photos yet. He asked for a generated avatar, as a stand-in until a photo
+  can be uploaded: DiceBear's **Blobs** (CC0, no attribution; it reads at 24px and in both modes),
+  in **the style's own colours** («cuando una persona suba la foto no tendremos control de los
+  colores»), **no initials**, **seeded by the id**, and the colour picker gone from the person sheet.
+- **Decision:** `components/shell/Avatar.tsx` takes a `seed` and draws `@dicebear/core` with
+  `@dicebear/styles/blobs.json`, both pinned to an exact version (10.7.0 and 10.6.0; v11 is in `rc`
+  and `new Avatar(definition)` is deprecated, so the definition is wrapped in one `Style`). It is an
+  `<img alt="">` with a `data:image/svg+xml` URI: the CSP already allows `data:`, and an image keeps
+  each SVG's ids to itself and renders the same on the server and the client. Each seed is drawn once
+  per module (~0.45 ms each; a contact picker can hold 200). Seeds: you, your user id; a contact,
+  theirs; the owner of a group you joined, the group's id; a block of guests listed to settle with, its
+  expense's id. With no id yet, the `user` icon (F-82). Its sizes now follow the plates (24px in a
+  chip, 28px in the sidebar, 32px in More, 56px as a person's hero); the app had drifted to 28 and 64. The same person looks different in two
+  people's books, since each draws their own contact — accepted. The contact's `color` stays in the
+  API (optional); the app no longer sends or shows it, and every person model dropped it.
+- **Budget (owner, 2026-10-09):** the app screen budget goes from 230 to 300 kB gz («para tener mas
+  margen pero sin dejar de lado las restricciones»). Blobs adds ~28 kB gz to every app screen: the
+  heaviest (`shared/groups/[id]`) went from 229.9 to 257.8 kB. The gate still fails above 300.
+- **Alternatives (not taken):** Glyphs (reads as sad faces next to a debt and glares in dark) and
+  Voxel Bot (childish, illegible at 24px); the feature-colour tokens (the style's validator takes only
+  hex, and a photo will not follow them either); seeding by name (a rename would change the face);
+  loading DiceBear on demand (every app screen draws the user's avatar in the frame).
+- **Consequence:** a photo upload, when it comes, replaces the drawing inside `Avatar` and opens the
+  CSP to the photos' origin; nothing else has to change. The design draws the same blobs: `build.mjs`
+  writes one SVG per seed to `design/preview/assets/avatars/`, which `design:check` treats as generated.
+
 ## 2026-10-09 · Controls get their cursor from the base layer (T-261)
 
 - **Context:** Tailwind v4's preflight no longer gives a button the pointer, and nothing in the app

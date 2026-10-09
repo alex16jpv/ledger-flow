@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { blobOf } from "@/components/shell/Avatar";
 import { ToastProvider } from "@/components/ui/Toast";
 import { resetOutboxStatus } from "@/lib/local/outbox";
 import { QueryProvider } from "@/lib/query/QueryProvider";
@@ -79,6 +80,7 @@ const contacts = [contact({ id: ANA, name: "Ana Ruiz" }), contact({ id: BETO, na
 const fetchMock = vi.fn<typeof fetch>();
 
 const push = vi.fn();
+vi.mock("@/lib/session/useAppUser", () => ({ useAppUser: () => ({ id: "user-1" }) }));
 vi.mock("@/lib/i18n/navigation", () => ({
   useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/shared/groups/g1",
@@ -149,6 +151,7 @@ describe("SharedGroupScreen", () => {
     expect(list).toHaveTextContent("You");
     expect(list).toHaveTextContent("Ana Ruiz");
     expect(list).toHaveTextContent("Beto Cano");
+    expect(list?.querySelector(`img[src="${blobOf("user-1")}"]`)).toBeInTheDocument();
     expect(screen.getAllByText("Not paid").length).toBeGreaterThan(0);
   });
 

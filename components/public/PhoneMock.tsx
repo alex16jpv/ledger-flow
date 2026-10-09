@@ -1,6 +1,7 @@
 import { Calendar, ChartPie, Inbox, TrendingUp } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { Avatar } from "@/components/shell/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Bars } from "@/components/ui/Bars";
 import { Card } from "@/components/ui/Card";
@@ -43,9 +44,7 @@ export async function PhoneMock() {
             </span>
             <span className="text-xl font-semibold tracking-[-0.02em]">{t("greeting")}</span>
           </span>
-          <span className="grid size-8 place-items-center rounded-full bg-brand-soft text-xs font-semibold text-brand-text">
-            {t("initials")}
-          </span>
+          <Avatar seed="5e0a7c1d-2b3f-4e6a-9c8d-7f1e2d3c4b5a" className="size-8" />
         </div>
         <div className="flex items-center gap-2 rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">
           <Inbox {...iconProps("sm")} />

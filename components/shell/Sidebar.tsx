@@ -12,6 +12,7 @@ import { Avatar } from "./Avatar";
 import { type AddOptions, isActive, NAV_ITEMS, type NavItem, SETTINGS_ITEM } from "./nav";
 
 interface SidebarProps {
+  userId?: string;
   userName: string;
   pendingCount: number;
   invitations?: number;
@@ -58,7 +59,7 @@ function SidebarLink({
   );
 }
 
-export function Sidebar({ userName, pendingCount, invitations = 0, onAdd }: SidebarProps) {
+export function Sidebar({ userId, userName, pendingCount, invitations = 0, onAdd }: SidebarProps) {
   const t = useTranslations("nav");
   const tc = useTranslations("common");
   const pathname = usePathname();
@@ -103,7 +104,7 @@ export function Sidebar({ userName, pendingCount, invitations = 0, onAdd }: Side
             href={SETTINGS_ITEM.href}
             className="flex items-center gap-3 rounded-md px-3 py-[9px] text-base font-medium text-text-2 hover:bg-surface-2 hover:text-text"
           >
-            <Avatar name={userName} size="sm" />
+            <Avatar seed={userId} className="size-7" />
             <span className="truncate">{userName}</span>
           </Link>
         )}

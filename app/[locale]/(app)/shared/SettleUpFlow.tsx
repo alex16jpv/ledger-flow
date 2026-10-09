@@ -51,7 +51,7 @@ export function SettleUpFlow({
                     setChosen(one);
                   }}
                 >
-                  <Avatar name={one.name} color={one.color} />
+                  <Avatar seed={one.contactId ?? one.expenseId} />
                   <RowBody>
                     <RowTitle>
                       <span>{one.name}</span>

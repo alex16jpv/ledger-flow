@@ -46,7 +46,6 @@ export function EditSplitSheet({ group, expense, open, onClose }: EditSplitSheet
     return {
       contactId: participant.contactId,
       name: participant.contactId === null ? you : (held?.name ?? ""),
-      color: held?.color ?? null,
     };
   });
 

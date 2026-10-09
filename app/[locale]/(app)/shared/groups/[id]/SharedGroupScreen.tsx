@@ -65,6 +65,7 @@ import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { iconProps } from "@/lib/icons/sizes";
 import { useBackNavigation } from "@/lib/navigation/history";
+import { useAppUser } from "@/lib/session/useAppUser";
 import { featureColorStyle } from "@/lib/theme/feature-color";
 import type { SharedExpense, Transaction } from "@/types/api";
 
@@ -145,7 +146,7 @@ function PartyBody({
   return (
     <>
       {person.expenseId === null ? (
-        <Avatar name={person.name} color={person.color} />
+        <Avatar seed={person.contactId} />
       ) : (
         <Tile color="GRAY">
           <Users {...iconProps("md")} />
@@ -318,6 +319,7 @@ function GroupHero({ view, projected }: { view: GroupView; projected: boolean })
 
 function GroupBody({ view, section }: { view: GroupView; section: SharedSection }) {
   const t = useTranslations();
+  const userId = useAppUser()?.id;
   const money = useMoney();
   const router = useRouter();
   const toast = useToast();
@@ -349,7 +351,6 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
     return {
       contactId: participant.contactId,
       name: participant.contactId === null ? you : (contact?.name ?? ""),
-      color: contact?.color ?? null,
     };
   });
   const named = splitPeople.filter((person) => person.contactId !== null && person.name !== "");
@@ -505,7 +506,7 @@ function GroupBody({ view, section }: { view: GroupView; section: SharedSection 
           <List>
             {/* You are a row like everybody else, with a share of your own. */}
             <Row>
-              <Avatar name={t("shared.group.you")} />
+              <Avatar seed={userId} />
               <RowBody>
                 <RowTitle>
                   <span>{t("shared.group.you")}</span>
