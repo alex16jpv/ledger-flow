@@ -1,7 +1,7 @@
 import { api } from "@/lib/api/client";
 import { noteSessionStarted } from "@/lib/api/refresh";
 import { pullAfterDirectSend } from "@/lib/local/outbox";
-import { readAccounts, readCategoriesPage } from "@/lib/local/repository";
+import { readAccountsPage, readCategoriesPage } from "@/lib/local/repository";
 import type {
   AccountDeleted,
   AccountList,
@@ -47,7 +47,7 @@ export async function fetchCategorySummary(): Promise<CategorySummary> {
 }
 
 export function fetchAccountCount(): Promise<AccountList> {
-  return readAccounts({ limit: 1 });
+  return readAccountsPage({ limit: 1 });
 }
 
 export function fetchSessions(): Promise<{ data: Session[] }> {

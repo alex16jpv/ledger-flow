@@ -133,8 +133,8 @@ describe("home reads", () => {
   it("keeps the archived accounts out of the list and the archived categories in the map", async () => {
     reportOnline(false);
 
-    expect((await fetchHomeAccounts()).data).toEqual([cash]);
-    expect((await fetchHomeCategories()).data).toEqual([dining, gym]);
+    expect(await fetchHomeAccounts()).toEqual([cash]);
+    expect(await fetchHomeCategories()).toEqual([dining, gym]);
   });
 
   // O-F3: derived money is cut on the profile's zone, so with no profile the server answers.
@@ -163,10 +163,7 @@ describe("home reads", () => {
     });
 
     expect(spending.total).toBe(20.29);
-    await expect(fetchHomeBudgets("2026-09-03T12:00:00.000Z")).resolves.toEqual({
-      data: [],
-      pagination: { limit: 100, offset: 0, total: 0, hasMore: false, nextCursor: null },
-    });
+    await expect(fetchHomeBudgets("2026-09-03T12:00:00.000Z")).resolves.toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

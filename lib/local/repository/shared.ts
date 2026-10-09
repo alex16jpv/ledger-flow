@@ -1,4 +1,3 @@
-import { api } from "@/lib/api/client";
 import type {
   Settlement,
   SettlementList,
@@ -10,11 +9,8 @@ import type {
 
 import { deriveShared, type SharedGroupView } from "../derive";
 import type { VaultDb } from "../outbox/queue";
-import { read } from "./read";
+import { drainPages, read } from "./read";
 
-const PAGE_LIMIT = 100;
-// A cursor that does not move is a server that would page for ever; §6 says abort, never retry so.
-const MAX_PAGES = 200;
 // One request per group, four at a time: a cold device must not open sixty connections at once.
 const AT_A_TIME = 4;
 
@@ -43,28 +39,6 @@ const totalsOf = (view: SharedGroupView): SharedGroup["totals"] => ({
   dateTo: view.dateTo,
 });
 
-async function drain<T extends { id: string }>(
-  path: string,
-  query: Record<string, string | number | undefined> = {},
-): Promise<T[]> {
-  const data: T[] = [];
-  let cursor: string | undefined;
-  let pages = 0;
-  do {
-    const page = await api<{
-      data: T[];
-      pagination: { hasMore: boolean; nextCursor: string | null };
-    }>(path, { query: { ...query, limit: PAGE_LIMIT, cursor } });
-    data.push(...page.data);
-    const next = page.pagination.hasMore ? (page.pagination.nextCursor ?? undefined) : undefined;
-    if (next !== undefined && (next === cursor || ++pages > MAX_PAGES)) {
-      throw new Error(`${path} kept paging past ${String(pages)} pages`);
-    }
-    cursor = next;
-  } while (cursor);
-  return data;
-}
-
 async function inBatches<T, R>(rows: readonly T[], of: (row: T) => Promise<R>): Promise<R[]> {
   const done: R[] = [];
   for (let at = 0; at < rows.length; at += AT_A_TIME) {
@@ -88,14 +62,14 @@ export async function queuedPayments(db: VaultDb): Promise<ReadonlySet<string>> 
 }
 
 async function fromServer(): Promise<SharedLedgerRows> {
-  const groups = await drain<SharedGroupList["data"][number]>("/shared-groups", {
+  const groups = await drainPages<SharedGroupList["data"][number]>("/shared-groups", {
     includeArchived: "true",
   });
   const [expenses, settlements] = await Promise.all([
     inBatches(groups, (group) =>
-      drain<SharedExpenseList["data"][number]>(`/shared-groups/${group.id}/expenses`),
+      drainPages<SharedExpenseList["data"][number]>(`/shared-groups/${group.id}/expenses`),
     ),
-    drain<SettlementList["data"][number]>("/settlements"),
+    drainPages<SettlementList["data"][number]>("/settlements"),
   ]);
   return {
     groups,

@@ -19,7 +19,7 @@ import type {
 
 import { resetClockOffset } from "../clock";
 import { pullChanges } from "../pull";
-import { readBudget, readBudgets, readBudgetsPage } from "./budgets";
+import { readBudget, readBudgets } from "./budgets";
 import { setCurrentVault } from "./read";
 
 const REFERENCE = "2026-09-03T12:00:00.000Z";
@@ -203,51 +203,12 @@ describe("budgets through the repository", () => {
     await expect(readBudgets({ reference: REFERENCE })).resolves.toEqual([]);
   });
 
-  // T-161: paging before judging left `data: []` beside `total: 4, hasMore: true`, as the server did.
-  it("fills a page with live budgets even when ended ones sort first, and counts only those", async () => {
-    const ended = ["a1", "a2", "a3"].map((id, i) =>
-      budget({
-        id,
-        periodType: "CUSTOM",
-        periodStartDate: `2026-0${i + 4}-01T05:00:00.000Z`,
-        periodEndDate: `2026-0${i + 5}-01T05:00:00.000Z`,
-      }),
-    );
-    const later = budget({ id: "b2", effectiveFrom: "2026-10-01T05:00:00.000Z" });
-    await mirrorOf({ budgets: [...ended, dining, later] });
-    reportOnline(false);
-
-    const page = await readBudgetsPage({ reference: REFERENCE, limit: 2 });
-    expect(page.pagination).toEqual({
-      limit: 2,
-      offset: 0,
-      total: 1,
-      hasMore: false,
-      nextCursor: null,
-    });
-    expect(page.data).toMatchObject([{ id: "b1" }]);
-
-    const withEnded = await readBudgetsPage({
-      reference: REFERENCE,
-      limit: 2,
-      includeExpired: true,
-    });
-    expect(withEnded.data).toMatchObject([
-      { id: "a1", expired: true },
-      { id: "a2", expired: true },
-    ]);
-    expect(withEnded.pagination).toMatchObject({ total: 4, hasMore: true, nextCursor: "a2" });
-  });
-
   it("declines every read when the mirror has no profile to take the zone from", async () => {
     await mirrorOf({ user: null, budgets: [dining] });
     reportOnline(false);
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
 
     await expect(readBudgets({ reference: REFERENCE })).rejects.toThrow("Network request failed");
-    await expect(readBudgetsPage({ reference: REFERENCE })).rejects.toThrow(
-      "Network request failed",
-    );
     await expect(readBudget("b1", REFERENCE)).rejects.toThrow("Network request failed");
   });
 

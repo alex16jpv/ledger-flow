@@ -1,4 +1,3 @@
-import { api } from "@/lib/api/client";
 import type {
   ReceivedInvitation,
   ReceivedInvitationList,
@@ -8,25 +7,7 @@ import type {
 
 import { serverNow } from "../clock";
 import { receivedInvitationRecord, sentInvitationRecord } from "../schema";
-import { ownVault, read } from "./read";
-
-const PAGE_LIMIT = 100;
-
-async function drain<T extends { id: string }>(path: string): Promise<T[]> {
-  const data: T[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await api<{
-      data: T[];
-      pagination: { hasMore: boolean; nextCursor: string | null };
-    }>(path, { query: { limit: PAGE_LIMIT, cursor } });
-    data.push(...page.data);
-    const next = page.pagination.hasMore ? (page.pagination.nextCursor ?? undefined) : undefined;
-    if (next !== undefined && next === cursor) throw new Error(`${path} kept paging in place`);
-    cursor = next;
-  } while (cursor);
-  return data;
-}
+import { drainPages, ownVault, read } from "./read";
 
 // Nothing marks the moment an invitation runs out, so its date is read against the server's clock.
 export function isAnswerable(
@@ -39,14 +20,14 @@ export function isAnswerable(
 // Every invitation addressed to this person that the device holds, answered ones included.
 export function readReceivedInvitations(): Promise<ReceivedInvitation[]> {
   return read<ReceivedInvitation[]>(
-    () => drain<ReceivedInvitationList["data"][number]>("/invitations"),
+    () => drainPages<ReceivedInvitationList["data"][number]>("/invitations"),
     async (db) => (await db.getAll("invitationsReceived")).map((record) => record.row),
   );
 }
 
 export function readGroupInvitations(groupId: string): Promise<SentInvitation[]> {
   return read<SentInvitation[]>(
-    () => drain<SentInvitationList["data"][number]>(`/shared-groups/${groupId}/invitations`),
+    () => drainPages<SentInvitationList["data"][number]>(`/shared-groups/${groupId}/invitations`),
     async (db) =>
       (await db.getAll("invitationsSent"))
         .map((record) => record.row)

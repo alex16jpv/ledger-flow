@@ -5,6 +5,30 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-08 · Every screen reads every account, not the first page (T-38)
+
+- **Context:** the account list was read as one page of 100 (`readAccounts`, and the mirror cut its
+  answer to the same size with `mirrorPage`). The backend caps a user at 100 **active** accounts, but
+  the archived ones count towards a page, and before the backend fix restoring could go past 100 active.
+  From the 101st account on, the newest ones fell off Accounts, the account pickers, and every map
+  that resolves an account's name — Stats › Accounts said "Unknown account".
+- **Decision:** `readAccounts` answers `Account[]` with every account: online it follows the cursor
+  to the last page (`drain`, the shape categories, budgets and contacts already had), and the mirror
+  answers everything it holds. `readAccountsPage` keeps the paged envelope for the one caller that
+  wants a count. Home reads its accounts, budgets and categories the same way: it asked for 100
+  categories with the archived ones included while a user may have 200 active, so a budget of the
+  101st category lost its name there too. The cap itself stays at 100 active (the owner, 2026-10-08)
+  and the backend now holds it on restore as well.
+- **Alternatives (not taken):** raising the page size — it only moves the edge; saying 100 is the
+  ceiling in the interface — the archived ones still overflow the page.
+- **One way to read a whole list.** Following the cursor existed seven times over (accounts, budgets,
+  categories, contacts, invitations, joined groups, Shared), and only the last three stopped a cursor
+  that does not move. It is now `drainPages` in `lib/local/repository/read.ts`, with the guard of
+  Shared's (a repeated cursor or more than 200 pages aborts). `readBudgetsPage` lost its last caller
+  with Home and is gone, with its test.
+- **Consequence:** one request per hundred accounts before the first pull, none after it. Supersedes
+  the "one page" assumption of _2026-09-02 · Accounts (W-23)_.
+
 ## 2026-10-08 · One tab drains the queue at a time (T-165)
 
 - **Context:** every tab of a user opens the same vault, but the engine's single flight lived in each
@@ -2706,7 +2730,8 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
 
 ## 2026-09-02 · Accounts (W-23)
 
-- **One request for the whole list.** `/accounts` asks `includeArchived=true` once (a user is
+- **One request for the whole list.** _(The "one page" part is superseded by T-38, 2026-10-08: the
+  list follows the cursor.)_ `/accounts` asks `includeArchived=true` once (a user is
   capped at 100 accounts, which is one page) and `summarizeAccounts` splits active and archived,
   puts the main account first and derives the summary card. The design fetched the archived ones
   on opening the section, but the count in the "Archived · n" header needs them anyway, and a

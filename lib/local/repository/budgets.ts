@@ -1,7 +1,7 @@
 import type { IDBPDatabase } from "idb";
 
 import { api } from "@/lib/api/client";
-import type { Budget, BudgetList, SyncBudget } from "@/types/api";
+import type { Budget, SyncBudget } from "@/types/api";
 
 import { serverNow } from "../clock";
 import {
@@ -13,7 +13,7 @@ import {
   resolvePeriod,
 } from "../derive";
 import type { VaultSchema } from "../schema";
-import { mirrorPage, read } from "./read";
+import { drainPages, read } from "./read";
 import { liveRowsInWindow, mirrorTimeZone } from "./window";
 
 export const BUDGET_PAGE_LIMIT = 100;
@@ -25,25 +25,13 @@ export interface BudgetListParams {
   limit?: number;
 }
 
-function listQuery(params: BudgetListParams, cursor?: string) {
+function listQuery(params: BudgetListParams) {
   return {
     reference: params.reference,
     includeExpired: params.includeExpired ? "true" : undefined,
     includeArchived: params.includeArchived ? "true" : undefined,
     limit: params.limit ?? BUDGET_PAGE_LIMIT,
-    cursor,
   };
-}
-
-async function drain(params: BudgetListParams): Promise<Budget[]> {
-  const data: Budget[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await api<BudgetList>("/budgets", { query: listQuery(params, cursor) });
-    data.push(...page.data);
-    cursor = page.pagination.hasMore ? (page.pagination.nextCursor ?? undefined) : undefined;
-  } while (cursor);
-  return data;
 }
 
 interface ViewContext {
@@ -162,24 +150,11 @@ async function viewsOf(
 
 export function readBudgets(params: BudgetListParams = {}): Promise<Budget[]> {
   return read<Budget[]>(
-    () => drain(params),
+    () => drainPages<Budget>("/budgets", listQuery(params)),
     async (db) => {
       const reference = referenceOf(params.reference);
       const found = await listing(db, params, reference);
       return found && viewsOf(db, found.budgets, reference, found.timeZone);
-    },
-  );
-}
-
-export function readBudgetsPage(params: BudgetListParams = {}): Promise<BudgetList> {
-  return read<BudgetList>(
-    () => api<BudgetList>("/budgets", { query: listQuery(params) }),
-    async (db) => {
-      const reference = referenceOf(params.reference);
-      const found = await listing(db, params, reference);
-      if (!found) return undefined;
-      const { data, pagination } = mirrorPage(found.budgets, params.limit ?? BUDGET_PAGE_LIMIT);
-      return { data: await viewsOf(db, data, reference, found.timeZone), pagination };
     },
   );
 }
