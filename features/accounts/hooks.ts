@@ -21,7 +21,6 @@ export function useAccountsQuery(includeArchived = false, enabled = true) {
   return useQuery({
     queryKey: accountKeys.list(includeArchived),
     queryFn: () => fetchAccounts({ includeArchived }),
-    select: (list) => list.data,
     staleTime: REFERENCE_STALE_TIME_MS,
     enabled,
   });

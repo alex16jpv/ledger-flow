@@ -13,8 +13,8 @@ server is the same ADJUSTMENT as for any other account.
 active accounts with their type tile, "Main" badge and live balance. `exclude` hides one account so
 the two sides of a transfer can never be the same; archived accounts are not offered.
 
-`AccountsView` (W-23) loads the whole list once with `includeArchived=true` (a user is capped at
-100 accounts, one page) and derives the summary card, the active grid and the folded "Archived"
+`AccountsView` (W-23) loads the whole list once with `includeArchived=true` (every page: the cap of
+100 is on active accounts, and the archived ones come on top) and derives the summary card, the active grid and the folded "Archived"
 section through `summarizeAccounts`. `AccountForm` creates and edits: the balance field exists only
 on creation (it becomes the immutable `openingBalance`), a live `AccountCard` previews the result and
 a `409 DUPLICATE` is shown under the name with the case-insensitive explanation. The detail screen

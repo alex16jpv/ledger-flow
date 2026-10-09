@@ -150,7 +150,7 @@ describe("the row the mirror keeps while its queue is not empty", () => {
     reportOnline(false);
     const accounts = await readAccounts();
 
-    expect(accounts.data[0]?.balance).toBe(1000);
+    expect(accounts[0]?.balance).toBe(1000);
   });
 
   it("puts a refused write's row back at the server's version, with no pull to help", async () => {
@@ -249,7 +249,7 @@ describe("the row the mirror keeps while its queue is not empty", () => {
     ).toBe(120);
     const accounts = await readAccounts();
     // 980 is the server's after 120 was spent; this device wants 130 spent: ten more.
-    expect(accounts.data[0]?.balance).toBe(970);
+    expect(accounts[0]?.balance).toBe(970);
   });
 
   it("keeps a create's own effect: there is no server row to restate it from", async () => {
@@ -283,7 +283,7 @@ describe("the row the mirror keeps while its queue is not empty", () => {
 
     const [create] = await pendingOperations(vault.db);
     expect((create?.payload as { effect: { before: unknown } }).effect.before).toBeNull();
-    expect((await readAccounts()).data[0]?.balance).toBe(995);
+    expect((await readAccounts())[0]?.balance).toBe(995);
   });
 });
 
@@ -302,7 +302,7 @@ describe("a queued write the feed shows already applied (T-162)", () => {
     note: null,
   };
   const landed = transaction({ ...lunch, updatedAt: T1 });
-  const balance = async () => (await readAccounts()).data[0]?.balance;
+  const balance = async () => (await readAccounts())[0]?.balance;
 
   it("counts a create once when the feed brings its row and the balance that holds it", async () => {
     const vault = await vaultWith();

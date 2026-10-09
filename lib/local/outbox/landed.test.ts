@@ -93,7 +93,7 @@ const feedOf = (
 });
 
 const balanceOf = async (id: string) =>
-  (await readAccounts()).data.find((row) => row.id === id)?.balance;
+  (await readAccounts()).find((row) => row.id === id)?.balance;
 
 const pull = (vault: VaultHandle, page: SyncChangesResponse) =>
   pullChanges(vault, { fetchPage: () => Promise.resolve(page) });

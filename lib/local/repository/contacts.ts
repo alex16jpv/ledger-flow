@@ -2,7 +2,7 @@ import { api } from "@/lib/api/client";
 import type { Contact, ContactList } from "@/types/api";
 
 import type { ContactRecord } from "../schema";
-import { mirrorPage, read } from "./read";
+import { drainPages, mirrorPage, read } from "./read";
 
 export const CONTACT_PAGE_LIMIT = 100;
 
@@ -18,17 +18,6 @@ function listQuery(params: ContactListParams, cursor = params.cursor) {
     limit: params.limit ?? CONTACT_PAGE_LIMIT,
     cursor,
   };
-}
-
-async function drain(params: ContactListParams): Promise<Contact[]> {
-  const data: Contact[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await api<ContactList>("/contacts", { query: listQuery(params, cursor) });
-    data.push(...page.data);
-    cursor = page.pagination.hasMore ? (page.pagination.nextCursor ?? undefined) : undefined;
-  } while (cursor);
-  return data;
 }
 
 function matching(records: ContactRecord[], params: ContactListParams): Contact[] {
@@ -47,7 +36,7 @@ function after(rows: Contact[], cursor: string | undefined): Contact[] | undefin
 // Reference data, like the categories: the picker pages, and everything else wants every name.
 export function readContacts(params: ContactListParams = {}): Promise<Contact[]> {
   return read<Contact[]>(
-    () => drain(params),
+    () => drainPages<Contact>("/contacts", listQuery(params, undefined)),
     async (db) => matching(await db.getAll("contacts"), params),
   );
 }

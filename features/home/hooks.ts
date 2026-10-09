@@ -116,18 +116,16 @@ export function useHomeData(month: MonthContext) {
   const accounts = useQuery({
     queryKey: homeKeys.accounts(),
     queryFn: fetchHomeAccounts,
-    select: (list) => list.data.filter((account) => !account.archivedAt),
+    select: (list) => list.filter((account) => !account.archivedAt),
   });
   const budgets = useQuery({
     queryKey: homeKeys.budgets(month.from),
     queryFn: () => fetchHomeBudgets(month.reference.toISOString()),
-    select: (list) => list.data,
   });
 
   const categories = useQuery({
     queryKey: homeKeys.categories(),
     queryFn: fetchHomeCategories,
-    select: (list) => list.data,
     staleTime: 5 * 60 * 1000,
   });
   const pending = useQuery({

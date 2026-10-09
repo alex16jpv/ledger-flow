@@ -1,4 +1,3 @@
-import { api } from "@/lib/api/client";
 import { reportError } from "@/lib/observability/reporter";
 import type {
   JoinedExpense,
@@ -14,9 +13,8 @@ import { pullAfterDirectSend } from "../outbox/engine";
 import { splitRestamps } from "../outbox/restamp";
 import { restampVault } from "../outbox/write";
 import { transactionRecord } from "../schema";
-import { currentVault, ownVault, read } from "./read";
+import { currentVault, drainPages, ownVault, read } from "./read";
 
-const PAGE_LIMIT = 100;
 // One request per group, four at a time: a cold device must not open a connection per group at once.
 const AT_A_TIME = 4;
 
@@ -26,31 +24,15 @@ export interface JoinedRows {
   added: SyncTransaction[];
 }
 
-async function drain<T extends { id: string }>(path: string): Promise<T[]> {
-  const data: T[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await api<{
-      data: T[];
-      pagination: { hasMore: boolean; nextCursor: string | null };
-    }>(path, { query: { limit: PAGE_LIMIT, cursor } });
-    data.push(...page.data);
-    const next = page.pagination.hasMore ? (page.pagination.nextCursor ?? undefined) : undefined;
-    if (next !== undefined && next === cursor) throw new Error(`${path} kept paging in place`);
-    cursor = next;
-  } while (cursor);
-  return data;
-}
-
 async function fromServer(): Promise<JoinedRows> {
-  const groups = await drain<JoinedGroupList["data"][number]>("/joined-groups");
+  const groups = await drainPages<JoinedGroupList["data"][number]>("/joined-groups");
   const expenses: JoinedExpense[] = [];
   for (let at = 0; at < groups.length; at += AT_A_TIME) {
     const batch = await Promise.all(
       groups
         .slice(at, at + AT_A_TIME)
         .map((group) =>
-          drain<JoinedExpenseList["data"][number]>(`/joined-groups/${group.id}/expenses`),
+          drainPages<JoinedExpenseList["data"][number]>(`/joined-groups/${group.id}/expenses`),
         ),
     );
     expenses.push(...batch.flat());

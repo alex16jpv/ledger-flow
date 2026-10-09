@@ -6,13 +6,20 @@ import { projectBalances } from "../outbox/projection";
 import type { VaultDb } from "../outbox/queue";
 import { willBeSent } from "../outbox/reproject";
 import type { AccountRecord } from "../schema";
-import { mirrorPage, read } from "./read";
+import { drainPages, mirrorPage, read } from "./read";
 
 export const ACCOUNT_PAGE_LIMIT = 100;
 
 export interface AccountListParams {
   includeArchived?: boolean;
   limit?: number;
+}
+
+function listQuery(params: AccountListParams) {
+  return {
+    includeArchived: params.includeArchived ? "true" : undefined,
+    limit: params.limit ?? ACCOUNT_PAGE_LIMIT,
+  };
 }
 
 // Invariant 2 with D-23: the server's `balance` plus what it has not applied, or has and no pull brought.
@@ -41,19 +48,24 @@ async function projectedRecords(db: VaultDb, id?: string): Promise<AccountRecord
   }));
 }
 
-export function readAccounts(params: AccountListParams = {}): Promise<AccountList> {
-  const limit = params.limit ?? ACCOUNT_PAGE_LIMIT;
+function matching(records: AccountRecord[], params: AccountListParams): Account[] {
+  return records
+    .filter((record) => params.includeArchived === true || record.archived === 0)
+    .map((record) => record.row);
+}
+
+export function readAccounts(params: AccountListParams = {}): Promise<Account[]> {
+  return read<Account[]>(
+    () => drainPages<Account>("/accounts", listQuery(params)),
+    async (db) => matching(await projectedRecords(db), params),
+  );
+}
+
+export function readAccountsPage(params: AccountListParams = {}): Promise<AccountList> {
   return read<AccountList>(
-    () =>
-      api<AccountList>("/accounts", {
-        query: { includeArchived: params.includeArchived ? "true" : undefined, limit },
-      }),
-    async (db) => {
-      const rows = (await projectedRecords(db))
-        .filter((record) => params.includeArchived === true || record.archived === 0)
-        .map((record) => record.row);
-      return mirrorPage(rows, limit);
-    },
+    () => api<AccountList>("/accounts", { query: listQuery(params) }),
+    async (db) =>
+      mirrorPage(matching(await projectedRecords(db), params), params.limit ?? ACCOUNT_PAGE_LIMIT),
   );
 }
 

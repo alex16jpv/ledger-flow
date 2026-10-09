@@ -429,7 +429,7 @@ export type paths = {
         put?: never;
         /**
          * Restore an archived account, optionally under a new name
-         * @description Idempotent - restoring an already-active account returns it unchanged.
+         * @description Idempotent - restoring an already-active account returns it unchanged. The cap of 100 counts active accounts, so bringing one back when 100 are already active is 400 ACCOUNT_LIMIT_REACHED.
          */
         post: {
             parameters: {
@@ -459,7 +459,7 @@ export type paths = {
                         "application/json": components["schemas"]["Account"];
                     };
                 };
-                /** @description Invalid ID format (code VALIDATION) */
+                /** @description Invalid ID format (code VALIDATION), or 100 active accounts already (code ACCOUNT_LIMIT_REACHED) */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2652,7 +2652,7 @@ export type paths = {
         put?: never;
         /**
          * Restore an archived category, optionally under a new name
-         * @description Idempotent — restoring an already-active category returns it unchanged. Fails with 409 when another active category took its name meanwhile.
+         * @description Idempotent — restoring an already-active category returns it unchanged. Fails with 409 when another active category took its name meanwhile, and with 400 CATEGORY_LIMIT_REACHED when 200 are already active.
          */
         post: {
             parameters: {
@@ -2682,7 +2682,7 @@ export type paths = {
                         "application/json": components["schemas"]["Category"];
                     };
                 };
-                /** @description Invalid ID format (code VALIDATION) */
+                /** @description Invalid ID format (code VALIDATION), or 200 active categories already (code CATEGORY_LIMIT_REACHED) */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2737,7 +2737,7 @@ export type paths = {
         put?: never;
         /**
          * Recreate the missing default categories (idempotent by seedKey)
-         * @description Creates only the missing defaults. Archived seed categories count as present and renamed ones keep their seedKey, so neither is duplicated.
+         * @description Creates only the missing defaults. Archived seed categories count as present and renamed ones keep their seedKey, so neither is duplicated. All or nothing: when the missing ones do not all fit under the cap of 200 active categories, none is created and the answer is 400 CATEGORY_LIMIT_REACHED.
          */
         post: {
             parameters: {
@@ -2755,6 +2755,15 @@ export type paths = {
                     };
                     content: {
                         "application/json": components["schemas"]["RestoreDefaultsResponse"];
+                    };
+                };
+                /** @description The missing defaults would take the user past 200 active categories (code CATEGORY_LIMIT_REACHED) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Unauthorized */

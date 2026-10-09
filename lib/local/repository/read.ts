@@ -1,6 +1,8 @@
 import type { IDBPDatabase } from "idb";
 
+import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
+import type { QueryValue } from "@/lib/api/query";
 import { sessionIsFor } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
 import type { Pagination } from "@/types/api";
@@ -112,4 +114,29 @@ export function mirrorPage<T extends { id: string }>(
       nextCursor: hasMore ? (data.at(-1)?.id ?? null) : null,
     },
   };
+}
+
+const DRAIN_PAGE_LIMIT = 100;
+// A cursor that does not move is a server that would page for ever; §6 says abort, never retry so.
+const DRAIN_MAX_PAGES = 200;
+
+export async function drainPages<T>(
+  path: string,
+  query: Record<string, QueryValue> = {},
+): Promise<T[]> {
+  const data: T[] = [];
+  let cursor: string | undefined;
+  let pages = 0;
+  do {
+    const page = await api<{ data: T[]; pagination: Pagination }>(path, {
+      query: { ...query, limit: query.limit ?? DRAIN_PAGE_LIMIT, cursor },
+    });
+    data.push(...page.data);
+    const next = page.pagination.hasMore ? (page.pagination.nextCursor ?? undefined) : undefined;
+    if (next !== undefined && (next === cursor || ++pages > DRAIN_MAX_PAGES)) {
+      throw new Error(`${path} kept paging past ${String(pages)} pages`);
+    }
+    cursor = next;
+  } while (cursor);
+  return data;
 }

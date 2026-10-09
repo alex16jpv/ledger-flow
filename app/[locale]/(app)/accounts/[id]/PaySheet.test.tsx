@@ -109,7 +109,7 @@ function routeLoan(categories: unknown[]) {
     if (href.includes("/api/stats/spending"))
       return Promise.resolve(json({ groupBy: "category", total: 0, buckets: [] }));
     if (isTransactions(url)) return Promise.resolve(json({ id: "t1" }, { status: 201 }));
-    return Promise.resolve(json({ data: [main, loan] }));
+    return Promise.resolve(json({ data: [main, loan], pagination }));
   });
 }
 
@@ -242,7 +242,7 @@ describe("the instalment split (T-94)", () => {
           ? Promise.resolve(json({ code: "INTERNAL", message: "no" }, { status: 500 }))
           : Promise.resolve(json({ id: `t${String(posts)}` }, { status: 201 }));
       }
-      return Promise.resolve(json({ data: [main, loan] }));
+      return Promise.resolve(json({ data: [main, loan], pagination }));
     });
     const onClose = openLoan();
 
@@ -274,7 +274,7 @@ describe("the instalment split (T-94)", () => {
           ? Promise.resolve(json({ code: "INTERNAL", message: "no" }, { status: 500 }))
           : Promise.resolve(json({ id: `t${String(posts)}` }, { status: 201 }));
       }
-      return Promise.resolve(json({ data: [main, loan] }));
+      return Promise.resolve(json({ data: [main, loan], pagination }));
     });
     openLoan();
 
@@ -301,7 +301,7 @@ describe("the instalment split (T-94)", () => {
           ? Promise.resolve(json({ code: "INTERNAL", message: "no" }, { status: 500 }))
           : Promise.resolve(json({ id: `t${String(posts)}` }, { status: 201 }));
       }
-      return Promise.resolve(json({ data: [main, loan] }));
+      return Promise.resolve(json({ data: [main, loan], pagination }));
     });
     openLoan();
 
@@ -393,7 +393,7 @@ describe("the instalment split (T-94)", () => {
   });
 
   it("does not offer the split on a card, or when the money comes from outside", async () => {
-    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    fetchMock.mockResolvedValue(json({ data: [main, card], pagination }));
     open();
     expect(await screen.findByLabelText("Amount to pay")).toBeVisible();
     expect(screen.queryByLabelText("Of which interest")).not.toBeInTheDocument();
@@ -408,7 +408,7 @@ describe("the instalment split (T-94)", () => {
 
 describe("PaySheet", () => {
   it("opens empty, with nothing decided and nothing to read back (T-99)", async () => {
-    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    fetchMock.mockResolvedValue(json({ data: [main, card], pagination }));
     open();
 
     expect(await screen.findByLabelText("Amount to pay")).toHaveValue("");
@@ -418,7 +418,7 @@ describe("PaySheet", () => {
   });
 
   it("carries the total on the chip that fills the field, as the second option it now is", async () => {
-    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    fetchMock.mockResolvedValue(json({ data: [main, card], pagination }));
     open();
 
     const chip = await screen.findByRole("button", { name: "Everything owed · $1,245,900" });
@@ -436,7 +436,7 @@ describe("PaySheet", () => {
   });
 
   it("takes an amount of the user's own, which is the whole point of T-99", async () => {
-    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    fetchMock.mockResolvedValue(json({ data: [main, card], pagination }));
     open();
 
     await userEvent.type(await screen.findByLabelText("Amount to pay"), "300000");
@@ -451,7 +451,7 @@ describe("PaySheet", () => {
   });
 
   it("replaces an amount already typed, and gives it back on a second press", async () => {
-    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    fetchMock.mockResolvedValue(json({ data: [main, card], pagination }));
     open();
 
     const amount = await screen.findByLabelText("Amount to pay");
@@ -465,7 +465,7 @@ describe("PaySheet", () => {
   });
 
   it("does not move the keyboard away from the chip that was pressed", async () => {
-    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    fetchMock.mockResolvedValue(json({ data: [main, card], pagination }));
     open();
 
     const chip = await screen.findByRole("button", { name: /^Everything owed/ });
@@ -475,7 +475,7 @@ describe("PaySheet", () => {
   });
 
   it("asks before leaving once something is typed, and not before", async () => {
-    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    fetchMock.mockResolvedValue(json({ data: [main, card], pagination }));
     open();
 
     await screen.findByLabelText("Amount to pay");
@@ -492,7 +492,7 @@ describe("PaySheet", () => {
 
   it("offers the whole debt on a loan too, which is exactly its ceiling", async () => {
     const loan = account({ id: "loan", name: "Car loan", type: "LOAN", balance: -8_400_000 });
-    fetchMock.mockResolvedValue(json({ data: [main, loan] }));
+    fetchMock.mockResolvedValue(json({ data: [main, loan], pagination }));
     renderWithProviders(
       <QueryProvider>
         <ToastProvider>
@@ -512,7 +512,9 @@ describe("PaySheet", () => {
   it("records the payment as a transfer towards the card", async () => {
     fetchMock.mockImplementation((url) =>
       Promise.resolve(
-        isTransactions(url) ? json({ id: "t1" }, { status: 201 }) : json({ data: [main, card] }),
+        isTransactions(url)
+          ? json({ id: "t1" }, { status: 201 })
+          : json({ data: [main, card], pagination }),
       ),
     );
     const onClose = open();
@@ -538,7 +540,9 @@ describe("PaySheet", () => {
   it("pays from outside the app without inventing an income", async () => {
     fetchMock.mockImplementation((url) =>
       Promise.resolve(
-        isTransactions(url) ? json({ id: "t1" }, { status: 201 }) : json({ data: [main, card] }),
+        isTransactions(url)
+          ? json({ id: "t1" }, { status: 201 })
+          : json({ data: [main, card], pagination }),
       ),
     );
     open();
@@ -567,7 +571,7 @@ describe("PaySheet", () => {
   });
 
   it("never offers the account being paid as the source, even when it is the main one (T-88)", async () => {
-    fetchMock.mockResolvedValue(json({ data: [card] }));
+    fetchMock.mockResolvedValue(json({ data: [card], pagination }));
     const onClose = vi.fn();
     renderWithProviders(
       <QueryProvider>
@@ -583,7 +587,7 @@ describe("PaySheet", () => {
 
   it("refuses to pay a loan more than it owes, and says how much that is", async () => {
     const loan = account({ id: "loan", name: "Car loan", type: "LOAN", balance: -8_400_000 });
-    fetchMock.mockResolvedValue(json({ data: [main, loan] }));
+    fetchMock.mockResolvedValue(json({ data: [main, loan], pagination }));
     renderWithProviders(
       <QueryProvider>
         <ToastProvider>
@@ -606,7 +610,7 @@ describe("PaySheet", () => {
   });
 
   it("keeps letting a card be overpaid, because a bank does too", async () => {
-    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    fetchMock.mockResolvedValue(json({ data: [main, card], pagination }));
     open();
 
     const amount = await screen.findByLabelText("Amount to pay");
@@ -615,7 +619,7 @@ describe("PaySheet", () => {
   });
 
   it("refuses to pay nothing once the field has been emptied again", async () => {
-    fetchMock.mockResolvedValue(json({ data: [main, card] }));
+    fetchMock.mockResolvedValue(json({ data: [main, card], pagination }));
     open();
 
     const amount = await screen.findByLabelText("Amount to pay");

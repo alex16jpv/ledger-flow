@@ -159,7 +159,7 @@ The previous default account is unmarked automatically.
 
 ### `POST /accounts/{id}/restore`
 
-Idempotent - restoring an already-active account returns it unchanged.
+Idempotent - restoring an already-active account returns it unchanged. The cap of 100 counts active accounts, so bringing one back when 100 are already active is 400 ACCOUNT_LIMIT_REACHED.
 
 **Path**
 
@@ -174,7 +174,7 @@ Idempotent - restoring an already-active account returns it unchanged.
 | Status | Schema            | Description                                                                                                                                                                                                    |
 | ------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `200`  | `Account`         | Account restored (or already active)                                                                                                                                                                           |
-| `400`  | `ErrorResponse`   | Invalid ID format (code VALIDATION)                                                                                                                                                                            |
+| `400`  | `ErrorResponse`   | Invalid ID format (code VALIDATION), or 100 active accounts already (code ACCOUNT_LIMIT_REACHED)                                                                                                               |
 | `401`  | `ErrorResponse`   | Unauthorized                                                                                                                                                                                                   |
 | `404`  | `ErrorResponse`   | Account not found (uniform for missing and not owned)                                                                                                                                                          |
 | `409`  | `AccountConflict` | An active account took this name while it was archived (code DUPLICATE) — rename that one first, or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) |
@@ -850,7 +850,7 @@ Soft delete — the category stays readable by id and its transactions keep poin
 
 ### `POST /categories/{id}/restore`
 
-Idempotent — restoring an already-active category returns it unchanged. Fails with 409 when another active category took its name meanwhile.
+Idempotent — restoring an already-active category returns it unchanged. Fails with 409 when another active category took its name meanwhile, and with 400 CATEGORY_LIMIT_REACHED when 200 are already active.
 
 **Path**
 
@@ -865,21 +865,22 @@ Idempotent — restoring an already-active category returns it unchanged. Fails 
 | Status | Schema             | Description                                                                                                                                                               |
 | ------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `200`  | `Category`         | Category restored (or already active)                                                                                                                                     |
-| `400`  | `ErrorResponse`    | Invalid ID format (code VALIDATION)                                                                                                                                       |
+| `400`  | `ErrorResponse`    | Invalid ID format (code VALIDATION), or 200 active categories already (code CATEGORY_LIMIT_REACHED)                                                                       |
 | `401`  | `ErrorResponse`    | Unauthorized                                                                                                                                                              |
 | `404`  | `ErrorResponse`    | Category not found (uniform for missing and not owned)                                                                                                                    |
 | `409`  | `CategoryConflict` | An active category already uses this name (code DUPLICATE), or the resource changed since the `If-Match` version (code STALE_UPDATE; `current` carries the server's copy) |
 
 ### `POST /categories/restore-defaults`
 
-Creates only the missing defaults. Archived seed categories count as present and renamed ones keep their seedKey, so neither is duplicated.
+Creates only the missing defaults. Archived seed categories count as present and renamed ones keep their seedKey, so neither is duplicated. All or nothing: when the missing ones do not all fit under the cap of 200 active categories, none is created and the answer is 400 CATEGORY_LIMIT_REACHED.
 
 **Responses**
 
-| Status | Schema                    | Description                                                 |
-| ------ | ------------------------- | ----------------------------------------------------------- |
-| `200`  | `RestoreDefaultsResponse` | Newly created defaults (empty array when none were missing) |
-| `401`  | `ErrorResponse`           | Unauthorized                                                |
+| Status | Schema                    | Description                                                                                       |
+| ------ | ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `200`  | `RestoreDefaultsResponse` | Newly created defaults (empty array when none were missing)                                       |
+| `400`  | `ErrorResponse`           | The missing defaults would take the user past 200 active categories (code CATEGORY_LIMIT_REACHED) |
+| `401`  | `ErrorResponse`           | Unauthorized                                                                                      |
 
 ## Contacts
 

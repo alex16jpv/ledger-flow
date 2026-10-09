@@ -1,17 +1,11 @@
 import {
   readAccounts,
-  readBudgetsPage,
-  readCategoriesPage,
+  readBudgets,
+  readCategories,
   readSpending,
   readTransactions,
 } from "@/lib/local/repository";
-import type {
-  AccountList,
-  BudgetList,
-  CategoryList,
-  StatsResponse,
-  TransactionList,
-} from "@/types/api";
+import type { Account, Budget, Category, StatsResponse, TransactionList } from "@/types/api";
 
 export interface SpendingParams {
   from: string;
@@ -24,16 +18,16 @@ export function fetchSpending({ from, to, type, groupBy }: SpendingParams): Prom
   return readSpending({ from, to, type, groupBy });
 }
 
-export function fetchHomeAccounts(): Promise<AccountList> {
-  return readAccounts({ limit: 100 });
+export function fetchHomeAccounts(): Promise<Account[]> {
+  return readAccounts();
 }
 
-export function fetchHomeBudgets(reference: string): Promise<BudgetList> {
-  return readBudgetsPage({ reference, limit: 100 });
+export function fetchHomeBudgets(reference: string): Promise<Budget[]> {
+  return readBudgets({ reference });
 }
 
-export function fetchHomeCategories(): Promise<CategoryList> {
-  return readCategoriesPage({ includeArchived: true, limit: 100 });
+export function fetchHomeCategories(): Promise<Category[]> {
+  return readCategories({ includeArchived: true });
 }
 
 export function fetchHomePending(): Promise<TransactionList> {
