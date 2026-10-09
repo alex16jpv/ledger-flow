@@ -18,6 +18,9 @@ test("home shows the pending alert, the day bars, the top budgets and the latest
   await signIn(page, request);
   await page.goto("/home");
   await expect(page.getByRole("heading", { level: 1, name: /^Hi, / })).toBeVisible();
+  for (const stat of ["What you have", "What you owe", "Income this month", "Estimated savings"]) {
+    await expect(page.getByText(stat, { exact: true })).toBeVisible();
+  }
 
   const alert = page.getByRole("link", { name: /quick entr(y|ies) to review/ });
   await expect(alert).toBeVisible();

@@ -473,7 +473,7 @@ ${samsungLine}
     ? '<div class="section-head mobile-only"><h3 class="h3">Stats</h3><a class="link" href="#">See all</a></div>'
     : "";
   const income = `<div class="card stat"><span class="k">Income this month</span><span class="v amount income">${money(4200000, "+")}</span><span class="d up">${iconSvg("trending-up", "sm")}Same as August</span></div>`;
-  const savings = `<div class="card stat wide-only"><span class="k">Estimated savings</span><span class="v amount">${money(2915700)}</span><span class="d faint">Income − spending</span></div>`;
+  const savings = `<div class="card stat${debt === "two-cards" ? "" : " wide-only"}"><span class="k">Estimated savings</span><span class="v amount">${money(2915700)}</span><span class="d faint">Income − spending</span></div>`;
   const totalCard =
     debt === null
       ? `<div class="card stat"><span class="k">Total balance</span><span class="v amount">${money(11258600)}</span><span class="d faint">4 accounts</span></div>`
@@ -9442,7 +9442,7 @@ const PAGES = [
       plate(
         "home-have-and-owe",
         "Home · two cards, what you have and what you owe",
-        "<b>Chosen, 2026-09-17.</b> Two stat cards, and <b>no net figure anywhere on Home</b>. <b>His reason, and it is right:</b> a car loan is tens of millions against a few in the bank, so a net total would read <i>negative for years</i> — until the car is paid — and that is a true figure nobody wants on the screen they open to record a coffee. Net worth is a real number; it is not this screen’s number. <b>Income this month and Estimated savings both stay</b>, which he asked for after a first draft dropped the savings card: the row is four cards in two pairs, and <i>Estimated savings</i> keeps the 600px floor it has today, so a phone still shows three and nothing is lost against now. <b>What it costs, measured at 460px:</b> the stats row goes from <b>104px to 221px</b> and the page ends at <b>1,568px</b> against 1,415 — budgets, accounts and recent transactions all move down. Switch the preview to Desktop to see the two pairs.",
+        "<b>Chosen, 2026-09-17.</b> Two stat cards, and <b>no net figure anywhere on Home</b>. <b>His reason, and it is right:</b> a car loan is tens of millions against a few in the bank, so a net total would read <i>negative for years</i> — until the car is paid — and that is a true figure nobody wants on the screen they open to record a coffee. Net worth is a real number; it is not this screen’s number. <b>Income this month and Estimated savings both stay</b>, which he asked for after a first draft dropped the savings card: the row is four cards in two pairs, and <i>Estimated savings</i> kept the 600px floor it had, so a phone showed three; <b>since T-262 (2026-10-09, his report that the phone did not show it) the floor is gone and a phone shows all four</b>. <b>What it costs, measured at 460px:</b> the stats row goes from <b>104px to 221px</b> and the page ends at <b>1,568px</b> against 1,415 — budgets, accounts and recent transactions all move down. Switch the preview to Desktop to see the two pairs.",
         home({ debt: "two-cards" }),
         {
           added: "2026-09-17",

@@ -33,6 +33,6 @@ figure**, because a car loan against a bank account reads negative for years. A 
 zero is what you owe, and since T-102 a **loan** past zero is in neither figure: its card reads as
 finished and does not name that money, so a header that counted it would contradict
 the card. The row is four cards
-in two pairs; _Estimated savings_ keeps its floor, so a phone still shows three. The carousel prints
+in two pairs at every width; since T-262 a phone shows _Estimated savings_ too. The carousel prints
 each account through the same reading as the Accounts list, so a card leads with what is available
 on both screens or on neither.

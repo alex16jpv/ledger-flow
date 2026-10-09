@@ -37,8 +37,8 @@
   — the hero amount, the daily average, yesterday — are the same series added up, so the chart and the
   numbers can never disagree.
 
-- **Stats:** total balance (the sum of active accounts) and the month's income; a third card,
-  "Estimated savings", only at 600px and up.
+- **Stats:** what you have and what you owe, then the month's income and "Estimated savings", in
+  two pairs at every width.
 - **What people owe you:** one line under the four figures, with a `users` icon, reading
   "$552,600 owed to you · you owe $60,000" and opening [Shared](shared.md). It is **never added to
   _What you have_**, and it is drawn neutral, never green: money somebody owes you is not money you
@@ -159,8 +159,8 @@ neither** (T-102).
 
 _Income this month_ and _Estimated savings_ **both stay** — he asked for it explicitly, after a first
 draft dropped the savings card. The row is four cards in **two pairs**: what you have and what you owe
-above, income and savings below. `Estimated savings` takes a 600px floor — it had 640 — so a phone
-shows three cards and nothing is lost compared to now.
+above, income and savings below. `Estimated savings` first kept a 600px floor, so a phone showed three
+cards; since T-262 (2026-10-09, his report that the phone did not show it) a phone shows all four.
 
 Measured at 460px in the preview frame: the stats row goes from **104px to 221px**, and the accounts
 carousel grows **37px** because it is as tall as its tallest card and the debt cards are taller — the
