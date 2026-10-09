@@ -226,6 +226,38 @@ describe("NewTransactionScreen", () => {
     });
   });
 
+  // T-192: the profile's zone changed on another device while this form was open offline.
+  it("saves the time in the zone the form opened with, not one that arrives while it is open", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-24T22:30:00.000Z"));
+    search = "accountId=a1";
+    const screenIn = (timeZone: string) => (
+      <QueryProvider>
+        <ToastProvider>
+          <FormatSettingsProvider timeZone={timeZone} currency="USD">
+            <NewTransactionScreen />
+          </FormatSettingsProvider>
+        </ToastProvider>
+      </QueryProvider>
+    );
+    const { rerender } = renderWithProviders(screenIn("Europe/Madrid"));
+    expect(await screen.findByRole("button", { name: /Account.*Bancolombia/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Time/ })).toHaveTextContent("12:30 AM");
+
+    rerender(screenIn("America/Bogota"));
+    expect(screen.getByRole("button", { name: /^Time/ })).toHaveTextContent("12:30 AM");
+    await userEvent.type(screen.getByRole("textbox", { name: "Amount" }), "12.5");
+    await userEvent.click(screen.getByRole("button", { name: "Save transaction" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/transactions");
+    });
+    const [post] = calls("POST");
+    expect(JSON.parse(post?.[1]?.body as string)).toMatchObject({
+      date: "2026-09-24T22:30:00.000Z",
+    });
+  });
+
   it("keeps the amount when switching to a transfer and refuses the same account twice", async () => {
     render(<NewTransactionScreen />);
     await screen.findByRole("group", { name: "Type" });

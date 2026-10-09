@@ -35,7 +35,7 @@ import { INCOME_REFUSED_TYPES, loanOwed, owesMoney } from "@/lib/accounts/debt";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { IdempotencyKeyring } from "@/lib/api/idempotency";
 import { dayKey, shiftDayKey } from "@/lib/format/dates";
-import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
+import { FrozenTimeZone, useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { validationMessage } from "@/lib/i18n/validation";
 import { iconProps } from "@/lib/icons/sizes";
@@ -72,7 +72,15 @@ export interface TransactionFormProps {
   suggest?: boolean;
 }
 
-export function TransactionForm({
+export function TransactionForm(props: TransactionFormProps) {
+  return (
+    <FrozenTimeZone>
+      <TransactionFormFields {...props} />
+    </FrozenTimeZone>
+  );
+}
+
+function TransactionFormFields({
   defaultValues,
   submitLabel,
   pending,

@@ -5,6 +5,27 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-09 · A form keeps the time zone it opened with (T-192)
+
+- **Context:** offline, a form starts with the mirror's profile zone. If `/auth/me` then brings another
+  one (changed on another device), the transaction form converted the wall clock the user saw with
+  the new zone on save, and the stored instant moved by the difference between the two; the
+  "Saved in your time zone" line changed under the user too.
+- **Decision:** the owner's call (2026-10-08): the zone the form opened with is the one it shows and
+  converts with. `FrozenTimeZone` (`lib/i18n/FormatSettingsProvider.tsx`) re-provides the format
+  settings with the zone caught when it mounts, or each time its `open` turns true; everything inside
+  (the form's own conversion, `DateTimeField`, the pickers and their zone line) reads that one. It
+  wraps the transaction form, Paid by other, Settle up and the sync conflict sheet: the places that
+  turn a date or a time the user picked into an instant.
+- **Until the profile is resolved it follows the live zone**: before that the zone is the default,
+  not the user's, and T-159 already moves an untouched date to the user's day when the profile
+  arrives. It holds from the first render with the profile in.
+- **Alternatives (not taken):** warning about the change and letting the user choose — a question
+  for a rare case the user cannot see coming. The budget form is left out: it picks days, not hours,
+  and a CUSTOM window is the user's days in whatever zone they now live in.
+- **Consequence:** a form left open across a zone change saves the moment the user saw, and the
+  next form opened uses the new zone.
+
 ## 2026-10-09 · There are no income budgets (T-37)
 
 - **Context:** the contract let a budget be `EXPENSE` or `INCOME`. The form only ever sent

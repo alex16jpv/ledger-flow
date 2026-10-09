@@ -18,7 +18,7 @@ import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { fieldErrors, presentError } from "@/lib/api/errors";
 import { dayKey, localNoon } from "@/lib/format/dates";
-import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
+import { FrozenTimeZone, useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useDates } from "@/lib/i18n/useDates";
 import { useMoney } from "@/lib/i18n/useMoney";
 import { validationMessage } from "@/lib/i18n/validation";
@@ -44,7 +44,15 @@ export interface PaidByOtherSheetProps {
   people: readonly PaidByOtherPerson[];
 }
 
-export function PaidByOtherSheet({ open, onClose, group, people }: PaidByOtherSheetProps) {
+export function PaidByOtherSheet(props: PaidByOtherSheetProps) {
+  return (
+    <FrozenTimeZone open={props.open}>
+      <PaidByOtherFields {...props} />
+    </FrozenTimeZone>
+  );
+}
+
+function PaidByOtherFields({ open, onClose, group, people }: PaidByOtherSheetProps) {
   const t = useTranslations();
   const toast = useToast();
   const money = useMoney();

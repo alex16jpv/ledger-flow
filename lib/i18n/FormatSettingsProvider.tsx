@@ -1,7 +1,14 @@
 "use client";
 
 import { useLocale } from "next-intl";
-import { createContext, type ReactNode, useContext, useMemo, useSyncExternalStore } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { DEFAULT_CURRENCY_CODE } from "@/lib/format/currency";
 import { DEFAULT_TIME_ZONE_ID } from "@/lib/format/timezone";
@@ -58,4 +65,21 @@ export function useFormatSettings(): FormatSettings {
   const context = useContext(FormatSettingsContext);
   if (!context) throw new Error("useFormatSettings requires a FormatSettingsProvider");
   return context;
+}
+
+export function FrozenTimeZone({ open = true, children }: { open?: boolean; children: ReactNode }) {
+  const settings = useFormatSettings();
+  const live = settings.timeZone;
+  const ready = open && settings.profileResolved;
+  const [frozen, setFrozen] = useState({ open, held: ready, timeZone: live });
+  if (open !== frozen.open) {
+    setFrozen(open ? { open, held: ready, timeZone: live } : { ...frozen, open });
+  } else if (!frozen.held && (ready || frozen.timeZone !== live)) {
+    setFrozen({ open, held: ready, timeZone: live });
+  }
+  const value = useMemo(
+    () => ({ ...settings, timeZone: frozen.timeZone }),
+    [settings, frozen.timeZone],
+  );
+  return <FormatSettingsContext.Provider value={value}>{children}</FormatSettingsContext.Provider>;
 }

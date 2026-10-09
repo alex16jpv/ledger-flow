@@ -187,7 +187,10 @@ describe("recording a line somebody else paid", () => {
     const sheet = (timeZone?: string) => (
       <QueryProvider>
         <ToastProvider>
-          <FormatSettingsProvider {...(timeZone ? { timeZone } : {})}>
+          <FormatSettingsProvider
+            profileResolved={Boolean(timeZone)}
+            {...(timeZone ? { timeZone } : {})}
+          >
             <PaidByOtherSheet open group={group} people={people} onClose={onClose} />
           </FormatSettingsProvider>
         </ToastProvider>
@@ -195,6 +198,35 @@ describe("recording a line somebody else paid", () => {
     );
     const { rerender } = renderWithProviders(sheet());
     rerender(sheet("Europe/Madrid"));
+
+    await fill(user);
+    await user.click(screen.getByRole("button", { name: "Add expense" }));
+
+    await vi.waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    const [queued] = await pendingOperations(vault.db);
+    expect((queued?.payload as { body: { date: string } }).body.date).toBe(
+      "2026-09-25T10:00:00.000Z",
+    );
+  });
+
+  // T-192: the zone changed on another device while the sheet was open.
+  it("keeps the day it showed when the profile's zone changes while it is open", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-24T22:30:00.000Z"));
+    const user = userEvent.setup();
+    const sheet = (timeZone: string) => (
+      <QueryProvider>
+        <ToastProvider>
+          <FormatSettingsProvider timeZone={timeZone}>
+            <PaidByOtherSheet open group={group} people={people} onClose={onClose} />
+          </FormatSettingsProvider>
+        </ToastProvider>
+      </QueryProvider>
+    );
+    const { rerender } = renderWithProviders(sheet("Europe/Madrid"));
+    rerender(sheet("America/Bogota"));
 
     await fill(user);
     await user.click(screen.getByRole("button", { name: "Add expense" }));

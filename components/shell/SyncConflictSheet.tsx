@@ -11,7 +11,7 @@ import { Field, Input } from "@/components/ui/Field";
 import { Sheet, SheetAction, SheetCancel } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { dateTimeInstant, dateTimeParts } from "@/lib/format/dates";
-import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
+import { FrozenTimeZone, useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useDates } from "@/lib/i18n/useDates";
 import { aheadOfServer, clockStore, serverNow } from "@/lib/local/clock";
 import {
@@ -92,7 +92,15 @@ export interface SyncConflictSheetProps {
 const isArchivedAccount = (operation: OutboxOperation): boolean =>
   operation.status === "conflict" && operation.lastError === "RESOURCE_ARCHIVED";
 
-export function SyncConflictSheet({ open, seq, onClose }: SyncConflictSheetProps) {
+export function SyncConflictSheet(props: SyncConflictSheetProps) {
+  return (
+    <FrozenTimeZone open={props.open}>
+      <SyncConflictFields {...props} />
+    </FrozenTimeZone>
+  );
+}
+
+function SyncConflictFields({ open, seq, onClose }: SyncConflictSheetProps) {
   const t = useTranslations("states.conflict");
   const common = useTranslations("common");
   const toast = useToast();
