@@ -172,6 +172,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
       restamped ||= rewrote;
       return pull();
     },
+    othersChanged: () => options.onChanged?.(),
   });
 
   // F-14: another tab's new schema closes this connection, so reads go back to the server.

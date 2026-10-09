@@ -2,6 +2,7 @@ import { ApiError, isErrorCode, NetworkError } from "@/lib/api/errors";
 import { sessionIsFor } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
 import { reportError } from "@/lib/observability/reporter";
+import { tabChannel } from "@/lib/session/channel";
 import type { Account, Restamp, SyncBatchResponse } from "@/types/api";
 
 import { rememberServerTime } from "../clock";
@@ -28,7 +29,7 @@ import { reconcileCarried, reconcileRemoval, reconcileRow, reconcileServerRow } 
 import { remint, swapMirror } from "./remint";
 import { applyRestamps, splitRestamps } from "./restamp";
 import { routeFor, serverBaseline } from "./routes";
-import { outboxStatusStore, refreshOutboxStatus } from "./status";
+import { followOutboxStatus, outboxStatusStore, refreshOutboxStatus } from "./status";
 import { reportSynced, resetSynced } from "./synced";
 import { OUTBOX_SYNC_TAG } from "./tag";
 
@@ -743,6 +744,9 @@ interface EngineState {
   afterRound: ((rewrote: boolean) => Promise<void> | void) | null;
   random: () => number;
   stop: (() => void) | null;
+  // The pass waiting for another tab to let go of the queue, so a stop can call it off.
+  waiting: AbortController | null;
+  othersChanged: (() => void) | null;
 }
 
 const state: EngineState = {
@@ -757,6 +761,8 @@ const state: EngineState = {
   afterRound: null,
   random: Math.random,
   stop: null,
+  waiting: null,
+  othersChanged: null,
 };
 
 export function backoffDelay(failures: number, random: () => number = Math.random): number {
@@ -778,52 +784,116 @@ function scheduleRetry(retryAfterMs: number): void {
   }, delay);
 }
 
+interface Drained {
+  answered: boolean;
+  rewrote: boolean;
+  backOff: boolean;
+  retryAfterMs: number;
+  // The session died or moved under the queue: nothing is pulled and nothing is scheduled.
+  halted: boolean;
+}
+
+async function drain(db: VaultDb, owner: string, report: DrainReport): Promise<Drained> {
+  const drained: Drained = {
+    answered: false,
+    rewrote: false,
+    backOff: false,
+    retryAfterMs: 0,
+    halted: false,
+  };
+  for (;;) {
+    // A write that lands after this runs `wanted` ahead, so `requestSync` asks for another pass.
+    state.served = state.wanted;
+    if (connectivityStore.getSnapshot() === "offline") break;
+    const plan = coalesce(await pendingOperations(db));
+    if (plan.cancelled.length > 0) {
+      await cancel(db, plan.cancelled, report);
+      await refreshOutboxStatus(db);
+      continue;
+    }
+    if (plan.operations.length === 0) break;
+    const outcome =
+      state.transport === "batch"
+        ? await sendBatch(db, owner, plan.operations, report)
+        : await sendPlanned(db, owner, plan.operations, report);
+    await refreshOutboxStatus(db);
+    drained.answered ||= outcome.answered;
+    drained.rewrote ||= outcome.rewrote;
+    if (outcome.stopped) {
+      // F-26: a dead session is not a slow network, so the queue holds until `resumeSyncEngine`.
+      if (outcome.held) {
+        state.paused = true;
+        clearRetry();
+        drained.halted = true;
+      } else if (outcome.moved) {
+        clearRetry();
+        drained.halted = true;
+      } else {
+        drained.backOff = true;
+        drained.retryAfterMs = outcome.retryAfterMs;
+      }
+      break;
+    }
+    if (!outcome.progressed) break;
+  }
+  return drained;
+}
+
+// T-165: past this, the tab that holds the queue is taken for frozen and this one comes back later.
+export const OUTBOX_LOCK_WAIT_MS = 10_000;
+
+const BUSY = Symbol("busy");
+const STOPPED = Symbol("stopped");
+
+type Unheld = typeof BUSY | typeof STOPPED;
+
+const isUnheld = (value: unknown): value is Unheld => value === BUSY || value === STOPPED;
+
+// T-165: two tabs folding and sending one queue at once lose edits, so one tab drains at a time.
+async function withOutboxLock<T>(owner: string, run: () => Promise<T>): Promise<T | Unheld> {
+  const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+  if (!locks) return run();
+  const waiting = new AbortController();
+  state.waiting = waiting;
+  const stopWaiting = state.schedule(() => {
+    waiting.abort(BUSY);
+  }, OUTBOX_LOCK_WAIT_MS);
+  try {
+    return await locks.request(`lf-outbox-${owner}`, { signal: waiting.signal }, () => {
+      stopWaiting();
+      return run();
+    });
+  } catch (error) {
+    // Only a called-off wait rejects with these, so a drain's own error is never taken for one.
+    if (isUnheld(error)) return error;
+    throw error;
+  } finally {
+    stopWaiting();
+    if (state.waiting === waiting) state.waiting = null;
+  }
+}
+
 async function pass(db: VaultDb, owner: string): Promise<DrainReport> {
   const report: DrainReport = new Map();
-  let answered = false;
-  let rewrote = false;
   let retryAfterMs = 0;
   let backOff = false;
+  let busy = false;
 
   try {
-    for (;;) {
-      // A write that lands after this runs `wanted` ahead, so `requestSync` asks for another pass.
+    const drained = await withOutboxLock(owner, () => drain(db, owner, report));
+    if (drained === STOPPED) return report;
+    if (drained === BUSY) {
+      // Whoever joined this pass is answered by the retry, not by a wait of their own.
       state.served = state.wanted;
-      if (connectivityStore.getSnapshot() === "offline") break;
-      const plan = coalesce(await pendingOperations(db));
-      if (plan.cancelled.length > 0) {
-        await cancel(db, plan.cancelled, report);
-        await refreshOutboxStatus(db);
-        continue;
-      }
-      if (plan.operations.length === 0) break;
-      const outcome =
-        state.transport === "batch"
-          ? await sendBatch(db, owner, plan.operations, report)
-          : await sendPlanned(db, owner, plan.operations, report);
-      await refreshOutboxStatus(db);
-      answered ||= outcome.answered;
-      rewrote ||= outcome.rewrote;
-      if (outcome.stopped) {
-        // F-26: a dead session is not a slow network, so the queue holds until `resumeSyncEngine`.
-        if (outcome.held) {
-          state.paused = true;
-          clearRetry();
-          return report;
-        }
-        if (outcome.moved) {
-          clearRetry();
-          return report;
-        }
-        backOff = true;
-        retryAfterMs = outcome.retryAfterMs;
-        break;
-      }
-      if (!outcome.progressed) break;
+      backOff = true;
+      busy = true;
+    } else {
+      if (drained.halted) return report;
+      backOff = drained.backOff;
+      retryAfterMs = drained.retryAfterMs;
+      // §4.2: a pull after every round the server answered, and never on a background timer.
+      if (drained.answered && state.afterRound) await state.afterRound(drained.rewrote);
     }
-
-    // §4.2: a pull after every round the server answered, and never on a background timer.
-    if (answered && state.afterRound) await state.afterRound(rewrote);
   } catch (error) {
     // F-27: the write is queued and durable, so the pass ends like a cut network, not a failure.
     reportError(error, "vault");
@@ -831,7 +901,8 @@ async function pass(db: VaultDb, owner: string): Promise<DrainReport> {
     retryAfterMs = 0;
   }
   if (backOff) {
-    state.failures += 1;
+    // Another tab sending is not this network failing, so the backoff does not grow for it.
+    if (!busy) state.failures += 1;
     scheduleRetry(retryAfterMs);
   } else {
     state.failures = 0;
@@ -882,6 +953,8 @@ async function registerBackgroundSync(): Promise<void> {
 export interface SyncEngineOptions {
   // The pull of §4.2, run after a round in which the server answered something about the data.
   afterRound?: (rewrote: boolean) => Promise<void> | void;
+  // Another tab of this vault changed the queue, and with it the rows this tab's screens read.
+  othersChanged?: () => void;
   random?: () => number;
   schedule?: Scheduler;
 }
@@ -890,6 +963,7 @@ export interface SyncEngineOptions {
 export function startSyncEngine(options: SyncEngineOptions = {}): () => void {
   state.stop?.();
   state.afterRound = options.afterRound ?? null;
+  state.othersChanged = options.othersChanged ?? null;
   state.random = options.random ?? Math.random;
   state.schedule = options.schedule ?? timeoutScheduler;
   state.failures = 0;
@@ -911,6 +985,13 @@ export function startSyncEngine(options: SyncEngineOptions = {}): () => void {
   };
 
   const unsubscribe = connectivityStore.subscribe(onConnectivity);
+  const unsubscribeTabs = tabChannel.subscribe((message) => {
+    if (message.type !== "outbox:changed") return;
+    const vault = currentVault();
+    if (vault?.db.name !== message.vault) return;
+    void followOutboxStatus(vault.db);
+    state.othersChanged?.();
+  });
   window.addEventListener("focus", wake);
   document.addEventListener("visibilitychange", onVisible);
   const worker = "serviceWorker" in navigator ? navigator.serviceWorker : null;
@@ -918,12 +999,15 @@ export function startSyncEngine(options: SyncEngineOptions = {}): () => void {
 
   const stop = (): void => {
     unsubscribe();
+    unsubscribeTabs();
     window.removeEventListener("focus", wake);
     document.removeEventListener("visibilitychange", onVisible);
     worker?.removeEventListener("message", onWorkerMessage);
     clearRetry();
+    state.waiting?.abort(STOPPED);
     state.stop = null;
     state.afterRound = null;
+    state.othersChanged = null;
     state.schedule = timeoutScheduler;
     state.failures = 0;
   };
@@ -960,6 +1044,7 @@ export async function pullAfterDirectSend(rewrote = false): Promise<void> {
 export async function resetSyncEngine(): Promise<void> {
   state.stop?.();
   clearRetry();
+  state.waiting?.abort(STOPPED);
   state.paused = true;
   await state.inFlight?.catch(() => undefined);
   state.transport = "batch";
@@ -969,6 +1054,7 @@ export async function resetSyncEngine(): Promise<void> {
   state.failures = 0;
   state.paused = false;
   state.afterRound = null;
+  state.othersChanged = null;
   state.random = Math.random;
   state.schedule = timeoutScheduler;
   resetSynced();

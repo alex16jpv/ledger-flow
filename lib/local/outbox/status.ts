@@ -1,3 +1,5 @@
+import { tabChannel } from "@/lib/session/channel";
+
 import type { OutboxOperation } from "../schema";
 import { operationPayload } from "./envelope";
 import { readLanded } from "./landed";
@@ -127,10 +129,22 @@ function publish(next: OutboxStatus): void {
   for (const listener of listeners) listener();
 }
 
-export async function refreshOutboxStatus(db: VaultDb): Promise<OutboxStatus> {
+async function readOutboxStatus(db: VaultDb): Promise<boolean> {
   const [operations, landed] = await Promise.all([pendingOperations(db), readLanded(db)]);
+  const before = status;
   publish(summarise(operations, landed.length));
+  return status !== before;
+}
+
+// T-165: every tab of the user reads the one queue, so a change here is news for the others.
+export async function refreshOutboxStatus(db: VaultDb): Promise<OutboxStatus> {
+  if (await readOutboxStatus(db)) tabChannel.post({ type: "outbox:changed", vault: db.name });
   return status;
+}
+
+// Another tab's word, taken without passing it on: the tab that changed the queue already told all.
+export async function followOutboxStatus(db: VaultDb): Promise<void> {
+  await readOutboxStatus(db);
 }
 
 // Set once when the vault opens: nothing else in the app can turn an operation into a blocked one.
