@@ -5,6 +5,47 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-13 · A save waits at most 3 s for the network, and the worker gives up on one that hangs (T-264)
+
+- **Context:** the owner, testing on a road with 3G or with signal and no internet: saving a
+  transaction, a group expense above all, took minutes, and once the installed app stayed white for
+  minutes until the browser said it could not connect. With no network at all the app was instant,
+  because `navigator.onLine` said so; a network that never fails and never answers had no end to any
+  wait. The traces: `write()` awaited the whole sync pass, the pull included, and a group expense is two
+  writes; `/auth/refresh` had no timeout and runs under a Web Lock, so it held the drain and every save
+  behind it; the worker's document strategy was `NetworkFirst` with no timeout and navigation preload on,
+  and `/` was network-only; and the vault did not open until `/me` answered, up to 15 s.
+- **Decision:** one patience, `NETWORK_PATIENCE_MS` (3 s, `lib/network/timeouts.ts`, next to
+  `REQUEST_TIMEOUT_MS`), past which a network that has not answered is treated as absent:
+  - `write()` and `writeAll()` wait for the drain (`answerForms`), never the pull after it, for at most
+    the patience. It starts with the first form that waits on a pass and is shared by every later one,
+    so a group expense or a lot of N rows waits once, not N times. Past it the undo is dropped and the
+    form gets the projection, as with no network; what the server says later goes to the tray (F-23).
+    An undo the engine already took means it is settling that operation in this drain, so that form
+    waits for the answer. A form that gave up reports a network failure, so the heartbeat can decide
+    offline in 5 s and the next save does not try.
+  - `AppFrame` opens the vault the session marker names when `/me` has not answered within the
+    patience (`useWaitedPast`), as it already did when `/me` failed (§2.6, O-F6).
+  - `/auth/refresh` carries `REQUEST_TIMEOUT_MS`, like every other request.
+  - The worker: a document navigation races the network against the patience and answers with the
+    kept document, or `offline.html`, when it runs out (`shellDocument`); Serwist's
+    `networkTimeoutSeconds` falls back only to a cache hit and otherwise keeps waiting. `/` and RSC
+    navigations go through a `NetworkOnly` with the patience as its timeout. What the worker fetches for
+    itself (warm, staging) carries `AbortSignal.timeout(REQUEST_TIMEOUT_MS)`, which also frees the
+    connection.
+  - A staging install that cannot fetch a screen fails, and the old worker keeps its whole shell. With
+    timeouts, dropping that route would leave a 3G update whose screens answer only `offline.html`.
+- **Why 3 s:** it is the default `workbox-recipes` gives its page cache for lie-fi, and a working
+  network answers a `POST /sync` well inside it, so the form still gets the server's answer whenever
+  the network works. A cold backend can take longer; its refusals then land in the tray.
+- **Alternatives:** answering every save from the projection at once (a taken name or a refused
+  reference would never reach the form: D-35's reason still stands on a working network); a patience
+  per write (a group expense would wait twice and N movements N times); a shorter `REQUEST_TIMEOUT_MS`
+  (a slow but working 3G would fail requests that would have landed).
+- **Consequence:** on a working network slower than 3 s, a refusal the form used to show lands in the
+  tray instead. `tests/e2e/offline-lie-fi.spec.ts` hangs every request with Playwright routes; it turns
+  navigation preload off, because the browser's own preload request is out of Playwright's reach.
+
 ## 2026-10-09 · Every avatar is a DiceBear Blobs drawing seeded by an id (T-263, the owner's call)
 
 - **Context:** avatars were initials on the person's feature colour, and the owner does not want to
@@ -3899,7 +3940,8 @@ cover` is set once in the root layout for the standalone display.
 - **Alternatives:** keeping the old documents (they point at chunks the precache cleanup removes);
   versioned cache names (the worker has no build id to name them by).
 - **Consequence:** a route the install cannot fetch is dropped and warmed again by the app on its
-  next open; nothing stale survives an update. Not exercised end to end — Playwright cannot ship a
+  next open; nothing stale survives an update. _(Reversed on 2026-10-13, T-264: a route the install
+  cannot fetch now fails the install, and the old worker keeps its whole shell.)_ Not exercised end to end — Playwright cannot ship a
   second worker build in one run — so this rests on the worker's code and on the shell tests.
 
 ## 2026-09-05 · The worker serves documents from its cache, never RSC payloads (R-3b, F-51)
@@ -4033,7 +4075,9 @@ cover` is set once in the root layout for the standalone display.
   always the form (a refusal after a reload has no form, and undoing then would erase a write the
   user thinks is saved).
 - **Consequence:** `awaited(seq)` in the engine reads the rollback map; `write()` and `writeAll()` call
-  `forgetRollbacks` before answering from the projection. Reviewed and confirmed in R-4.
+  `forgetRollbacks` before answering from the projection. Reviewed and confirmed in R-4. _(Revised on
+  2026-10-13, T-264: `write()` waits for the drain, not the whole pass, and for at most
+  `NETWORK_PATIENCE_MS`; the undo is still the signal.)_
 
 ## 2026-09-06 · A warning lives with the row it explains, in `meta` (F-57)
 

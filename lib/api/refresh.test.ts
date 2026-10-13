@@ -1,4 +1,5 @@
 import { SESSION_END_HEADER } from "@/lib/auth/session-end";
+import { REQUEST_TIMEOUT_MS } from "@/lib/network/timeouts";
 import { reportError } from "@/lib/observability/reporter";
 import { tabChannel } from "@/lib/session/channel";
 
@@ -190,6 +191,23 @@ describe("refresh single-flight", () => {
     fetchMock.mockRejectedValue(new TypeError("Load failed"));
     await expect(refreshSession()).rejects.toBeInstanceOf(NetworkError);
     expect(received).not.toContain("session:expired");
+  });
+
+  // T-264: with signal and no internet the request hangs, and so did every save behind the lock.
+  it("gives up as a network error when the refresh never answers", async () => {
+    const timeout = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockImplementation(() => AbortSignal.abort(new DOMException("hung", "TimeoutError")));
+    fetchMock.mockImplementation(
+      (_input, init) =>
+        new Promise((_resolve, reject) => {
+          if (init?.signal?.aborted) reject(init.signal.reason as Error);
+        }),
+    );
+
+    await expect(refreshSession()).rejects.toBeInstanceOf(NetworkError);
+    expect(timeout).toHaveBeenCalledWith(REQUEST_TIMEOUT_MS);
+    timeout.mockRestore();
   });
 
   it("uses the Web Lock when the browser offers one", async () => {

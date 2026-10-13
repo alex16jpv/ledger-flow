@@ -12,6 +12,7 @@ import { SESSION_COOKIE } from "@/lib/auth/cookies";
 import { APP_HOME_PATH } from "@/lib/auth/routes";
 import { localeOf, localePrefix } from "@/lib/i18n/locales";
 import { OUTBOX_SYNC_TAG } from "@/lib/local/outbox/tag";
+import { NETWORK_PATIENCE_MS, REQUEST_TIMEOUT_MS } from "@/lib/network/timeouts";
 import {
   isLandingPath,
   isShellPath,
@@ -104,7 +105,7 @@ const serwist: Serwist = new Serwist({
     {
       matcher: ({ request, sameOrigin, url }) =>
         sameOrigin && request.mode === "navigate" && isShellPath(url.pathname),
-      handler: shellPages,
+      handler: { handle: shellDocument },
     },
     ...defaultCache,
   ],
@@ -134,7 +135,41 @@ async function holdsTheApp(): Promise<boolean> {
   }
 }
 
+// What the worker fetches for itself brings its own `AbortSignal`, which also frees the connection.
 const network: NetworkOnly = new NetworkOnly();
+
+// T-264: what a screen is waiting for gives up on a network that answers nothing at all.
+const patientNetwork: NetworkOnly = new NetworkOnly({
+  networkTimeoutSeconds: NETWORK_PATIENCE_MS / 1000,
+});
+
+const afterPatience = (): Promise<undefined> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, NETWORK_PATIENCE_MS);
+  });
+
+async function keptDocument(url: string): Promise<Response | undefined> {
+  const cache = await caches.open(SHELL_CACHE);
+  return cache.match(shellCacheKey(url), { ignoreVary: true });
+}
+
+// T-264: NetworkFirst only falls back once the network errors, and a hung one never does.
+async function shellDocument({
+  request,
+  event,
+}: {
+  request: Request;
+  event: ExtendableEvent;
+}): Promise<Response> {
+  const answer = shellPages.handle({ request, event });
+  const first = await Promise.race([answer, afterPatience()]);
+  if (first) return first;
+  event.waitUntil(answer.then(release, () => undefined));
+  const kept =
+    (await keptDocument(request.url)) ??
+    (await serwist.matchPrecache(offlineDocument(new URL(request.url).pathname)));
+  return kept ?? answer;
+}
 
 // Next's own header names, which it does not export from anywhere public.
 const RSC_HEADER = "RSC";
@@ -154,7 +189,11 @@ function isNavigationPayload(request: Request): boolean {
 function payloadRequest(url: string): Request {
   const target = new URL(url);
   target.searchParams.set(RSC_QUERY, "");
-  return new Request(target, { credentials: "same-origin", headers: { [RSC_HEADER]: "1" } });
+  return new Request(target, {
+    credentials: "same-origin",
+    headers: { [RSC_HEADER]: "1" },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
 }
 
 // Built again, not handed over: a fresh `Response` has no URL, so the router resolves the one it asked for.
@@ -192,7 +231,7 @@ async function rscNavigation({
   const warmed = newBuildPending() ? undefined : await warmedPayload(request.url);
   if (warmed) return warmed;
   try {
-    return await network.handle({ request, event });
+    return await patientNetwork.handle({ request, event });
   } catch (error) {
     const fallback = await warmedPayload(request.url);
     if (!fallback) throw error;
@@ -200,10 +239,11 @@ async function rscNavigation({
   }
 }
 
+// Rejects when the network does: the warm shrugs that off, a staging install must not.
 async function storePayload(cacheName: string, url: string, event: ExtendableEvent): Promise<void> {
-  const response = await network.handle({ request: payloadRequest(url), event }).catch(() => null);
-  const payload = response?.headers.get("content-type")?.startsWith(RSC_CONTENT_TYPE) ?? false;
-  if (response && payload && isOwnAnswer(response)) {
+  const response = await network.handle({ request: payloadRequest(url), event });
+  const payload = response.headers.get("content-type")?.startsWith(RSC_CONTENT_TYPE) ?? false;
+  if (payload && isOwnAnswer(response)) {
     await (await caches.open(cacheName)).put(shellCacheKey(url), response);
     return;
   }
@@ -211,9 +251,11 @@ async function storePayload(cacheName: string, url: string, event: ExtendableEve
 }
 
 function fetchDocument(strategy: NetworkFirst, url: string, event: ExtendableEvent): Promise<void> {
-  return strategy
-    .handle({ request: new Request(url, { credentials: "same-origin" }), event })
-    .then(release, () => undefined);
+  const request = new Request(url, {
+    credentials: "same-origin",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  return strategy.handle({ request, event }).then(release);
 }
 
 async function rootNavigation({
@@ -224,7 +266,7 @@ async function rootNavigation({
   event: ExtendableEvent;
 }): Promise<Response> {
   try {
-    return await network.handle({ request, event });
+    return await patientNetwork.handle({ request, event });
   } catch {
     if (await holdsTheApp()) {
       const url = new URL(request.url);
@@ -232,7 +274,7 @@ async function rootNavigation({
         `${url.origin}${localePrefix(localeOf(url.pathname))}${APP_HOME_PATH}`,
       );
     }
-    return shellPages.handle({ request, event });
+    return shellDocument({ request, event });
   }
 }
 
@@ -240,11 +282,11 @@ async function warmRoute(url: string, event: ExtendableEvent) {
   const documents = await caches.open(SHELL_CACHE);
   const key = shellCacheKey(url);
   if (!(await documents.match(key, { ignoreVary: true }))) {
-    await fetchDocument(shellPages, url, event);
+    await fetchDocument(shellPages, url, event).catch(() => undefined);
   }
   const payloads = await caches.open(SHELL_RSC_CACHE);
   if (await payloads.match(key, { ignoreVary: true })) return;
-  await storePayload(SHELL_RSC_CACHE, url, event);
+  await storePayload(SHELL_RSC_CACHE, url, event).catch(() => undefined);
 }
 
 // §6 O-F6: without this the first visit with no network has nothing to answer with.
@@ -272,7 +314,7 @@ function stagingOf(cacheName: string): string {
   return `${cacheName}${STAGED}-${self.__BUILD_ID}`;
 }
 
-// A new build's chunks replace the old, so the shell is refetched on install and staged, not kept.
+// A new build's chunks replace the old, so the shell is restaged on install, and any gap fails it (T-264).
 async function stageShell(event: ExtendableEvent): Promise<void> {
   await Promise.all([SHELL_CACHE, SHELL_RSC_CACHE].map((name) => caches.delete(stagingOf(name))));
   const live = await caches.open(SHELL_CACHE);

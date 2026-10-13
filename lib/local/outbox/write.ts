@@ -4,12 +4,12 @@ import type { Restamp } from "@/types/api";
 
 import { vaultReady } from "../repository/read";
 import {
+  answerForms,
   type DrainOutcome,
   type DrainReport,
   forgetRollbacks,
   pullAfterDirectSend,
   registerRollback,
-  requestSync,
 } from "./engine";
 import { NotProjectableError } from "./projected";
 import {
@@ -101,7 +101,9 @@ export async function write<T>(request: WriteRequest<T>): Promise<T> {
   registerRollback(seq, queued.undo);
   await refreshOutboxStatus(db);
 
-  const outcome = outcomeOf(await requestSync(), seq);
+  const { report, released } = await answerForms([seq]);
+  if (released.has(seq)) return request.optimistic(db);
+  const outcome = outcomeOf(report, seq);
   // Refused for good: the engine put the mirror back, and the form is the only place left.
   if (outcome?.kind === "rejected") throw outcome.error;
   // The server answered in time, so the screen gets its row rather than the projection of it.
@@ -134,13 +136,16 @@ export async function writeAll<T>(requests: WriteRequest<T>[]): Promise<PromiseS
     }
   }
   await refreshOutboxStatus(db);
-  const report = await requestSync();
+  const { report, released } = await answerForms(
+    queued.flatMap((entry) => (entry instanceof ApiError || !entry ? [] : [entry.operation.seq])),
+  );
 
   return Promise.allSettled(
     requests.map(async (request, index) => {
       const entry = queued[index];
       if (entry instanceof ApiError) throw entry;
       if (!entry) return sendDirect<T>(request.local, db);
+      if (released.has(entry.operation.seq)) return request.optimistic(db);
       const outcome = outcomeOf(report, entry.operation.seq);
       if (outcome?.kind === "rejected") throw outcome.error;
       if (outcome?.kind === "sent") return outcome.result as T;

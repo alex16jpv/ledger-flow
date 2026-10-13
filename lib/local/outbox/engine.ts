@@ -1,6 +1,7 @@
 import { ApiError, isErrorCode, NetworkError } from "@/lib/api/errors";
 import { sessionIsFor } from "@/lib/auth/marker";
-import { connectivityStore } from "@/lib/network/connectivity";
+import { connectivityStore, reportNetworkFailure } from "@/lib/network/connectivity";
+import { NETWORK_PATIENCE_MS } from "@/lib/network/timeouts";
 import { reportError } from "@/lib/observability/reporter";
 import { tabChannel } from "@/lib/session/channel";
 import type { Account, Restamp, SyncBatchResponse } from "@/types/api";
@@ -731,9 +732,17 @@ const timeoutScheduler: Scheduler = (run, delayMs) => {
 // §6 O-F5b, with routes as the fallback; one 404 or 501 settles it for the session (2026-09-06).
 export type SyncTransport = "batch" | "routes";
 
+interface Flight {
+  // Settles once the queue has had its answers, before the pull that follows them.
+  drained: Promise<DrainReport>;
+  done: Promise<DrainReport>;
+  // T-264: started by the first form that waits on this pass, and shared by every later one.
+  patience: Promise<void> | null;
+}
+
 interface EngineState {
   transport: SyncTransport;
-  inFlight: Promise<DrainReport> | null;
+  inFlight: Flight | null;
   wanted: number;
   served: number;
   failures: number;
@@ -873,7 +882,11 @@ async function withOutboxLock<T>(owner: string, run: () => Promise<T>): Promise<
   }
 }
 
-async function pass(db: VaultDb, owner: string): Promise<DrainReport> {
+async function pass(
+  db: VaultDb,
+  owner: string,
+  onDrained: (report: DrainReport) => void,
+): Promise<DrainReport> {
   const report: DrainReport = new Map();
   let retryAfterMs = 0;
   let backOff = false;
@@ -881,6 +894,7 @@ async function pass(db: VaultDb, owner: string): Promise<DrainReport> {
 
   try {
     const drained = await withOutboxLock(owner, () => drain(db, owner, report));
+    onDrained(report);
     if (drained === STOPPED) return report;
     if (drained === BUSY) {
       // Whoever joined this pass is answered by the retry, not by a wait of their own.
@@ -914,8 +928,24 @@ async function pass(db: VaultDb, owner: string): Promise<DrainReport> {
   return report;
 }
 
+function startFlight(db: VaultDb, owner: string): Flight {
+  let markDrained: (report: DrainReport) => void = () => undefined;
+  const drained = new Promise<DrainReport>((resolve) => {
+    markDrained = resolve;
+  });
+  const done = pass(db, owner, markDrained).finally(() => {
+    state.inFlight = null;
+  });
+  void done.then(markDrained, () => {
+    markDrained(EMPTY_REPORT);
+  });
+  return { drained, done, patience: null };
+}
+
+type Stage = "drained" | "done";
+
 // Single flight: a request arriving after the pass's last look asks for a pass of its own.
-export function requestSync(): Promise<DrainReport> {
+function request(stage: Stage): Promise<DrainReport> {
   const vault = currentVault();
   if (!vault) return Promise.resolve(EMPTY_REPORT);
   if (state.paused) return Promise.resolve(EMPTY_REPORT);
@@ -925,11 +955,45 @@ export function requestSync(): Promise<DrainReport> {
   const mine = state.wanted;
   if (!state.inFlight) {
     clearRetry();
-    state.inFlight = pass(vault.db, vault.userId).finally(() => {
-      state.inFlight = null;
-    });
+    state.inFlight = startFlight(vault.db, vault.userId);
   }
-  return state.inFlight.then((report) => (mine > state.served ? requestSync() : report));
+  const flight = state.inFlight;
+  return flight[stage].then((report) =>
+    mine > state.served ? flight.done.then(() => request(stage)) : report,
+  );
+}
+
+export function requestSync(): Promise<DrainReport> {
+  return request("done");
+}
+
+function patienceOf(flight: Flight): Promise<void> {
+  // Never called off: a form whose operation missed this drain still waits on it for the next one.
+  flight.patience ??= new Promise((resolve) => {
+    state.schedule(resolve, NETWORK_PATIENCE_MS);
+  });
+  return flight.patience;
+}
+
+export interface FormAnswer {
+  report: DrainReport;
+  // The operations whose form stopped waiting: whatever the server says later goes to the tray.
+  released: ReadonlySet<number>;
+}
+
+// T-264: a form waits for the server as long as a working network takes, never for the pull.
+export async function answerForms(seqs: readonly number[]): Promise<FormAnswer> {
+  const drained = request("drained");
+  const flight = state.inFlight;
+  const report = flight
+    ? await Promise.race([drained, patienceOf(flight).then(() => null)])
+    : await drained;
+  if (report) return { report, released: new Set() };
+  // An undo already taken means the engine is settling that operation in this very drain.
+  const released = new Set(seqs.filter((seq) => rollbacks.delete(seq)));
+  if (released.size > 0) reportNetworkFailure();
+  if (released.size === seqs.length) return { report: EMPTY_REPORT, released };
+  return { report: await drained, released };
 }
 
 interface SyncRegistration {
@@ -1046,7 +1110,7 @@ export async function resetSyncEngine(): Promise<void> {
   clearRetry();
   state.waiting?.abort(STOPPED);
   state.paused = true;
-  await state.inFlight?.catch(() => undefined);
+  await state.inFlight?.done.catch(() => undefined);
   state.transport = "batch";
   state.inFlight = null;
   state.wanted = 0;

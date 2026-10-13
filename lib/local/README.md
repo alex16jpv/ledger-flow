@@ -437,12 +437,16 @@ calls `createTransaction` and does not know the difference. Every write does the
    and without network. `write()` then asks the engine to drain and reads its own operation out of
    the report: a success hands the screen the server's row, a definitive refusal is thrown at the
    form, and anything else — queued, folded, in conflict, held — is answered from the projection.
-   With network the call therefore lasts the whole pass, the pull that follows the push included; the
-   pull swallows its own errors, so it never turns a saved write into an error. **The undo is the
+   **It waits for the drain, never for the pull that follows it, and for at most
+   `NETWORK_PATIENCE_MS`** (`answerForms`, T-264). A network with signal and no internet does not fail
+   a request, it leaves it hanging, so past that patience the form is answered from the projection as
+   if there were no network, and every later form on the same pass is answered at once; the form that
+   gave up also reports a network failure, so the heartbeat can call the app offline. **The undo is the
    signal that a form is waiting** (D-35): `write()` registers it before asking for the drain and
    drops it the moment it answers from the projection, so an answer the queue cannot act on — a
    `conflict` that is not `STALE_UPDATE`, a `merged` — is thrown at the form while the undo is there,
-   and left in the tray when it is not.
+   and left in the tray when it is not. An undo the engine already took when the patience runs out
+   means that operation is being settled in this very drain, so its form waits for that answer.
 
 A create carries its own id and therefore no `Idempotency-Key` (O-B1). In the two forms that had a
 keyring, the key **is** the id now, so a retried submit still names one row. `PATCH
