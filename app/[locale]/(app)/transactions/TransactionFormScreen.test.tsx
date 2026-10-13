@@ -149,6 +149,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
   resetClockOffset();
@@ -733,7 +734,7 @@ describe("EditTransactionScreen", () => {
     expect(calls("PUT")).toHaveLength(0);
   });
 
-  it("saves and deletes back to the screen that opened the movement, past its detail [T-265]", async () => {
+  it("saves back to the screen that opened the movement, past its detail [T-265]", async () => {
     const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
     recordNavigation("/accounts/a1", 2, false);
     recordNavigation("/transactions/t1", 3, false);
@@ -744,18 +745,24 @@ describe("EditTransactionScreen", () => {
     await waitFor(() => {
       expect(go).toHaveBeenCalledWith(-2);
     });
+    expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
+  });
 
-    recordNavigation("/transactions/review", 2, true);
+  it("deletes back to To review when the form was opened from there [T-265]", async () => {
+    const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+    recordNavigation("/transactions/review", 2, false);
     recordNavigation("/transactions/t1/edit", 3, false);
+    render(<EditTransactionScreen id="t1" />);
+    await screen.findByRole("combobox", { name: /^Description/ });
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     const dialog = screen.getByRole("dialog", { name: "Delete this transaction?" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
     await waitFor(() => {
-      expect(go).toHaveBeenLastCalledWith(-1);
+      expect(go).toHaveBeenCalledWith(-1);
     });
     expect(push).not.toHaveBeenCalled();
     expect(replace).not.toHaveBeenCalled();
-    go.mockRestore();
   });
 
   // T-85: an adjustment is edited in the account's own sheet, so this route hands it back.

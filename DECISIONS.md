@@ -12,17 +12,23 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   of every account, which read as rows coming out of nowhere.
 - **Decision:** the owner's call (2026-10-13): they go back **to the screen the movement was opened
   from** — the account, To review, Home, a budget, a group — skipping its detail and its form, not to
-  the detail. `useLeaveNavigation()(path, fallback)` counts the steps back to the latest entry of our
-  stack outside `path` (`/transactions/<id>`, its detail and its form) and calls `history.go(-steps)`,
-  so the screen keeps its scroll and nothing stays in the history pointing at a deleted movement. The
-  stack reads a push that follows a back as a replace (back from the form, then Edit again), so it can
-  come up one step short: `HistoryTracker` keeps going back while the page it lands on is still under
-  `path`, and the detail may show for a frame. With nothing of ours behind (a direct link, a reload),
-  it replaces the form with `/transactions`, as before.
+  the detail. `useLeaveNavigation()(path, fallback)` counts the steps back to the latest entry outside
+  `path` (`/transactions/<id>`, its detail and its form) and calls `history.go(-steps)`, so the screen
+  keeps its scroll and its filters and nothing behind it points at a deleted movement.
+  - **Where the steps come from:** the browser's own list through the Navigation API where there is
+    one (Chromium, recent Safari and Firefox), because it is exact; only the entries of the current
+    document count, since going back to one from before a reload loads the whole page and loses the
+    toast. Otherwise the in-app stack, which now reads a same-length change of path right after a
+    back as a push (opening another movement), not as a replace; a same-path change there (a filter)
+    is still a replace.
+  - **If the stack still comes up short,** `HistoryTracker` keeps going back while the page it lands
+    on is under `path` (the detail may show for a frame). The leave is armed for 2 s and a second call
+    in that window does nothing, so a double tap cannot overwrite the origin with the fallback.
+  - **With nothing of ours behind** (a direct link, a reload), it replaces the form with
+    `/transactions`, as before.
 - **Alternatives (not taken):** a `?returnTo=` on every link that opens a movement — every screen that
   lists one to touch, and a URL anyone can edit; replacing the detail with the form — the in-app back
-  from the form would then skip the detail; the Navigation API's list of entries — exact, but only
-  recent Safari and Firefox have it, so the correction above would still be needed.
+  from the form would then skip the detail.
 - **Consequence:** the forward button can bring back the form of a deleted movement, which shows its
   not-found state. Creating still lands on `/transactions`.
 

@@ -144,14 +144,20 @@ test("saving or deleting a movement opened from an account goes back to that acc
   await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}$`));
   await page.getByRole("link", { name: "Edit" }).click();
   await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}/edit$`));
-  await page.getByRole("combobox", { name: /^Description/ }).fill("E2E back home");
+  await page.getByRole("combobox", { name: /^Description/ }).fill("E2E return");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page).toHaveURL(account);
-  await expect(row("E2E back home")).toBeVisible();
+  await expect(row("E2E return")).toBeVisible();
 
-  await row("E2E back home").click();
+  const back = page.getByRole("button", { name: "Back", exact: true });
+  await row("E2E return").click();
+  await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}$`));
+  await back.click();
+  await expect(page).toHaveURL(account);
+  await row("E2E return").click();
   await page.getByRole("link", { name: "Edit" }).click();
-  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}/edit$`));
+  await back.click();
   await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}$`));
   await page.getByRole("link", { name: "Edit" }).click();
   await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}/edit$`));
@@ -162,5 +168,5 @@ test("saving or deleting a movement opened from an account goes back to that acc
     .click();
   await expect(page).toHaveURL(account);
   await expect(page.getByText("Transaction deleted")).toBeVisible();
-  await expect(row("E2E back home")).toHaveCount(0);
+  await expect(row("E2E return")).toHaveCount(0);
 });

@@ -94,6 +94,7 @@ beforeEach(() => {
 afterEach(async () => {
   resetOutboxStatus();
   setCurrentVault(null);
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   await wipeVaults();
 });
@@ -153,7 +154,6 @@ describe("TransactionDetailScreen", () => {
     });
     expect(replace).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
-    go.mockRestore();
   });
 
   it("says why a delete that would leave a loan above zero was refused, and stays [T-156]", async () => {
