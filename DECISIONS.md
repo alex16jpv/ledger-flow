@@ -5,6 +5,36 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-13 · The vault reopens when the browser closes it, and its transactions leave no unhandled rejection (T-267)
+
+- **Context:** Sentry `LEDGER-FLOW-D` (2026-10-13, production; Safari, by the stackless `DOMException`): an unhandled rejection
+  `AbortError: AbortError` with no stack, 27 minutes after the last activity, as the app came back.
+  That exact text is the `DOMException` `idb` builds when a transaction fails before it has an error
+  of its own: `idb` creates every transaction's `done` promise when it opens the transaction and
+  rejects it whether or not anyone awaits it, and the shortcut reads (`db.get`, `db.getAll`…) never
+  await it. `LEDGER-FLOW-C` (2026-09-18, Chrome) is the other half: the sync engine kept calling a
+  handle the browser had closed (`InvalidStateError: The database connection is closing`), because
+  only a `blocking` close (F-14) dropped the handle; a close by the browser itself (`terminated`:
+  iOS after a long suspension, site data cleared) left it in place until the next reload.
+- **Decision:** `openVault` hands `terminated` to the same `onClosed` as `blocking`, and `startMirror`
+  reopens through the same `adopt` as the first open: the eviction check (D-20) runs first, so a vault
+  the browser deleted is reported, and the clock offset, the blocked operations and the queue's send
+  come back with it. And `openVault` observes every transaction's `done` on its connection as it is
+  created, by wrapping that connection's native `transaction`: an awaited `done` still rejects and a
+  failed request rejects the call that made it, so only the copy nobody could catch goes quiet.
+  The short-lived connections of `purge`, `readVaultProfile` and `countPendingOperations` are not
+  wrapped; they await what they open.
+- **Trade-off:** a `readwrite` transaction that forgot `await tx.done` would now lose a commit-time
+  failure (`QuotaExceededError`) without a trace. Every write site awaits it today (checked one by
+  one on 2026-10-13); a new one must too.
+- **Alternatives (not taken):** dropping the event in `scrubEvent` — it hides the symptom and keeps
+  the dead handle; a `.catch` at every transaction site — eleven sites plus every shortcut read, and
+  the next one forgotten; a `Proxy` over `idb`'s own proxy — `idb` unwraps `this` for native methods,
+  so every method would need rebinding.
+- **Consequence:** a terminated connection costs at most the pass that was using it (reported once,
+  scope `vault`); the next read or pass runs on the new handle. `LEDGER-FLOW-C` and `LEDGER-FLOW-D`
+  can be resolved in Sentry once this is deployed.
+
 ## 2026-10-13 · Saving or deleting a movement goes back to the screen that opened it (T-265)
 
 - **Context:** saving an edit, deleting from the edit form or the detail, and undoing a payment all

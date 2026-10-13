@@ -1,3 +1,6 @@
+import { forceCloseDatabase } from "fake-indexeddb";
+import { unwrap } from "idb";
+
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { account, changes as feedChanges, wipeVaults } from "@/lib/testing/vault";
 import type { SyncChangesResponse } from "@/types/api";
@@ -110,6 +113,27 @@ describe("another tab upgrading the schema (F-14)", () => {
       expect(currentVault()).toBeNull();
     });
     warn.mockRestore();
+    stop();
+  });
+});
+
+describe("the browser closing the connection (T-267)", () => {
+  it("reopens the vault instead of serving from the dead handle", async () => {
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(queries).toHaveLength(1);
+    });
+    const dead = currentVault();
+    if (!dead) throw new Error("the vault did not open");
+
+    // fake-indexeddb types the argument as the class, not as an open connection.
+    forceCloseDatabase(unwrap(dead.db) as unknown as Parameters<typeof forceCloseDatabase>[0]);
+
+    await vi.waitFor(() => {
+      expect(currentVault()).not.toBeNull();
+      expect(currentVault()).not.toBe(dead);
+    });
+    await expect(currentVault()?.db.count("accounts")).resolves.toBe(1);
     stop();
   });
 });

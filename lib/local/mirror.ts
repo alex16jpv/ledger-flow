@@ -175,28 +175,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     othersChanged: () => options.onChanged?.(),
   });
 
-  // F-14: another tab's new schema closes this connection, so reads go back to the server.
-  const reopen = (): void => {
-    if (state.stopped) return;
-    handle = null;
-    setCurrentVault(null);
-    void openVault(userId, VAULT, { onClosed: reopen })
-      .then((reopened) => {
-        if (state.stopped) {
-          reopened.close();
-          return;
-        }
-        handle = reopened;
-        setCurrentVault(reopened);
-        return refreshOutboxStatus(reopened.db).then(() => pull());
-      })
-      .catch((error: unknown) => {
-        console.warn("ledger-flow: the offline mirror could not be reopened", error);
-      });
-  };
-
-  const ready = (async () => {
-    if (!isVaultSupported()) return;
+  const adopt = async (): Promise<void> => {
     // D-20: before opening, because opening is what creates the vault the marker claims.
     const marker = readSessionMarker();
     if (marker?.userId === userId) {
@@ -221,7 +200,19 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     await pull();
     // Opening the app is a trigger too: whatever the queue kept from the last session goes out now.
     await requestSync();
-  })();
+  };
+
+  // F-14, T-267: another tab's new schema or the browser closed this connection, so reads go back to the server.
+  const reopen = (): void => {
+    if (state.stopped) return;
+    handle = null;
+    setCurrentVault(null);
+    adopt().catch((error: unknown) => {
+      console.warn("ledger-flow: the offline mirror could not be reopened", error);
+    });
+  };
+
+  const ready = isVaultSupported() ? adopt() : Promise.resolve();
 
   ready
     .catch((error: unknown) => {
