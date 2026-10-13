@@ -30,6 +30,28 @@ test("the app shell shows navigation, greeting and passes axe", async ({ page, r
   await expectNoAxeViolations(page);
 });
 
+// T-266: on an iPhone, the installed app's whole screen bounced at the top or bottom of a list.
+test("a list keeps its overscroll and the app's page never bounces, while a public page still does", async ({
+  page,
+  request,
+}) => {
+  const overscroll = (selector: string) =>
+    page.locator(selector).evaluate((node) => getComputedStyle(node).overscrollBehaviorY);
+  await page.goto("/login");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  expect(await overscroll("html")).toBe("auto");
+
+  await signUp(request);
+  await page.context().addCookies((await request.storageState()).cookies);
+  await page.goto("/home");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, John");
+  expect(await overscroll("html")).toBe("none");
+  expect(await overscroll("main")).toBe("contain");
+  expect(
+    await page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorX),
+  ).toBe("auto");
+});
+
 // T-72: below 900px Stats and Categories had no way in at all; More is the only door there is.
 test("the phone reaches Stats, Categories and Accounts through More", async ({
   page,
