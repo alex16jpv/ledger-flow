@@ -172,7 +172,8 @@ in force.
 A centred hero (lg tile, amount, description, type · account), a table of attributes (category,
 account or accounts, the long date, tags, note, source, currency), the actions Edit (the form,
 preloaded) and Delete (confirmed in a sheet; a soft `DELETE`; a toast without undo, because there is no
-restore), and a footer with created and edited.
+restore), and a footer with created and edited. Deleting it, or undoing the payment it belongs to,
+goes back to the screen it was opened from (T-265), and to the list when there is none.
 
 **When deleting it would leave a loan above zero** (T-156) — money it took out of a loan that has been
 paid off since — the delete is refused, by the device before it queues anything and by the server

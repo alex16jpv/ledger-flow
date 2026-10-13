@@ -31,7 +31,7 @@ import { nothingChanged } from "@/lib/form/changes";
 import { useFormatSettings } from "@/lib/i18n/FormatSettingsProvider";
 import { useRouter } from "@/lib/i18n/navigation";
 import { iconProps } from "@/lib/icons/sizes";
-import { useBackNavigation } from "@/lib/navigation/history";
+import { useBackNavigation, useLeaveNavigation } from "@/lib/navigation/history";
 
 import { TransactionForm } from "./TransactionForm";
 
@@ -105,6 +105,7 @@ export function EditTransactionScreen({ id }: { id: string }) {
   const t = useTranslations();
   const router = useRouter();
   const back = useBackNavigation();
+  const leave = useLeaveNavigation();
   const toast = useToast();
   const { timeZone, profileResolved } = useFormatSettings();
   const transaction = useTransactionQuery(id);
@@ -123,7 +124,7 @@ export function EditTransactionScreen({ id }: { id: string }) {
     try {
       await remove.mutateAsync(id);
       toast.show({ message: t("transactions.form.deleted") });
-      router.push(AFTER_SAVE_PATH);
+      leave(`/transactions/${id}`, AFTER_SAVE_PATH);
     } catch (error) {
       toast.show({ message: t(presentError(error, true).messageKey), tone: "danger" });
       setConfirming(false);
@@ -172,7 +173,7 @@ export function EditTransactionScreen({ id }: { id: string }) {
             if (completes || !nothingChanged(changes))
               await update.mutateAsync(completes ? { ...changes, pendingDetails: false } : changes);
             toast.show({ message: t("transactions.form.updated") });
-            router.push(AFTER_SAVE_PATH);
+            leave(`/transactions/${id}`, AFTER_SAVE_PATH);
           }}
           secondaryAction={
             <Button

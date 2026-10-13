@@ -5,6 +5,27 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-13 · Saving or deleting a movement goes back to the screen that opened it (T-265)
+
+- **Context:** saving an edit, deleting from the edit form or the detail, and undoing a payment all
+  pushed `/transactions`. The owner edited a movement from an account and landed on every movement
+  of every account, which read as rows coming out of nowhere.
+- **Decision:** the owner's call (2026-10-13): they go back **to the screen the movement was opened
+  from** — the account, To review, Home, a budget, a group — skipping its detail and its form, not to
+  the detail. `useLeaveNavigation()(path, fallback)` counts the steps back to the latest entry of our
+  stack outside `path` (`/transactions/<id>`, its detail and its form) and calls `history.go(-steps)`,
+  so the screen keeps its scroll and nothing stays in the history pointing at a deleted movement. The
+  stack reads a push that follows a back as a replace (back from the form, then Edit again), so it can
+  come up one step short: `HistoryTracker` keeps going back while the page it lands on is still under
+  `path`, and the detail may show for a frame. With nothing of ours behind (a direct link, a reload),
+  it replaces the form with `/transactions`, as before.
+- **Alternatives (not taken):** a `?returnTo=` on every link that opens a movement — every screen that
+  lists one to touch, and a URL anyone can edit; replacing the detail with the form — the in-app back
+  from the form would then skip the detail; the Navigation API's list of entries — exact, but only
+  recent Safari and Firefox have it, so the correction above would still be needed.
+- **Consequence:** the forward button can bring back the form of a deleted movement, which shows its
+  not-found state. Creating still lands on `/transactions`.
+
 ## 2026-10-13 · A save waits at most 3 s for the network, and the worker gives up on one that hangs (T-264)
 
 - **Context:** the owner, testing on a road with 3G or with signal and no internet: saving a
@@ -3080,7 +3101,9 @@ noindex, nofollow` and `cache-control: no-store`. Mutations require a trusted `O
   `router.back()` when the stack has a previous entry and `router.replace(fallback)` otherwise, so a
   deep link or a reload lands on the list (`/accounts`, `/budgets`, `/categories`, `/transactions`)
   instead of leaving the app.
-- **Saving an edit goes back, creating replaces.** After an edit the screen returns to the detail it
+- **Saving an edit goes back, creating replaces.** _Reversed: by the time of T-265 both pushed
+  `/transactions`, and since T-265 (2026-10-13) an edit goes back to the screen that opened the
+  movement._ After an edit the screen returns to the detail it
   came from (`back(detail)`), so the form never stays in the history and "back" from the detail
   reaches the place before the edit; after a create the blank form is replaced by the new detail.
 

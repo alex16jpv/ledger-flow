@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { ToastProvider } from "@/components/ui/Toast";
 import { refreshOutboxStatus, resetOutboxStatus } from "@/lib/local/outbox";
 import { setCurrentVault } from "@/lib/local/repository/read";
+import { recordNavigation, resetHistoryForTests } from "@/lib/navigation/history";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { renderWithProviders } from "@/lib/testing/render";
 import { openTestVault, wipeVaults } from "@/lib/testing/vault";
@@ -11,8 +12,9 @@ import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 import { TransactionDetailScreen } from "./TransactionDetailScreen";
 
 const push = vi.fn();
+const replace = vi.fn();
 vi.mock("@/lib/i18n/navigation", () => ({
-  useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push, back: vi.fn(), replace }),
   usePathname: () => "/transactions/t1",
   Link: ({
     children,
@@ -54,6 +56,8 @@ function urlOf(input: string | URL | Request): string {
 beforeEach(() => {
   fetchMock.mockReset();
   push.mockReset();
+  replace.mockReset();
+  resetHistoryForTests();
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockImplementation((input, init) => {
     const url = urlOf(input);
@@ -122,17 +126,34 @@ describe("TransactionDetailScreen", () => {
     expect(screen.queryByText(/still needs a category/)).not.toBeInTheDocument();
   });
 
-  it("deletes after confirming and returns to the list", async () => {
+  it("deletes after confirming and, opened from nowhere of ours, lands on the list", async () => {
     render();
     await screen.findByRole("heading", { level: 2, name: "Uber to work" });
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     const dialog = screen.getByRole("dialog", { name: "Delete this transaction?" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
     await waitFor(() => {
-      expect(push).toHaveBeenCalledWith("/transactions");
+      expect(replace).toHaveBeenCalledWith("/transactions");
     });
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(true);
     expect(await screen.findByText("Transaction deleted")).toBeVisible();
+  });
+
+  it("deletes and goes back to the screen that opened the movement [T-265]", async () => {
+    const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+    recordNavigation("/accounts/a1", 2, false);
+    recordNavigation("/transactions/t1", 3, false);
+    render();
+    await screen.findByRole("heading", { level: 2, name: "Uber to work" });
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = screen.getByRole("dialog", { name: "Delete this transaction?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await waitFor(() => {
+      expect(go).toHaveBeenCalledWith(-1);
+    });
+    expect(replace).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+    go.mockRestore();
   });
 
   it("says why a delete that would leave a loan above zero was refused, and stays [T-156]", async () => {
@@ -262,7 +283,7 @@ describe("TransactionDetailScreen", () => {
     await userEvent.click(within(sheet).getByRole("button", { name: /^Undo the payment$/ }));
 
     await waitFor(() => {
-      expect(push).toHaveBeenCalledWith("/transactions");
+      expect(replace).toHaveBeenCalledWith("/transactions");
     });
     expect(
       fetchMock.mock.calls.some(

@@ -11,6 +11,12 @@ type Fallback = Parameters<ReturnType<typeof useRouter>["replace"]>[0];
 const stack: string[] = [];
 let lastLength = 0;
 let poppedByUser = false;
+let leaving: string | null = null;
+
+function inside(url: string, path: string): boolean {
+  const pathname = url.split(/[?#]/)[0] ?? url;
+  return pathname.endsWith(path) || pathname.includes(`${path}/`);
+}
 
 // Next may apply the URL before our listener runs, so the popstate flag alone is not reliable.
 export function recordNavigation(url: string, historyLength: number, popped: boolean): void {
@@ -33,6 +39,7 @@ export function resetHistoryForTests(): void {
   stack.length = 0;
   lastLength = 0;
   poppedByUser = false;
+  leaving = null;
 }
 
 export function HistoryTracker() {
@@ -51,11 +58,13 @@ export function HistoryTracker() {
   }, []);
 
   useEffect(() => {
-    recordNavigation(
-      query ? `${pathname}?${query}` : pathname,
-      window.history.length,
-      poppedByUser,
-    );
+    const url = query ? `${pathname}?${query}` : pathname;
+    if (leaving !== null && inside(url, leaving)) {
+      window.history.back();
+      return;
+    }
+    leaving = null;
+    recordNavigation(url, window.history.length, poppedByUser);
     poppedByUser = false;
   }, [pathname, query]);
 
@@ -69,6 +78,29 @@ export function useBackNavigation() {
     (fallback: Fallback) => {
       if (canGoBack()) router.back();
       else router.replace(fallback);
+    },
+    [router],
+  );
+}
+
+export function stepsOutOf(path: string): number {
+  const at = stack.findLastIndex((url) => !inside(url, path));
+  return at < 0 ? 0 : stack.length - 1 - at;
+}
+
+// Our stack takes a push that follows a back for a replace, so landing still inside keeps going back.
+export function useLeaveNavigation() {
+  const router = useRouter();
+  return useCallback(
+    (path: string, fallback: Fallback) => {
+      const steps = stepsOutOf(path);
+      if (steps === 0) {
+        router.replace(fallback);
+        return;
+      }
+      stack.length -= steps;
+      leaving = path;
+      window.history.go(-steps);
     },
     [router],
   );
