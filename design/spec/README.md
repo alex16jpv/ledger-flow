@@ -72,4 +72,6 @@ without being here first (D-36).
    so the first render is already right. Spanish runs about 20% longer: no component fixes a width to
    its text — chips and buttons grow, titles truncate.
 7. **Layout.** A full-height app shell: `main` is the only scrolling region, the tab bar is fixed at
-   the bottom below 900px and the sidebar is fixed at 900px and up.
+   the bottom below 900px and the sidebar is fixed at 900px and up. The shell itself never moves: at
+   the top or the bottom of a list the list bounces on its own, and the page behind it does not
+   (T-266).

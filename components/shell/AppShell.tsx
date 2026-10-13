@@ -38,7 +38,10 @@ export function AppShell({
 }: AppShellProps) {
   const t = useTranslations("common");
   return (
-    <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] md:grid-cols-[var(--sidebar-w)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]">
+    <div
+      data-app-shell
+      className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] md:grid-cols-[var(--sidebar-w)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]"
+    >
       <a
         href={`#${MAIN_ID}`}
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-ink focus:px-3 focus:py-2 focus:text-on-ink"
@@ -55,7 +58,7 @@ export function AppShell({
       <main
         id={MAIN_ID}
         tabIndex={-1}
-        className="min-h-0 min-w-0 [scrollbar-width:thin] overflow-y-auto pb-6 md:pb-10"
+        className="min-h-0 min-w-0 [scrollbar-width:thin] overflow-y-auto overscroll-y-contain pb-6 md:pb-10"
       >
         {banner}
         <div
