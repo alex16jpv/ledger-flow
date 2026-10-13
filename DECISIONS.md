@@ -5,27 +5,6 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
-## 2026-10-13 · The app's page never bounces; a list keeps its overscroll to itself (T-266)
-
-- **Context:** the owner, on an iPhone in the installed app: at the top or the bottom of a list,
-  scrolling did not scroll — the whole screen moved up as if the page were sliding. `main` is the only
-  scroller of the shell and nothing in the CSS set `overscroll-behavior`, so iOS handed a gesture that
-  started at the end of `main` to the page, which rubber-banded the whole shell, tab bar included; while
-  the page was still bouncing, the next gestures went on moving it instead of the list.
-- **Decision:** `main` and a sheet's body carry `overscroll-behavior-y: contain` (the list bounces on
-  its own and never hands the gesture on), and the root carries `overscroll-behavior-y: none` only
-  while the app shell is on the page (`html:has([data-app-shell])`), so neither a gesture outside
-  `main` (the tab bar) nor a short screen can bounce the page either. Only the vertical axis: on the
-  root, the horizontal one is what a trackpad's two-finger swipe and Android's edge swipe use to go
-  back. The public pages, whose document is what scrolls, keep the platform's bounce and Android's
-  pull-to-refresh. It needs iOS 16 or later, the first with `overscroll-behavior`.
-- **Alternatives (not taken):** `overflow: hidden` or `position: fixed` on the body — it changes how
-  the page is laid out to fix a gesture, and iOS still bounces a body with hidden overflow; doing it on
-  every page — the landing would lose its bounce and pull-to-refresh for nothing.
-- **Consequence:** inside the app, Android's pull-to-refresh no longer starts from a list; the app
-  refreshes on its own (sync on focus and on reconnect). Playwright cannot play an iOS bounce, so the
-  e2e checks the computed values and the owner checks it on his iPhone.
-
 ## 2026-10-13 · A save waits at most 3 s for the network, and the worker gives up on one that hangs (T-264)
 
 - **Context:** the owner, testing on a road with 3G or with signal and no internet: saving a
@@ -78,6 +57,27 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **Consequence:** on a working network slower than 3 s, a refusal the form used to show lands in the
   tray instead. `tests/e2e/offline-lie-fi.spec.ts` hangs every request with Playwright routes; it turns
   navigation preload off, because the browser's own preload request is out of Playwright's reach.
+
+## 2026-10-13 · The app's page never bounces; a list keeps its overscroll to itself (T-266)
+
+- **Context:** the owner, on an iPhone in the installed app: at the top or the bottom of a list,
+  scrolling did not scroll — the whole screen moved up as if the page were sliding. `main` is the only
+  scroller of the shell and nothing in the CSS set `overscroll-behavior`, so iOS handed a gesture that
+  started at the end of `main` to the page, which rubber-banded the whole shell, tab bar included; while
+  the page was still bouncing, the next gestures went on moving it instead of the list.
+- **Decision:** `main` and a sheet's body carry `overscroll-behavior-y: contain` (the list bounces on
+  its own and never hands the gesture on), and the root carries `overscroll-behavior-y: none` only
+  while the app shell is on the page (`html:has([data-app-shell])`), so neither a gesture outside
+  `main` (the tab bar) nor a short screen can bounce the page either. Only the vertical axis: on the
+  root, the horizontal one is what a trackpad's two-finger swipe and Android's edge swipe use to go
+  back. The public pages, whose document is what scrolls, keep the platform's bounce and Android's
+  pull-to-refresh. It needs iOS 16 or later, the first with `overscroll-behavior`.
+- **Alternatives (not taken):** `overflow: hidden` or `position: fixed` on the body — it changes how
+  the page is laid out to fix a gesture, and iOS still bounces a body with hidden overflow; doing it on
+  every page — the landing would lose its bounce and pull-to-refresh for nothing.
+- **Consequence:** inside the app, Android's pull-to-refresh no longer starts from a list; the app
+  refreshes on its own (sync on focus and on reconnect). Playwright cannot play an iOS bounce, so the
+  e2e checks the computed values and the owner checks it on his iPhone.
 
 ## 2026-10-09 · Every avatar is a DiceBear Blobs drawing seeded by an id (T-263, the owner's call)
 
