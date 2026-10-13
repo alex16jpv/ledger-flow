@@ -839,6 +839,32 @@ describe("two guarded operations queued on one row (R-2 §A)", () => {
     expect(await pendingOperations(vault.db)).toEqual([]);
   });
 
+  it("moves the guard behind an edit answered `duplicate` to the stamp that edit left (T-168)", async () => {
+    const vault = await vaultWith();
+    const resent = "00000000-0000-7000-8000-000000000001";
+    // Over the body budget, the resent edit travels alone and the next one waits for another batch.
+    await seed(vault.db, [
+      {
+        entityId: "t1",
+        baseUpdatedAt: T0,
+        attempts: 1,
+        payload: { body: { note: "x".repeat(900_000) } },
+      },
+      { entityId: "t1", baseUpdatedAt: T0, payload: { body: { amount: 15 } } },
+    ]);
+    answers((op) =>
+      op.opId === resent
+        ? { status: "duplicate", rowUpdatedAt: T1 }
+        : { result: transaction({ id: "t1", amount: 15, updatedAt: "2026-09-05T00:00:00.000Z" }) },
+    );
+
+    await requestSync();
+
+    expect(batches()).toEqual([["transaction:update:t1"], ["transaction:update:t1"]]);
+    expect(guards()).toEqual([T0, T1]);
+    expect(await pendingOperations(vault.db)).toEqual([]);
+  });
+
   it("guards an operation queued behind an unsent create with the stamp the create earned", async () => {
     const vault = await vaultWith();
     reportOnline(false);

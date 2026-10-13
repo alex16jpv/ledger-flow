@@ -477,7 +477,7 @@ async function applyLanded(run: BatchRun, entry: Collapsed, answer: BatchAnswer)
   const landed = operation;
   await settle(db, { ...entry, operation: landed }, answer.restamped ?? [], async (tx) => {
     await confirmLanded(tx, landed, answer.result);
-    rebased = await rebaseGuards(tx, landed, stampOf(answer.result));
+    rebased = await rebaseGuards(tx, landed, stampOf(answer.result) ?? answer.rowUpdatedAt);
     const moved = await applyRestamps(tx, answer.restamped ?? []);
     rebased += moved.guards;
     await recordNotices(tx, notices);
