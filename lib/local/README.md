@@ -44,8 +44,8 @@ aborting a schema upgrade.
 
 A handle can die under the app: another tab's schema upgrade asks for it (`blocking`), or the browser
 closes it on its own (`terminated` — iOS after a long suspension, site data cleared). Either way
-`startMirror` drops it and opens a new one (F-14, T-267), so no read or pass keeps calling a closed
-connection. Every transaction's `done` is observed at birth, because `idb` rejects it whether or not
+`startMirror` drops it and opens a new one the way it opened the first, eviction check included (F-14, T-267), so no read or pass keeps calling a closed
+connection. Every transaction's `done` on the vault's connection is observed at birth, because `idb` rejects it whether or not
 anyone awaits it; whoever awaits it still gets the rejection, and a failed request rejects its own call.
 
 ## Record shape
