@@ -1,4 +1,11 @@
-import { type IDBPDatabase, type IDBPTransaction, openDB, type StoreNames } from "idb";
+import {
+  type IDBPDatabase,
+  type IDBPTransaction,
+  openDB,
+  type StoreNames,
+  unwrap,
+  wrap,
+} from "idb";
 
 import type { User } from "@/types/api";
 
@@ -195,8 +202,19 @@ async function upgradeOutbox(
 }
 
 export interface OpenVaultOptions {
-  // F-14: once another tab's upgrade closes this handle, every call throws `InvalidStateError`.
+  // F-14, T-267: once another tab's upgrade or the browser closes this handle, every call throws `InvalidStateError`.
   onClosed?: () => void;
+}
+
+// idb rejects every transaction's `done` even when nobody awaits it; the request that failed already carries the error.
+function observeDone(db: IDBPDatabase<VaultSchema>): void {
+  const native = unwrap(db);
+  const open = native.transaction.bind(native);
+  native.transaction = (...args: Parameters<IDBDatabase["transaction"]>) => {
+    const tx = open(...args);
+    wrap(tx).done.catch(() => undefined);
+    return tx;
+  };
 }
 
 export async function openVault(
@@ -215,7 +233,11 @@ export async function openVault(
       (event.target as IDBDatabase | null)?.close();
       options.onClosed?.();
     },
+    terminated() {
+      options.onClosed?.();
+    },
   });
+  observeDone(db);
 
   await db.put("meta", { key: "userId", value: userId });
 
