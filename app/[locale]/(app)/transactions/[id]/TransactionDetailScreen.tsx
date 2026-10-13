@@ -52,7 +52,7 @@ import { accountTypeIcon } from "@/lib/icons/account-type-icons";
 import { CategoryIcon } from "@/lib/icons/CategoryIcon";
 import { iconProps } from "@/lib/icons/sizes";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
-import { useBackNavigation } from "@/lib/navigation/history";
+import { useBackNavigation, useLeaveNavigation } from "@/lib/navigation/history";
 import type { Account } from "@/types/api";
 
 import { UndoPaymentSheet } from "../../shared/UndoPaymentSheet";
@@ -84,6 +84,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
   const t = useTranslations();
   const router = useRouter();
   const back = useBackNavigation();
+  const leave = useLeaveNavigation();
   const toast = useToast();
   const dates = useDates();
   const transaction = useTransactionQuery(id);
@@ -130,7 +131,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
     try {
       await undoPayment.mutateAsync(settlementId);
       toast.show({ message: t("shared.undoPayment.done") });
-      router.push("/transactions");
+      leave(`/transactions/${id}`, "/transactions");
     } catch (error) {
       setUndoing(false);
       toast.show({ message: t(presentError(error, true).messageKey), tone: "danger" });
@@ -155,7 +156,7 @@ export function TransactionDetailScreen({ id }: { id: string }) {
     try {
       await remove.mutateAsync(id);
       toast.show({ message: t("transactions.form.deleted") });
-      router.push("/transactions");
+      leave(`/transactions/${id}`, "/transactions");
     } catch (error) {
       toast.show({ message: t(presentError(error, true).messageKey), tone: "danger" });
       setConfirming(false);

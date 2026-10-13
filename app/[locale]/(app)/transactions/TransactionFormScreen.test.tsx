@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { ToastProvider } from "@/components/ui/Toast";
 import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
 import { rememberServerTime, resetClockOffset } from "@/lib/local/clock";
+import { recordNavigation, resetHistoryForTests } from "@/lib/navigation/history";
 import { QueryProvider } from "@/lib/query/QueryProvider";
 import { UUID } from "@/lib/testing/ids";
 import { renderWithProviders } from "@/lib/testing/render";
@@ -141,12 +142,14 @@ beforeEach(() => {
   fetchMock.mockReset();
   push.mockReset();
   replace.mockReset();
+  resetHistoryForTests();
   search = "";
   vi.stubGlobal("fetch", fetchMock);
   routeFetch();
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
   resetClockOffset();
@@ -648,7 +651,7 @@ describe("EditTransactionScreen", () => {
     });
     // §1 example 3: only what was touched travels, or every disagreement becomes a money conflict.
     expect(JSON.parse(calls("PUT")[0]?.[1]?.body as string)).toEqual({ description: "Taxi" });
-    expect(push).toHaveBeenCalledWith("/transactions");
+    expect(replace).toHaveBeenCalledWith("/transactions");
 
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     const dialog = screen.getByRole("dialog", { name: "Delete this transaction?" });
@@ -726,9 +729,40 @@ describe("EditTransactionScreen", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => {
-      expect(push).toHaveBeenCalledWith("/transactions");
+      expect(replace).toHaveBeenCalledWith("/transactions");
     });
     expect(calls("PUT")).toHaveLength(0);
+  });
+
+  it("saves back to the screen that opened the movement, past its detail [T-265]", async () => {
+    const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+    recordNavigation("/accounts/a1", 2, false);
+    recordNavigation("/transactions/t1", 3, false);
+    recordNavigation("/transactions/t1/edit", 4, false);
+    render(<EditTransactionScreen id="t1" />);
+    await userEvent.type(await screen.findByRole("combobox", { name: /^Description/ }), "!");
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => {
+      expect(go).toHaveBeenCalledWith(-2);
+    });
+    expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("deletes back to To review when the form was opened from there [T-265]", async () => {
+    const go = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
+    recordNavigation("/transactions/review", 2, false);
+    recordNavigation("/transactions/t1/edit", 3, false);
+    render(<EditTransactionScreen id="t1" />);
+    await screen.findByRole("combobox", { name: /^Description/ });
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = screen.getByRole("dialog", { name: "Delete this transaction?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await waitFor(() => {
+      expect(go).toHaveBeenCalledWith(-1);
+    });
+    expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
   });
 
   // T-85: an adjustment is edited in the account's own sheet, so this route hands it back.

@@ -98,7 +98,9 @@ Then: description; tags as chips with suggestions from `GET /transactions/tags` 
 shown); and a note. Saving carries an `Idempotency-Key`, and errors are shown by `code` next to the
 field responsible (`CATEGORY_TYPE_MISMATCH`, `CATEGORY_ARCHIVED`, `AMOUNT_PRECISION`,
 `CURRENCY_MISMATCH`). Editing uses the same form under the title "Edit transaction", with "Delete" as
-the secondary action (confirmed; there is no restore).
+the secondary action (confirmed; there is no restore). **Saving or deleting goes back to the screen
+the movement was opened from** (T-265) — the account, To review, Home… — past its detail; opened from a
+link or after a reload, with nothing of the app behind it, it lands on Transactions.
 
 **Loading** is the form's skeleton under its header — the title, then four bars — and it stays until the
 user's time zone and currency are known, not only until the data is (T-159): opened cold from the

@@ -121,3 +121,52 @@ test("a row opens its detail, which edits and deletes the transaction", async ({
   await expect(page.getByText("Transaction deleted")).toBeVisible();
   expect((await request.get(`/api/transactions/${created.id}`)).status()).toBe(404);
 });
+
+// T-265: the owner edited from an account and landed on every movement of every account.
+test("saving or deleting a movement opened from an account goes back to that account", async ({
+  page,
+  request,
+}) => {
+  await signIn(page, request);
+  const amount = 100_000 + Math.floor(Math.random() * 899_999);
+  const created = (await (
+    await request.post("/api/transactions/quick", {
+      headers: { origin: APP },
+      data: { amount },
+    })
+  ).json()) as { id: string; fromAccountId: string };
+  const account = new RegExp(`/accounts/${created.fromAccountId}$`);
+  const row = (name: string) =>
+    page.getByRole("button", { name: new RegExp(`${name}.*${amount.toLocaleString("en-US")}`) });
+
+  await page.goto(`/accounts/${created.fromAccountId}`);
+  await row("Quick expense").click();
+  await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}$`));
+  await page.getByRole("link", { name: "Edit" }).click();
+  await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}/edit$`));
+  await page.getByRole("combobox", { name: /^Description/ }).fill("E2E return");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page).toHaveURL(account);
+  await expect(row("E2E return")).toBeVisible();
+
+  const back = page.getByRole("button", { name: "Back", exact: true });
+  await row("E2E return").click();
+  await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}$`));
+  await back.click();
+  await expect(page).toHaveURL(account);
+  await row("E2E return").click();
+  await page.getByRole("link", { name: "Edit" }).click();
+  await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}/edit$`));
+  await back.click();
+  await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}$`));
+  await page.getByRole("link", { name: "Edit" }).click();
+  await expect(page).toHaveURL(new RegExp(`/transactions/${created.id}/edit$`));
+  await page.getByRole("button", { name: "Delete" }).click();
+  await page
+    .getByRole("dialog", { name: "Delete this transaction?" })
+    .getByRole("button", { name: "Delete" })
+    .click();
+  await expect(page).toHaveURL(account);
+  await expect(page.getByText("Transaction deleted")).toBeVisible();
+  await expect(row("E2E return")).toHaveCount(0);
+});
