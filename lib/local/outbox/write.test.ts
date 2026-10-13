@@ -1,6 +1,13 @@
 import { ApiError } from "@/lib/api/errors";
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { answerBatch, conflictWith, operationsOf, rejectedWith } from "@/lib/testing/sync";
+import { NETWORK_PATIENCE_MS } from "@/lib/network/timeouts";
+import {
+  answerBatch,
+  batchResponse,
+  conflictWith,
+  operationsOf,
+  rejectedWith,
+} from "@/lib/testing/sync";
 import {
   account,
   category,
@@ -15,7 +22,7 @@ import { setCurrentVault } from "../repository/read";
 import { accountRecord, profileRecord, transactionRecord } from "../schema";
 import { createAccount, updateAccount } from "./accounts";
 import { createCategory } from "./categories";
-import { requestSync } from "./engine";
+import { requestSync, resetSyncEngine, startSyncEngine } from "./engine";
 import { operationPayload } from "./envelope";
 import { pendingOperations } from "./queue";
 import { resetOutboxStatus, setBlockedOperations } from "./status";
@@ -36,6 +43,8 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  // T-264: a write no longer outlasts its pass, so the pass can outlast the test.
+  await resetSyncEngine();
   setCurrentVault(null);
   connectivityStore.reset();
   vi.unstubAllGlobals();
@@ -402,5 +411,175 @@ describe("a lot where the device refuses one row", () => {
     expect(refused).toEqual({ status: "rejected", reason: refusal });
     expect(queued).toEqual({ status: "fulfilled", value: "queued" });
     expect(await pendingOperations(vault.db)).toHaveLength(1);
+  });
+});
+
+type Reply = Parameters<typeof batchResponse>[1];
+
+// T-264: a road with signal and no internet does not fail a request, it leaves it hanging.
+function hangingNetwork() {
+  const waiting: ((reply: Reply) => void)[] = [];
+  fetchMock.mockImplementation(
+    (_input, init) =>
+      new Promise((resolve) => {
+        waiting.push((reply) => {
+          resolve(batchResponse(init, reply));
+        });
+      }),
+  );
+  return {
+    // The signal comes back: what was waiting gets its answer, and so does whatever is sent next.
+    answer: (reply: Reply) => {
+      for (const resolve of waiting.splice(0)) resolve(reply);
+      answerBatch(fetchMock, reply);
+    },
+  };
+}
+
+function engineWithPatience(afterRound?: () => Promise<void>) {
+  const patience: (() => void)[] = [];
+  startSyncEngine({
+    random: () => 1,
+    afterRound,
+    schedule: (run, delayMs) => {
+      if (delayMs === NETWORK_PATIENCE_MS) patience.push(run);
+      return () => undefined;
+    },
+  });
+  return patience;
+}
+
+describe("a network that hangs instead of failing (T-264)", () => {
+  it("answers the save from the projection once a working network would have answered", async () => {
+    const vault = await vaultWith();
+    const patience = engineWithPatience();
+    const network = hangingNetwork();
+
+    const saving = updateAccount("a1", { name: "Renamed" });
+    await vi.waitFor(() => {
+      expect(patience).toHaveLength(1);
+    });
+    patience[0]?.();
+
+    await expect(saving).resolves.toMatchObject({ name: "Renamed" });
+    // The form walked away, so a refusal that arrives later is the tray's, not an undo (F-23).
+    network.answer(() => rejectedWith("VALIDATION"));
+    await vi.waitFor(async () => {
+      expect((await pendingOperations(vault.db))[0]).toMatchObject({
+        status: "failed",
+        lastError: "VALIDATION",
+      });
+    });
+  });
+
+  it("does not make a second save wait for the network the first one already gave up on", async () => {
+    await vaultWith();
+    const patience = engineWithPatience();
+    const network = hangingNetwork();
+
+    const first = updateAccount("a1", { name: "Renamed" });
+    await vi.waitFor(() => {
+      expect(patience).toHaveLength(1);
+    });
+    patience[0]?.();
+    await first;
+
+    await expect(updateAccount("a1", { name: "Renamed again" })).resolves.toMatchObject({
+      name: "Renamed again",
+    });
+    expect(patience).toHaveLength(1);
+    network.answer(() => ({}));
+  });
+
+  it("answers every row of a lot from the projection while the network hangs", async () => {
+    const vault = await vaultWith();
+    await vault.db.put("transactions", transactionRecord(transaction({ id: "t1" })));
+    await vault.db.put("transactions", transactionRecord(transaction({ id: "t2" })));
+    const patience = engineWithPatience();
+    const network = hangingNetwork();
+
+    const saving = writeAll<string>(
+      ["t1", "t2"].map((id) => ({
+        local: {
+          entity: "transaction",
+          entityId: id,
+          action: "update",
+          payload: { body: { description: "Taxi" } },
+          project: () => Promise.resolve({ dependsOn: [], undo: () => Promise.resolve() }),
+        },
+        optimistic: () => id,
+      })),
+    );
+    await vi.waitFor(() => {
+      expect(patience).toHaveLength(1);
+    });
+    patience[0]?.();
+
+    await expect(saving).resolves.toEqual([
+      { status: "fulfilled", value: "t1" },
+      { status: "fulfilled", value: "t2" },
+    ]);
+    network.answer(() => ({}));
+  });
+
+  it("answers with what an earlier round of the pass already landed when a later round hangs", async () => {
+    await vaultWith();
+    const patience = engineWithPatience();
+    const network = hangingNetwork();
+    const saved = account({ id: "a1", name: "Renamed" });
+    let other: Promise<unknown> = Promise.resolve();
+    fetchMock.mockImplementationOnce((_input, init) => {
+      // Queued while the first round is on the wire, so the same drain sends it in a second round.
+      other = updateAccount("a1", { name: "Renamed again" });
+      return Promise.resolve(batchResponse(init, () => ({ result: saved })));
+    });
+
+    const saving = updateAccount("a1", { name: "Renamed" });
+    await vi.waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+    patience[0]?.();
+
+    await expect(saving).resolves.toEqual(saved);
+    network.answer(() => ({}));
+    await other;
+  });
+
+  it("sends a second save while the first one's pull is still running", async () => {
+    await vaultWith();
+    const pulls: (() => void)[] = [];
+    engineWithPatience(
+      () =>
+        new Promise<void>((resolve) => {
+          pulls.push(resolve);
+        }),
+    );
+    answerBatch(fetchMock, (operation) => ({
+      result: account({ id: "a1", name: String(operation.payload.body?.name) }),
+    }));
+
+    await expect(updateAccount("a1", { name: "Renamed" })).resolves.toMatchObject({
+      name: "Renamed",
+    });
+    await expect(updateAccount("a1", { name: "Renamed again" })).resolves.toEqual(
+      account({ id: "a1", name: "Renamed again" }),
+    );
+    for (const finish of pulls) finish();
+  });
+
+  it("hands the form the server's row without waiting for the pull that follows", async () => {
+    await vaultWith();
+    let finishPull = (): void => undefined;
+    engineWithPatience(
+      () =>
+        new Promise<void>((resolve) => {
+          finishPull = resolve;
+        }),
+    );
+    const saved = account({ id: "a1", name: "Renamed" });
+    answerBatch(fetchMock, () => ({ result: saved }));
+
+    await expect(updateAccount("a1", { name: "Renamed" })).resolves.toEqual(saved);
+    finishPull();
   });
 });

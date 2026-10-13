@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth/session-end";
 import { resumeSyncEngine } from "@/lib/local/outbox/engine";
 import { reportNetworkAnswer, reportNetworkFailure } from "@/lib/network/connectivity";
+import { REQUEST_TIMEOUT_MS } from "@/lib/network/timeouts";
 import { reportError } from "@/lib/observability/reporter";
 import { tabChannel } from "@/lib/session/channel";
 
@@ -33,6 +34,7 @@ async function post(): Promise<Response | null> {
       method: "POST",
       credentials: "same-origin",
       headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     reportNetworkAnswer();
     return response;

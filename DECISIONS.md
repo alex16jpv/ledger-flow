@@ -5,6 +5,59 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-13 · A save waits at most 3 s for the network, and the worker gives up on one that hangs (T-264)
+
+- **Context:** the owner, testing on a road with 3G or with signal and no internet: saving a
+  transaction, a group expense above all, took minutes, and once the installed app stayed white for
+  minutes until the browser said it could not connect. With no network at all the app was instant,
+  because `navigator.onLine` said so; a network that never fails and never answers had no end to any
+  wait. The traces: `write()` awaited the whole sync pass, the pull included, and a group expense is two
+  writes; `/auth/refresh` had no timeout and runs under a Web Lock, so it held the drain and every save
+  behind it; the worker's document strategy was `NetworkFirst` with no timeout and navigation preload on,
+  and `/` was network-only; and the vault did not open until `/me` answered, up to 15 s.
+- **Decision:** one patience, `NETWORK_PATIENCE_MS` (3 s, `lib/network/timeouts.ts`, next to
+  `REQUEST_TIMEOUT_MS`), past which a network that has not answered is treated as absent:
+  - `write()` and `writeAll()` wait for the drain (`answerForms`), never the pull after it, for at most
+    the patience, each from its own start. Once one form on a pass has given up, every later form on
+    that pass is answered at once, so a group expense or a lot of N rows on a hung network waits once,
+    not N times. Past it the undo is dropped and the form gets the projection, as with no network;
+    what the server says later goes to the tray (F-23). An operation an earlier round already settled
+    is answered with that outcome; one whose undo was taken but whose outcome is not in yet waits for
+    that drain to end. A form that gave up reports a network failure, so the heartbeat can decide
+    offline in 5 s and the next save does not try.
+  - The pull after every round the server answered counts as news (`afterRound(true)`): a confirmed
+    row can already hold the stamp the pull brings with content only the pull brings (a budget's
+    override confirmed from its period view), and the form that used to re-read after that pull now
+    re-reads before it. The cost is one re-read of the mirror per round, which the form made anyway.
+  - A form's request no longer waits behind a pull: once a pass's drain has ended, it starts the next
+    drain while the pull finishes. Drains still never overlap, and drains and pulls already overlapped
+    through the mirror's own triggers. A request chained to the next pass now merges both reports;
+    before, an operation settled by the first pass lost its outcome there.
+  - `AppFrame` opens the vault the session marker names when `/me` has not answered within the
+    patience (`useWaitedPast`), as it already did when `/me` failed (§2.6, O-F6).
+  - `/auth/refresh` carries `REQUEST_TIMEOUT_MS`, like every other request.
+  - The worker: a document navigation races the network against the patience and answers with the
+    kept document when it runs out (`shellDocument`); with nothing kept, it gives the network up to
+    `REQUEST_TIMEOUT_MS` before `offline.html`, the one answer worse than waiting. Serwist's
+    `networkTimeoutSeconds` falls back only to a cache hit and otherwise keeps waiting. `/` and RSC
+    navigations go through a `NetworkOnly` with the patience as its timeout. What the worker fetches for
+    itself (warm, staging) carries `AbortSignal.timeout(REQUEST_TIMEOUT_MS)`, which also frees the
+    connection.
+  - A staging install that cannot fetch a screen fails, and the old worker keeps its whole shell. With
+    timeouts, dropping that route would leave a 3G update whose screens answer only `offline.html`.
+    It fetches four at a time, so an install on a slow link is not a quarter of an hour of serial
+    requests; an answer that is not the screen (a 4xx, the login) drops that route without failing.
+- **Why 3 s:** it is the default `workbox-recipes` gives its page cache for lie-fi, and a working
+  network answers a `POST /sync` well inside it, so the form still gets the server's answer whenever
+  the network works. A cold backend can take longer; its refusals then land in the tray.
+- **Alternatives:** answering every save from the projection at once (a taken name or a refused
+  reference would never reach the form: D-35's reason still stands on a working network); a patience
+  per write (a group expense would wait twice and N movements N times); a shorter `REQUEST_TIMEOUT_MS`
+  (a slow but working 3G would fail requests that would have landed).
+- **Consequence:** on a working network slower than 3 s, a refusal the form used to show lands in the
+  tray instead. `tests/e2e/offline-lie-fi.spec.ts` hangs every request with Playwright routes; it turns
+  navigation preload off, because the browser's own preload request is out of Playwright's reach.
+
 ## 2026-10-09 · Every avatar is a DiceBear Blobs drawing seeded by an id (T-263, the owner's call)
 
 - **Context:** avatars were initials on the person's feature colour, and the owner does not want to
@@ -3899,7 +3952,8 @@ cover` is set once in the root layout for the standalone display.
 - **Alternatives:** keeping the old documents (they point at chunks the precache cleanup removes);
   versioned cache names (the worker has no build id to name them by).
 - **Consequence:** a route the install cannot fetch is dropped and warmed again by the app on its
-  next open; nothing stale survives an update. Not exercised end to end — Playwright cannot ship a
+  next open; nothing stale survives an update. _(Reversed on 2026-10-13, T-264: a route the install
+  cannot fetch now fails the install, and the old worker keeps its whole shell.)_ Not exercised end to end — Playwright cannot ship a
   second worker build in one run — so this rests on the worker's code and on the shell tests.
 
 ## 2026-09-05 · The worker serves documents from its cache, never RSC payloads (R-3b, F-51)
@@ -4033,7 +4087,9 @@ cover` is set once in the root layout for the standalone display.
   always the form (a refusal after a reload has no form, and undoing then would erase a write the
   user thinks is saved).
 - **Consequence:** `awaited(seq)` in the engine reads the rollback map; `write()` and `writeAll()` call
-  `forgetRollbacks` before answering from the projection. Reviewed and confirmed in R-4.
+  `forgetRollbacks` before answering from the projection. Reviewed and confirmed in R-4. _(Revised on
+  2026-10-13, T-264: `write()` waits for the drain, not the whole pass, and for at most
+  `NETWORK_PATIENCE_MS`; the undo is still the signal.)_
 
 ## 2026-09-06 · A warning lives with the row it explains, in `meta` (F-57)
 
@@ -6113,7 +6169,8 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
 - **The screens:** a pull counts a row as news by its stamp (F-38), and a restamped row already holds
   the stamp the pull brings, with content only the pull brings. So the round tells the pull after it
   (`afterRound(rewrote)`), and `startMirror` treats that pull as news even when every stamp matches;
-  if that pull fails, the next one does.
+  if that pull fails, the next one does. _(Widened on 2026-10-13, T-264: every round the server
+  answered tells its pull so, since no form waits for that pull any more.)_
 - **Alternatives:** moving only the queued guards, which leaves a split queued after the landing and
   before a pull (or after a failed pull) guarded by the old stamp; remembering the restamps and
   rewriting guards at send time, a second copy of the server's stamps that has to be kept and purged;

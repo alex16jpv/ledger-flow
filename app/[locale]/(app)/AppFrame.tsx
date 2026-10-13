@@ -37,9 +37,11 @@ import { HistoryTracker } from "@/lib/navigation/history";
 import { reportOnline } from "@/lib/network/connectivity";
 import { startHeartbeat } from "@/lib/network/heartbeat";
 import { setLocalOnly } from "@/lib/network/local-only";
+import { NETWORK_PATIENCE_MS } from "@/lib/network/timeouts";
 import { warmAppShell } from "@/lib/pwa/service-worker";
 import { invalidateMirrorBacked } from "@/lib/query/domains";
 import { useMounted } from "@/lib/react/useMounted";
+import { useWaitedPast } from "@/lib/react/useWaitedPast";
 import { SessionProvider, useSession } from "@/lib/session";
 import { emailUnconfirmed, useConfirmEmailOpenedOnce } from "@/lib/session/confirm-email";
 import { profileResolved } from "@/lib/session/profile";
@@ -80,9 +82,15 @@ function Frame({ children }: { children: ReactNode }) {
   // Read once per mount: the marker only changes on a sign-in or a sign-out, and both remount this.
   const [marker] = useState(() => readSessionMarker());
   const confirmationRequired = Boolean(session.user?.emailConfirmationRequired);
+  // T-264: a `/me` that hangs opens the vault the marker names, as a `/me` that failed already does.
+  const sessionSlow = useWaitedPast(sessionStatus === "loading", NETWORK_PATIENCE_MS);
   const localUserId = confirmationRequired
     ? undefined
-    : vaultUserFor(userId, sessionStatus === "loading" ? "loading" : "resolved", marker);
+    : vaultUserFor(
+        userId,
+        sessionStatus === "loading" && !sessionSlow ? "loading" : "resolved",
+        marker,
+      );
   // F-63: offline or in local mode (§2.6), the mirror profile carries the currency and the zone.
   const mirrorProfile = useMirrorProfile(Boolean(localUserId) && session.user === null);
   const user = session.user ?? mirrorProfile.user;

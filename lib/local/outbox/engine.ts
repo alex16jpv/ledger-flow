@@ -1,6 +1,7 @@
 import { ApiError, isErrorCode, NetworkError } from "@/lib/api/errors";
 import { sessionIsFor } from "@/lib/auth/marker";
-import { connectivityStore } from "@/lib/network/connectivity";
+import { connectivityStore, reportNetworkFailure } from "@/lib/network/connectivity";
+import { NETWORK_PATIENCE_MS } from "@/lib/network/timeouts";
 import { reportError } from "@/lib/observability/reporter";
 import { tabChannel } from "@/lib/session/channel";
 import type { Account, Restamp, SyncBatchResponse } from "@/types/api";
@@ -226,8 +227,6 @@ interface PassResult {
   // Another user signed in on the device: the pass stops and nothing is scheduled (T-152).
   moved: boolean;
   retryAfterMs: number;
-  // The mirror took stamps whose rows only the pull brings, so that pull is news whatever it finds.
-  rewrote: boolean;
 }
 
 const emptyPass = (): PassResult => ({
@@ -237,7 +236,6 @@ const emptyPass = (): PassResult => ({
   held: false,
   moved: false,
   retryAfterMs: 0,
-  rewrote: false,
 });
 
 interface Holds {
@@ -309,7 +307,6 @@ async function sendPlanned(
         rebased = await rebaseGuards(tx, operation, stampOf(row));
         const moved = await applyRestamps(tx, restamped);
         rebased += moved.guards;
-        result.rewrote ||= moved.rows > 0;
       });
       report.set(seq, { kind: "sent", result: row });
       result.progressed = true;
@@ -483,7 +480,6 @@ async function applyLanded(run: BatchRun, entry: Collapsed, answer: BatchAnswer)
     rebased = await rebaseGuards(tx, landed, stampOf(answer.result));
     const moved = await applyRestamps(tx, answer.restamped ?? []);
     rebased += moved.guards;
-    run.result.rewrote ||= moved.rows > 0;
     await recordNotices(tx, notices);
   });
   report.set(
@@ -731,9 +727,19 @@ const timeoutScheduler: Scheduler = (run, delayMs) => {
 // §6 O-F5b, with routes as the fallback; one 404 or 501 settles it for the session (2026-09-06).
 export type SyncTransport = "batch" | "routes";
 
+interface Flight {
+  report: DrainReport;
+  drained: Promise<DrainReport>;
+  done: Promise<DrainReport>;
+  drainEnded: boolean;
+  gaveUp: boolean;
+}
+
 interface EngineState {
   transport: SyncTransport;
-  inFlight: Promise<DrainReport> | null;
+  inFlight: Flight | null;
+  // A pass whose drain ended can still be pulling while the next one drains.
+  flights: Set<Flight>;
   wanted: number;
   served: number;
   failures: number;
@@ -752,6 +758,7 @@ interface EngineState {
 const state: EngineState = {
   transport: "batch",
   inFlight: null,
+  flights: new Set(),
   wanted: 0,
   served: 0,
   failures: 0,
@@ -786,7 +793,6 @@ function scheduleRetry(retryAfterMs: number): void {
 
 interface Drained {
   answered: boolean;
-  rewrote: boolean;
   backOff: boolean;
   retryAfterMs: number;
   // The session died or moved under the queue: nothing is pulled and nothing is scheduled.
@@ -796,7 +802,6 @@ interface Drained {
 async function drain(db: VaultDb, owner: string, report: DrainReport): Promise<Drained> {
   const drained: Drained = {
     answered: false,
-    rewrote: false,
     backOff: false,
     retryAfterMs: 0,
     halted: false,
@@ -818,7 +823,6 @@ async function drain(db: VaultDb, owner: string, report: DrainReport): Promise<D
         : await sendPlanned(db, owner, plan.operations, report);
     await refreshOutboxStatus(db);
     drained.answered ||= outcome.answered;
-    drained.rewrote ||= outcome.rewrote;
     if (outcome.stopped) {
       // F-26: a dead session is not a slow network, so the queue holds until `resumeSyncEngine`.
       if (outcome.held) {
@@ -873,14 +877,19 @@ async function withOutboxLock<T>(owner: string, run: () => Promise<T>): Promise<
   }
 }
 
-async function pass(db: VaultDb, owner: string): Promise<DrainReport> {
-  const report: DrainReport = new Map();
+async function pass(
+  db: VaultDb,
+  owner: string,
+  report: DrainReport,
+  onDrained: () => void,
+): Promise<DrainReport> {
   let retryAfterMs = 0;
   let backOff = false;
   let busy = false;
 
   try {
     const drained = await withOutboxLock(owner, () => drain(db, owner, report));
+    onDrained();
     if (drained === STOPPED) return report;
     if (drained === BUSY) {
       // Whoever joined this pass is answered by the retry, not by a wait of their own.
@@ -892,7 +901,8 @@ async function pass(db: VaultDb, owner: string): Promise<DrainReport> {
       backOff = drained.backOff;
       retryAfterMs = drained.retryAfterMs;
       // §4.2: a pull after every round the server answered, and never on a background timer.
-      if (drained.answered && state.afterRound) await state.afterRound(drained.rewrote);
+      // T-264: no form waits for this pull, and a confirmed row can carry the stamp the pull brings.
+      if (drained.answered && state.afterRound) await state.afterRound(true);
     }
   } catch (error) {
     // F-27: the write is queued and durable, so the pass ends like a cut network, not a failure.
@@ -914,8 +924,32 @@ async function pass(db: VaultDb, owner: string): Promise<DrainReport> {
   return report;
 }
 
+function startFlight(db: VaultDb, owner: string): Flight {
+  const report: DrainReport = new Map();
+  let markDrained: () => void = () => undefined;
+  const drained = new Promise<DrainReport>((resolve) => {
+    markDrained = () => {
+      resolve(report);
+    };
+  });
+  const flight: Flight = { report, drained, done: drained, drainEnded: false, gaveUp: false };
+  const endDrain = (): void => {
+    flight.drainEnded = true;
+    markDrained();
+  };
+  flight.done = pass(db, owner, report, endDrain).finally(() => {
+    state.flights.delete(flight);
+    if (state.inFlight === flight) state.inFlight = null;
+  });
+  void flight.done.then(endDrain, endDrain);
+  state.flights.add(flight);
+  return flight;
+}
+
+type Stage = "drained" | "done";
+
 // Single flight: a request arriving after the pass's last look asks for a pass of its own.
-export function requestSync(): Promise<DrainReport> {
+function request(stage: Stage): Promise<DrainReport> {
   const vault = currentVault();
   if (!vault) return Promise.resolve(EMPTY_REPORT);
   if (state.paused) return Promise.resolve(EMPTY_REPORT);
@@ -923,13 +957,64 @@ export function requestSync(): Promise<DrainReport> {
   if (!sessionIsFor(vault.userId)) return Promise.resolve(EMPTY_REPORT);
   state.wanted += 1;
   const mine = state.wanted;
-  if (!state.inFlight) {
+  if (!state.inFlight || (stage === "drained" && state.inFlight.drainEnded)) {
     clearRetry();
-    state.inFlight = pass(vault.db, vault.userId).finally(() => {
-      state.inFlight = null;
-    });
+    state.inFlight = startFlight(vault.db, vault.userId);
   }
-  return state.inFlight.then((report) => (mine > state.served ? requestSync() : report));
+  const flight = state.inFlight;
+  return flight[stage].then(async (report) => {
+    if (mine <= state.served) return report;
+    const next = await (stage === "drained"
+      ? request(stage)
+      : flight.done.then(() => request(stage)));
+    return new Map([...report, ...next]);
+  });
+}
+
+export function requestSync(): Promise<DrainReport> {
+  return request("done");
+}
+
+function withinPatience(answer: Promise<DrainReport>, flight: Flight): Promise<DrainReport | null> {
+  if (flight.gaveUp) return Promise.race([answer, Promise.resolve(null)]);
+  return new Promise((resolve, reject) => {
+    const cancel = state.schedule(() => {
+      flight.gaveUp = true;
+      resolve(null);
+    }, NETWORK_PATIENCE_MS);
+    answer.then(
+      (report) => {
+        cancel();
+        resolve(report);
+      },
+      (error: unknown) => {
+        cancel();
+        reject(error instanceof Error ? error : new Error(String(error)));
+      },
+    );
+  });
+}
+
+const liveReports = (): DrainReport =>
+  new Map([...state.flights].flatMap((flight) => [...flight.report]));
+
+export interface FormAnswer {
+  report: DrainReport;
+  released: ReadonlySet<number>;
+}
+
+// T-264: a form waits for the drain alone, and at most as long as a working network takes.
+export async function answerForms(seqs: readonly number[]): Promise<FormAnswer> {
+  const drained = request("drained");
+  const flight = state.inFlight;
+  const report = flight ? await withinPatience(drained, flight) : await drained;
+  if (report) return { report, released: new Set() };
+  const released = new Set(seqs.filter((seq) => rollbacks.delete(seq)));
+  if (released.size > 0) reportNetworkFailure();
+  // An operation whose undo is gone has been, or is being, settled by a pass.
+  const settled = seqs.filter((seq) => !released.has(seq));
+  if (settled.every((seq) => liveReports().has(seq))) return { report: liveReports(), released };
+  return { report: new Map([...liveReports(), ...(await drained)]), released };
 }
 
 interface SyncRegistration {
@@ -1046,9 +1131,10 @@ export async function resetSyncEngine(): Promise<void> {
   clearRetry();
   state.waiting?.abort(STOPPED);
   state.paused = true;
-  await state.inFlight?.catch(() => undefined);
+  await Promise.all([...state.flights].map((flight) => flight.done.catch(() => undefined)));
   state.transport = "batch";
   state.inFlight = null;
+  state.flights.clear();
   state.wanted = 0;
   state.served = 0;
   state.failures = 0;

@@ -326,7 +326,8 @@ describe("the rows a write rewrote besides its own (T-145)", () => {
     expect(afterRound).toHaveBeenCalledWith(true);
   });
 
-  it("does not when no row the mirror holds was restamped", async () => {
+  // T-264: the form no longer waits for that pull, so a confirmed row's refresh is the pull's to tell.
+  it("tells it so as well when no row the mirror holds was restamped", async () => {
     await inAGroup();
     reportOnline(false);
     await updateTransaction("t1", { amount: 60_000 });
@@ -340,7 +341,7 @@ describe("the rows a write rewrote besides its own (T-145)", () => {
 
     await requestSync();
 
-    expect(afterRound).toHaveBeenCalledWith(false);
+    expect(afterRound).toHaveBeenCalledWith(true);
   });
 });
 

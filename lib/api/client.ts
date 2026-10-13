@@ -3,6 +3,7 @@ import {
   reportNetworkAnswer,
   reportNetworkFailure,
 } from "@/lib/network/connectivity";
+import { REQUEST_TIMEOUT_MS } from "@/lib/network/timeouts";
 import { isReportable, reportError } from "@/lib/observability/reporter";
 import type { AccountDeletedResponse } from "@/types/api";
 
@@ -12,7 +13,6 @@ import { type QueryValue, toQueryString } from "./query";
 import { newRequestId, REQUEST_ID_HEADER } from "./request-id";
 
 export const API_PREFIX = "/api";
-export const REQUEST_TIMEOUT_MS = 15_000;
 
 export type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
