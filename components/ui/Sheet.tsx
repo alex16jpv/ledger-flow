@@ -329,7 +329,7 @@ export function Sheet({
                   ref={body}
                   tabIndex={bodyNeedsFocus ? 0 : undefined}
                   className={cn(
-                    "min-h-0 flex-1 overflow-y-auto",
+                    "min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
                     fullScreen &&
                       "flex flex-col px-4 pt-4 pb-[calc(var(--sp-4)+var(--safe-bottom))]",
                   )}

@@ -12,11 +12,13 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   scroller of the shell and nothing in the CSS set `overscroll-behavior`, so iOS handed a gesture that
   started at the end of `main` to the page, which rubber-banded the whole shell, tab bar included; while
   the page was still bouncing, the next gestures went on moving it instead of the list.
-- **Decision:** `main` carries `overscroll-behavior-y: contain` (the list bounces on its own and never
-  hands the gesture on), and the root carries `overscroll-behavior: none` only while the app shell is on
-  the page (`html:has([data-app-shell])`), so neither a gesture outside `main` (the tab bar) nor a sheet
-  can bounce the page either. The public pages, whose document is what scrolls, keep the platform's
-  bounce and Android's pull-to-refresh.
+- **Decision:** `main` and a sheet's body carry `overscroll-behavior-y: contain` (the list bounces on
+  its own and never hands the gesture on), and the root carries `overscroll-behavior-y: none` only
+  while the app shell is on the page (`html:has([data-app-shell])`), so neither a gesture outside
+  `main` (the tab bar) nor a short screen can bounce the page either. Only the vertical axis: on the
+  root, the horizontal one is what a trackpad's two-finger swipe and Android's edge swipe use to go
+  back. The public pages, whose document is what scrolls, keep the platform's bounce and Android's
+  pull-to-refresh. It needs iOS 16 or later, the first with `overscroll-behavior`.
 - **Alternatives (not taken):** `overflow: hidden` or `position: fixed` on the body — it changes how
   the page is laid out to fix a gesture, and iOS still bounces a body with hidden overflow; doing it on
   every page — the landing would lose its bounce and pull-to-refresh for nothing.

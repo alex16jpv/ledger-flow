@@ -47,6 +47,9 @@ test("a list keeps its overscroll and the app's page never bounces, while a publ
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Hi, John");
   expect(await overscroll("html")).toBe("none");
   expect(await overscroll("main")).toBe("contain");
+  expect(
+    await page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorX),
+  ).toBe("auto");
 });
 
 // T-72: below 900px Stats and Categories had no way in at all; More is the only door there is.

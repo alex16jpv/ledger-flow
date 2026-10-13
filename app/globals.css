@@ -39,7 +39,7 @@
 
   /* iOS hands a gesture at the end of a list to the page, and in the installed app the whole shell bounces. */
   html:has([data-app-shell]) {
-    overscroll-behavior: none;
+    overscroll-behavior-y: none;
   }
 
   body {
