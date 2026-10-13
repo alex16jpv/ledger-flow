@@ -440,13 +440,14 @@ calls `createTransaction` and does not know the difference. Every write does the
    **It waits for the drain, never for the pull that follows it, and for at most
    `NETWORK_PATIENCE_MS`** (`answerForms`, T-264). A network with signal and no internet does not fail
    a request, it leaves it hanging, so past that patience the form is answered from the projection as
-   if there were no network, and every later form on the same pass is answered at once; the form that
-   gave up also reports a network failure, so the heartbeat can call the app offline. **The undo is the
+   if there were no network, and every later form on that pass is answered at once; the form that gave
+   up also reports a network failure, so the heartbeat can call the app offline. An operation an
+   earlier round of the pass already settled is answered with that outcome. **The undo is the
    signal that a form is waiting** (D-35): `write()` registers it before asking for the drain and
    drops it the moment it answers from the projection, so an answer the queue cannot act on — a
    `conflict` that is not `STALE_UPDATE`, a `merged` — is thrown at the form while the undo is there,
-   and left in the tray when it is not. An undo the engine already took when the patience runs out
-   means that operation is being settled in this very drain, so its form waits for that answer.
+   and left in the tray when it is not. An undo the engine took but whose outcome is not in yet means
+   a pass is settling that operation right now, so its form waits for that drain to end.
 
 A create carries its own id and therefore no `Idempotency-Key` (O-B1). In the two forms that had a
 keyring, the key **is** the id now, so a retried submit still names one row. `PATCH
@@ -537,7 +538,10 @@ the only way in.
   goes out.
 - **Single flight.** One drain runs at a time; every trigger that arrives while it runs joins it. A
   request that lands _after_ the running pass took its last look at the queue is not lost — the pass
-  records which request it served, and a later one asks for a pass of its own.
+  records which request it served, and a later one asks for a pass of its own, whose report is merged
+  into the first. A form does not wait behind a pull: once a pass's drain has ended, a form's request
+  starts the next drain while that pull finishes (T-264); `requestSync` still waits for the whole
+  pass.
 - **One tab at a time** (T-165). Every tab of the user reads the same queue, so a pass sends under
   the Web Lock `lf-outbox-<userId>`; another tab's pass waits for it, and after
   `OUTBOX_LOCK_WAIT_MS` gives up and backs off rather than hold a form behind a frozen tab; a stop

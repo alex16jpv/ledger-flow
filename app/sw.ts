@@ -143,9 +143,9 @@ const patientNetwork: NetworkOnly = new NetworkOnly({
   networkTimeoutSeconds: NETWORK_PATIENCE_MS / 1000,
 });
 
-const afterPatience = (): Promise<undefined> =>
+const after = (ms: number): Promise<undefined> =>
   new Promise((resolve) => {
-    setTimeout(resolve, NETWORK_PATIENCE_MS);
+    setTimeout(resolve, ms);
   });
 
 async function keptDocument(url: string): Promise<Response | undefined> {
@@ -153,7 +153,7 @@ async function keptDocument(url: string): Promise<Response | undefined> {
   return cache.match(shellCacheKey(url), { ignoreVary: true });
 }
 
-// T-264: NetworkFirst only falls back once the network errors, and a hung one never does.
+// T-264: NetworkFirst falls back only once the network errors, and a hung one never does.
 async function shellDocument({
   request,
   event,
@@ -162,13 +162,16 @@ async function shellDocument({
   event: ExtendableEvent;
 }): Promise<Response> {
   const answer = shellPages.handle({ request, event });
-  const first = await Promise.race([answer, afterPatience()]);
-  if (first) return first;
+  const early = await Promise.race([answer, after(NETWORK_PATIENCE_MS)]);
+  if (early) return early;
+  const kept = await keptDocument(request.url);
+  // With nothing kept the only other answer is `offline.html`, so a slow network gets longer.
+  const late =
+    kept ?? (await Promise.race([answer, after(REQUEST_TIMEOUT_MS - NETWORK_PATIENCE_MS)]));
+  if (late && late !== kept) return late;
   event.waitUntil(answer.then(release, () => undefined));
-  const kept =
-    (await keptDocument(request.url)) ??
-    (await serwist.matchPrecache(offlineDocument(new URL(request.url).pathname)));
-  return kept ?? answer;
+  const offline = await serwist.matchPrecache(offlineDocument(new URL(request.url).pathname));
+  return late ?? offline ?? answer;
 }
 
 // Next's own header names, which it does not export from anywhere public.
@@ -314,7 +317,17 @@ function stagingOf(cacheName: string): string {
   return `${cacheName}${STAGED}-${self.__BUILD_ID}`;
 }
 
-// A new build's chunks replace the old, so the shell is restaged on install, and any gap fails it (T-264).
+const STAGING_AT_ONCE = 4;
+
+async function eachAtOnce<T>(items: readonly T[], run: (item: T) => Promise<void>): Promise<void> {
+  const queue = [...items];
+  const lane = async (): Promise<void> => {
+    for (let item = queue.shift(); item !== undefined; item = queue.shift()) await run(item);
+  };
+  await Promise.all(Array.from({ length: STAGING_AT_ONCE }, lane));
+}
+
+// A new build's chunks replace the old, so the shell is refetched on install and staged, not kept.
 async function stageShell(event: ExtendableEvent): Promise<void> {
   await Promise.all([SHELL_CACHE, SHELL_RSC_CACHE].map((name) => caches.delete(stagingOf(name))));
   const live = await caches.open(SHELL_CACHE);
@@ -323,13 +336,11 @@ async function stageShell(event: ExtendableEvent): Promise<void> {
     plugins: [byRoute, ownAnswerOnly],
     matchOptions: { ignoreVary: true },
   });
-  for (const key of await live.keys()) {
-    await fetchDocument(staging, warmUrlFor(key.url), event);
-  }
+  await eachAtOnce(await live.keys(), (key) => fetchDocument(staging, warmUrlFor(key.url), event));
   const payloads = await caches.open(SHELL_RSC_CACHE);
-  for (const key of await payloads.keys()) {
-    await storePayload(stagingOf(SHELL_RSC_CACHE), warmUrlFor(key.url), event);
-  }
+  await eachAtOnce(await payloads.keys(), (key) =>
+    storePayload(stagingOf(SHELL_RSC_CACHE), warmUrlFor(key.url), event),
+  );
 }
 
 async function swapShell(cacheName: string): Promise<void> {

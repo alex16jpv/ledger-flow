@@ -18,23 +18,35 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **Decision:** one patience, `NETWORK_PATIENCE_MS` (3 s, `lib/network/timeouts.ts`, next to
   `REQUEST_TIMEOUT_MS`), past which a network that has not answered is treated as absent:
   - `write()` and `writeAll()` wait for the drain (`answerForms`), never the pull after it, for at most
-    the patience. It starts with the first form that waits on a pass and is shared by every later one,
-    so a group expense or a lot of N rows waits once, not N times. Past it the undo is dropped and the
-    form gets the projection, as with no network; what the server says later goes to the tray (F-23).
-    An undo the engine already took means it is settling that operation in this drain, so that form
-    waits for the answer. A form that gave up reports a network failure, so the heartbeat can decide
+    the patience, each from its own start. Once one form on a pass has given up, every later form on
+    that pass is answered at once, so a group expense or a lot of N rows on a hung network waits once,
+    not N times. Past it the undo is dropped and the form gets the projection, as with no network;
+    what the server says later goes to the tray (F-23). An operation an earlier round already settled
+    is answered with that outcome; one whose undo was taken but whose outcome is not in yet waits for
+    that drain to end. A form that gave up reports a network failure, so the heartbeat can decide
     offline in 5 s and the next save does not try.
+  - The pull after every round the server answered counts as news (`afterRound(true)`): a confirmed
+    row can already hold the stamp the pull brings with content only the pull brings (a budget's
+    override confirmed from its period view), and the form that used to re-read after that pull now
+    re-reads before it. The cost is one re-read of the mirror per round, which the form made anyway.
+  - A form's request no longer waits behind a pull: once a pass's drain has ended, it starts the next
+    drain while the pull finishes. Drains still never overlap, and drains and pulls already overlapped
+    through the mirror's own triggers. A request chained to the next pass now merges both reports;
+    before, an operation settled by the first pass lost its outcome there.
   - `AppFrame` opens the vault the session marker names when `/me` has not answered within the
     patience (`useWaitedPast`), as it already did when `/me` failed (§2.6, O-F6).
   - `/auth/refresh` carries `REQUEST_TIMEOUT_MS`, like every other request.
   - The worker: a document navigation races the network against the patience and answers with the
-    kept document, or `offline.html`, when it runs out (`shellDocument`); Serwist's
+    kept document when it runs out (`shellDocument`); with nothing kept, it gives the network up to
+    `REQUEST_TIMEOUT_MS` before `offline.html`, the one answer worse than waiting. Serwist's
     `networkTimeoutSeconds` falls back only to a cache hit and otherwise keeps waiting. `/` and RSC
     navigations go through a `NetworkOnly` with the patience as its timeout. What the worker fetches for
     itself (warm, staging) carries `AbortSignal.timeout(REQUEST_TIMEOUT_MS)`, which also frees the
     connection.
   - A staging install that cannot fetch a screen fails, and the old worker keeps its whole shell. With
     timeouts, dropping that route would leave a 3G update whose screens answer only `offline.html`.
+    It fetches four at a time, so an install on a slow link is not a quarter of an hour of serial
+    requests; an answer that is not the screen (a 4xx, the login) drops that route without failing.
 - **Why 3 s:** it is the default `workbox-recipes` gives its page cache for lie-fi, and a working
   network answers a `POST /sync` well inside it, so the form still gets the server's answer whenever
   the network works. A cold backend can take longer; its refusals then land in the tray.
@@ -6157,7 +6169,8 @@ split` sends `useGroupSplit: true` and projects the default resolved here.
 - **The screens:** a pull counts a row as news by its stamp (F-38), and a restamped row already holds
   the stamp the pull brings, with content only the pull brings. So the round tells the pull after it
   (`afterRound(rewrote)`), and `startMirror` treats that pull as news even when every stamp matches;
-  if that pull fails, the next one does.
+  if that pull fails, the next one does. _(Widened on 2026-10-13, T-264: every round the server
+  answered tells its pull so, since no form waits for that pull any more.)_
 - **Alternatives:** moving only the queued guards, which leaves a split queued after the landing and
   before a pull (or after a failed pull) guarded by the old stamp; remembering the restamps and
   rewriting guards at send time, a second copy of the server's stamps that has to be kept and purged;

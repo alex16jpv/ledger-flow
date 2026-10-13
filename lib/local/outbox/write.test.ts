@@ -522,6 +522,51 @@ describe("a network that hangs instead of failing (T-264)", () => {
     network.answer(() => ({}));
   });
 
+  it("answers with what an earlier round of the pass already landed when a later round hangs", async () => {
+    await vaultWith();
+    const patience = engineWithPatience();
+    const network = hangingNetwork();
+    const saved = account({ id: "a1", name: "Renamed" });
+    let other: Promise<unknown> = Promise.resolve();
+    fetchMock.mockImplementationOnce((_input, init) => {
+      // Queued while the first round is on the wire, so the same drain sends it in a second round.
+      other = updateAccount("a1", { name: "Renamed again" });
+      return Promise.resolve(batchResponse(init, () => ({ result: saved })));
+    });
+
+    const saving = updateAccount("a1", { name: "Renamed" });
+    await vi.waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+    patience[0]?.();
+
+    await expect(saving).resolves.toEqual(saved);
+    network.answer(() => ({}));
+    await other;
+  });
+
+  it("sends a second save while the first one's pull is still running", async () => {
+    await vaultWith();
+    const pulls: (() => void)[] = [];
+    engineWithPatience(
+      () =>
+        new Promise<void>((resolve) => {
+          pulls.push(resolve);
+        }),
+    );
+    answerBatch(fetchMock, (operation) => ({
+      result: account({ id: "a1", name: String(operation.payload.body?.name) }),
+    }));
+
+    await expect(updateAccount("a1", { name: "Renamed" })).resolves.toMatchObject({
+      name: "Renamed",
+    });
+    await expect(updateAccount("a1", { name: "Renamed again" })).resolves.toEqual(
+      account({ id: "a1", name: "Renamed again" }),
+    );
+    for (const finish of pulls) finish();
+  });
+
   it("hands the form the server's row without waiting for the pull that follows", async () => {
     await vaultWith();
     let finishPull = (): void => undefined;

@@ -69,6 +69,8 @@ test("the installed app opens with the network hanging instead of a blank screen
   request,
   context,
 }) => {
+  // Installing the worker and warming the shell is the slow part, as in offline-shell.spec.ts.
+  test.setTimeout(180_000);
   const user = await freshUser(request, "lie-fi-open");
   await signInAs(context, request, user);
   await page.goto("/home");
