@@ -2,6 +2,8 @@ import { expect, test } from "../fixtures";
 import {
   accountIdsIn,
   APP,
+  createExpense,
+  expectPending,
   freshUser,
   listAccounts,
   networkComesBack,
@@ -70,4 +72,33 @@ test("a resync while a pull is downloading leaves the whole copy", async ({
 
   await expect(page.getByText("Resynced")).toBeVisible();
   expect((await accountIdsIn(page, vault)).sort()).toEqual(mine);
+});
+
+// T-170: a row the queue created is on no server yet, so the snapshot cannot bring it back.
+test("a movement the server has not received is still listed after a resync", async ({
+  page,
+  request,
+  context,
+}) => {
+  const who = await freshUser(request, "resync-unsent");
+  await signInAs(context, request, who);
+  await page.goto("/settings/sync");
+  await readyForOffline(page);
+  // The write never reaches the server, so the movement is still queued when the copy is emptied.
+  await context.route("**/api/sync", (route) =>
+    route.request().method() === "POST" ? route.abort() : route.continue(),
+  );
+
+  await createExpense(page, 12_345, "Kept through the resync");
+  await expectPending(page, 1);
+  await page.goto("/settings/sync");
+  await page.getByRole("button", { name: "Force full resync" }).click();
+  await page.getByRole("button", { name: "Resync now" }).click();
+  await expect(page.getByText("Resynced")).toBeVisible();
+
+  await page.goto("/transactions");
+  await expect(
+    page.getByRole("button", { name: /Kept through the resync.*Pending sync/ }),
+  ).toBeVisible();
+  await expectPending(page, 1);
 });

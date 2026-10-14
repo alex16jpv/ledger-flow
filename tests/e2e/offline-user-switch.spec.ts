@@ -78,7 +78,8 @@ test("another account signing in takes the previous copy and moves the tab still
   await expect(page.getByText("Left behind")).toHaveCount(0);
 
   expect(await accountIdsIn(page, vault)).toEqual([]);
-  expect(await storeCount(page, vault, "transactions")).toBe(0);
+  // T-170: the one row left is the unsent movement's own, which only the queue knows about.
+  expect(await storeCount(page, vault, "transactions")).toBe(1);
   expect(await storeCount(page, vault, "profile")).toBe(0);
   expect(await storeCount(page, vault, "outbox")).toBe(1);
 });

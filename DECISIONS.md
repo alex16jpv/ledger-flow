@@ -5,6 +5,36 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-13 · Emptying the copy keeps the rows the queue created (T-170)
+
+- **Context:** a resync, a logout that keeps the unsent work, another account's sign-in and a
+  `RESYNC_REQUIRED` snapshot all emptied every mirror store and kept the outbox. A movement created with
+  no network and still queued was then in no list, no figure and no detail until it was sent — while
+  the projected balance, read from the queue, still counted it. A create in `conflict` or `failed`,
+  which never goes out, was only in the Sync tray. Projecting the queue back (D-23) could not help: a
+  create has no rule, because its row is not something the server sends.
+- **Decision:** every purge goes through `clearMirror` (`lib/local/purge.ts`), which keeps, exactly as
+  they were, the records written by queued creates (`unsentRows`: the created row, and the movements a
+  payment minted), whatever the operation's status. The yardstick is that a purge and a pull leave the
+  copy as a pull alone would: without a purge those rows are never touched either. Rows of the server's
+  that queued writes change are not kept: the snapshot brings them and the queue is projected back on
+  top. For that to be whole, an expense created from a movement now projects its stamp
+  (`sharedExpenseId`, `sharedGroupId`) over the movement's row from the feed, which it did not do on
+  any pull; the stamp keeps the movement's server row aside, the server taking the expense moves that
+  baseline to the stamp, and a refusal, a conflict or a discard takes the stamp off
+  (`reconcileSplit`) — before, a discarded expense left the movement pointing at nothing. Discarding
+  the unsent work keeps nothing. Taken by the session (technical).
+- **Alternatives (not taken):** rebuilding each created row from its operation after the pull — the
+  body does not hold all of it (a quick capture takes the default account the device had then), and
+  it would repeat every create's projection; storing the projected row in each create's payload —
+  a change to the outbox format for a copy the mirror already holds.
+- **Consequence:** the `MIRROR_VERSION` reset of `openVault` still keeps nothing: a row an older build
+  wrote may not have the shape the new one reads, and only the outbox migrates. Until the create lands,
+  a version bump hides it from the lists the way every purge did before; that is T-268 on the owner's
+  list. On a logout, and when another account signs in (T-167: "the copy goes, the queue
+  waits"), the kept rows stay in that user's own vault, next to the queue that already holds the same
+  data, and no other session reads that vault.
+
 ## 2026-10-13 · A resent edit answered `duplicate` moves the guards behind it (T-168)
 
 - **Context:** after a lost answer, the next pass resent `[op1, op2]` on one row with only `op1` guarded

@@ -18,7 +18,12 @@ import type {
 import type { OutboxEntity, OutboxOperation } from "../schema";
 import { type OperationPayload, operationPayload, type OutboxAction } from "./envelope";
 import type { WriteTransaction } from "./queue";
-import { reconcileCarried, reconcileRemoval, reconcileServerRow } from "./reconcile";
+import {
+  reconcileCarried,
+  reconcileRemoval,
+  reconcileServerRow,
+  reconcileSplit,
+} from "./reconcile";
 import type { MirrorRow } from "./reproject";
 
 // O-B2: absent for a create and an unsent row — guarding an unprinted `updatedAt` is a 409.
@@ -340,7 +345,10 @@ export const ROUTES: Record<RouteKey, Route> = {
         method: "POST",
         body: payload.body,
       }),
-    confirm: (tx, row) => confirmRow(tx, "sharedExpense", row),
+    confirm: async (tx, row, operation) => {
+      await confirmRow(tx, "sharedExpense", row);
+      await reconcileSplit(tx, operation, true);
+    },
   }),
   "sharedExpense:update": route<SharedExpense>({
     send: ({ entityId, payload }, guard) =>

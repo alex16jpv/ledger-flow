@@ -1,10 +1,11 @@
 import { markOfflineReadyAnnounced, offlineReadyAnnounced } from "@/lib/pwa/readiness";
 import { purgePersistedCaches } from "@/lib/query/purge";
-import { account, openTestVault, transaction, wipeVaults } from "@/lib/testing/vault";
+import { account, openTestVault, settlement, transaction, wipeVaults } from "@/lib/testing/vault";
 
 import { countPendingOperations, vaultExists } from "./db";
-import { purgeOtherVaults, purgeVault } from "./purge";
-import { accountRecord, type OutboxOperation, transactionRecord } from "./schema";
+import { writeTransaction } from "./outbox/queue";
+import { clearMirror, purgeOtherVaults, purgeVault } from "./purge";
+import { accountRecord, type OutboxOperation, settlementRecord, transactionRecord } from "./schema";
 
 function operation(seq: number): OutboxOperation {
   return {
@@ -12,7 +13,7 @@ function operation(seq: number): OutboxOperation {
     opId: `op-${seq}`,
     opVersion: 1,
     entity: "transaction",
-    entityId: `t${seq}`,
+    entityId: `q${seq}`,
     action: "create",
     occurredAt: "2026-08-01T10:00:00.000Z",
     payload: { amount: 20.29 },
@@ -210,5 +211,60 @@ describe("purgePersistedCaches", () => {
     await purgeVault("u1");
 
     expect(offlineReadyAnnounced()).toBe(false);
+  });
+});
+
+// T-170: a row a queued create wrote is the device's alone, so emptying the copy leaves it.
+describe("clearMirror", () => {
+  afterEach(wipeVaults);
+
+  const queued = (overrides: Partial<OutboxOperation>): OutboxOperation => ({
+    ...operation(1),
+    ...overrides,
+  });
+
+  it("keeps what queued creates wrote, whatever their status, and empties the rest", async () => {
+    const vault = await openTestVault("u1");
+    const rows = {
+      server: accountRecord(account({ id: "a-server" })),
+      refused: accountRecord(account({ id: "a-refused" })),
+      quick: transactionRecord(transaction({ id: "t-quick" })),
+      edited: transactionRecord(transaction({ id: "t-edited" })),
+      payment: settlementRecord(settlement({ id: "s-new" })),
+      minted: transactionRecord(transaction({ id: "m-new", sharedSettlementId: "s-new" })),
+    };
+    await vault.db.put("accounts", rows.server);
+    await vault.db.put("accounts", rows.refused);
+    await vault.db.put("transactions", rows.quick);
+    await vault.db.put("transactions", rows.edited);
+    await vault.db.put("settlements", rows.payment);
+    await vault.db.put("transactions", rows.minted);
+    const operations = [
+      queued({ seq: 1, entity: "account", entityId: "a-refused", status: "conflict" }),
+      queued({ seq: 2, entityId: "t-quick", action: "quickAdd" }),
+      queued({ seq: 3, entityId: "t-edited", action: "update" }),
+      queued({ seq: 4, entity: "settlement", entityId: "s-new", payload: { minted: ["m-new"] } }),
+    ];
+
+    const tx = writeTransaction(vault.db);
+    await clearMirror(tx, operations);
+    await tx.done;
+
+    expect(await vault.db.getAll("accounts")).toEqual([rows.refused]);
+    expect(await vault.db.getAll("settlements")).toEqual([rows.payment]);
+    expect((await vault.db.getAllKeys("transactions")).sort()).toEqual(["m-new", "t-quick"]);
+    expect(await vault.db.get("transactions", "t-quick")).toEqual(rows.quick);
+  });
+
+  it("keeps another user's created rows in that user's own copy", async () => {
+    const vault = await openTestVault("u1");
+    await vault.db.put("transactions", transactionRecord(transaction({ id: "q1" })));
+    await vault.db.put("outbox", operation(1));
+    vault.close();
+
+    await purgeOtherVaults("me");
+
+    const other = await openTestVault("u1");
+    expect(await other.db.getAllKeys("transactions")).toEqual(["q1"]);
   });
 });

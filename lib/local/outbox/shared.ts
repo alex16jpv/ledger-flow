@@ -84,7 +84,7 @@ async function stamp(
         sharedExpenseId: expense?.id ?? null,
         sharedGroupId: expense?.groupId ?? null,
       },
-      previous.server,
+      previous.server ?? previous.row,
     ),
   );
   return async () => {
