@@ -571,11 +571,14 @@ the only way in.
   followed by a restore) both carry the stamp the first one is about to replace. **Inside one pass
   only the first operation of a row carries its `If-Match`** (D-34) — per pass, not per batch: a row
   split across two batches keeps its guard on the first one only (F-61). There is no gap to rebase
-  the ones behind it in, and unguarded they open no window, because `POST /sync` blocks by entity
-  id — if the first conflicts, the rest come back `blocked` without being applied. Across passes the
-  rebase still happens: when an operation lands and answers a row, whatever of that row still shares its old
-  guard moves to the new stamp inside the transaction that settles it, and a guard a pull moved in
-  the meantime is another device's edit, left alone to earn its conflict.
+  the ones behind it in, and unguarded they open no window: `POST /sync` blocks by entity id — if
+  the first conflicts, the rest come back `blocked` without being applied — and runs each of them
+  against the stamp the earlier operation of its row left, also when that one comes back
+  `duplicate` from the server's record after a lost answer (T-168). Across passes the rebase still
+  happens: when an operation lands and answers a row — or, answered `duplicate` from the record,
+  the `rowUpdatedAt` it left — whatever of that row still shares its old guard moves to the new
+  stamp inside the transaction that settles it, and the batches behind wait for the next pass; a
+  guard a pull moved in the meantime is another device's edit, left alone to earn its conflict.
 - **Rows a write rewrote besides its own** (T-145). A movement that carries its shared expense, and
   every Shared write that imputes payments again, rewrite other expenses and movements, and the
   server lists them in `restamped` — each with the stamp it had and the one it has now — beside the

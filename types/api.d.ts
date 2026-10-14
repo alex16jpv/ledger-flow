@@ -8199,6 +8199,11 @@ export type components = {
             warnings?: "CATEGORY_ARCHIVED_DROPPED"[];
             /** @description On the writes whose route answers `restamped`: the same list, lifted out of `result`, and kept with the opId so a resent one answered `duplicate` carries it again. Later operations of the same batch guarded by a `previousUpdatedAt` here were already run against its `updatedAt`. */
             restamped?: components["schemas"]["Restamp"][];
+            /**
+             * Format: date-time
+             * @description duplicate opId only: the `updatedAt` the operation left on its own row when it first landed, which a queued guard on that stamp may move to. Absent when the server did not keep it. Later operations of the same batch sent without `baseUpdatedAt` were already run against it.
+             */
+            rowUpdatedAt?: string;
         };
         /** @description A group as STORED, not the view GET /shared-groups returns: no totals and no status. Both are worked out from the group's expenses on every read, and the client already holds the expenses. */
         SyncSharedGroup: {

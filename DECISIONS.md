@@ -5,6 +5,29 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-13 · A resent edit answered `duplicate` moves the guards behind it (T-168)
+
+- **Context:** after a lost answer, the next pass resent `[op1, op2]` on one row with only `op1` guarded
+  (D-34). The server answered `op1` `duplicate` from its record, with no row, and applied `op2`
+  unconditionally over whatever another device had saved in between: a different amount overwritten
+  with no sheet to ask. The premise of D-34 — "if the first conflicts, the rest are `blocked`" — said
+  nothing of a first one that does not conflict because it already landed.
+- **Decision:** the fix lives in the backend, which knows the stamp while it runs the batch: it keeps
+  the `updatedAt` each landed operation left on its own row and runs an unguarded operation behind it
+  against that stamp, so `op2` now comes back `conflict` `STALE_UPDATE` and goes to the sheet. The
+  `duplicate` also answers that stamp as `rowUpdatedAt`, and `applyLanded` rebases with it when there
+  is no row (`stampOf(result) ?? rowUpdatedAt`). That covers what the server cannot see: `op2` in a
+  later batch of the same pass (a queue over 200 operations or 900 KB), or queued while the resend
+  was in flight, which kept the guard `op1` was about to replace and would earn a false conflict.
+  Taken by the session (technical).
+- **Alternatives (not taken):** guarding `op2` from the client whenever the first operation of its row
+  was already attempted — it only has the stamp `op1` replaced, so every lost answer would end in a
+  false conflict on the user's own edit; sending `op1` alone and waiting for its answer — a `duplicate`
+  from the record had no stamp to rebase to.
+- **Consequence:** D-34 stands, and its safety now also rests on the server's chaining
+  (`lag-money-manager` `docs/modules/sync.md`). Against a backend from before T-168, or a record it
+  kept before then, nothing changes: no `rowUpdatedAt`, no rebase, as before.
+
 ## 2026-10-13 · The vault reopens when the browser closes it, and its transactions leave no unhandled rejection (T-267)
 
 - **Context:** Sentry `LEDGER-FLOW-D` (2026-10-13, production; Safari, by the stackless `DOMException`): an unhandled rejection
@@ -4147,6 +4170,8 @@ cover` is set once in the root layout for the standalone display.
   the case the batch existed to fix); guessing the stamp the previous operation will produce (the
   client does not write `updatedAt`, invariant 2).
 - **Consequence:** the owner approved it on 2026-09-06. Across batches the old rebase still applies.
+  Completed on 2026-10-13 (T-168): a first operation answered `duplicate` from the server's record
+  did not block the rest, and the server now runs them against the stamp it left.
 
 ## 2026-09-06 · An answer the queue cannot act on belongs to the form that is waiting for it (O-F5b, D-35)
 
