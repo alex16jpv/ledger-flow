@@ -26,13 +26,20 @@ import {
   type WriteTransaction,
   writeTransaction,
 } from "./queue";
-import { reconcileCarried, reconcileRemoval, reconcileRow, reconcileServerRow } from "./reconcile";
+import {
+  reconcileCarried,
+  reconcileRemoval,
+  reconcileRow,
+  reconcileServerRow,
+  reconcileSplit,
+} from "./reconcile";
 import { remint, swapMirror } from "./remint";
 import { applyRestamps, splitRestamps } from "./restamp";
 import { routeFor, serverBaseline } from "./routes";
 import { followOutboxStatus, outboxStatusStore, refreshOutboxStatus } from "./status";
 import { reportSynced, resetSynced } from "./synced";
 import { OUTBOX_SYNC_TAG } from "./tag";
+import { isCreate } from "./unsent";
 
 // §6 O-F4: the jitter can only shorten the step, so devices do not come back in lockstep.
 export const BACKOFF_MIN_MS = 1_000;
@@ -112,8 +119,6 @@ const stampOf = (answer: unknown): string | undefined => {
 
 // §2.6: a pass outlives the check that started it, so every request looks at the marker again.
 const sessionMoved = (owner: string): boolean => !sessionIsFor(owner);
-
-const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
 
 // An operation replayed after a reload has no undo, so it is left `failed` for the tray (O-F5a).
 const rollbacks = new Map<number, (tx: WriteTransaction) => Promise<void>>();
@@ -367,6 +372,7 @@ async function sendPlanned(
               entityId,
               current === undefined ? undefined : await serverBaseline(tx, entity, current),
             );
+            await reconcileSplit(tx, operation);
           },
         );
         blocked.add(entityId);
@@ -388,9 +394,10 @@ async function sendPlanned(
       const undos = takeRollbacks([seq, ...entry.absorbed].reverse());
       if (undos.length < 1 + entry.absorbed.length) {
         // O-F5a: undoing half a fold would strand the mirror, so the run stays `failed`.
-        await markOperation(db, seq, "failed", codeOf(error), {}, (tx) =>
-          reconcileRow(tx, entity, entityId),
-        );
+        await markOperation(db, seq, "failed", codeOf(error), {}, async (tx) => {
+          await reconcileRow(tx, entity, entityId);
+          await reconcileSplit(tx, entry.operation);
+        });
         blocked.add(entityId);
         report.set(seq, { kind: "rejected", error });
         result.answered = true;
@@ -553,6 +560,7 @@ async function applyConflict(run: BatchRun, entry: Collapsed, answer: BatchAnswe
         entityId,
         own ? await serverBaseline(tx, entity, current) : undefined,
       );
+      await reconcileSplit(tx, entry.operation);
     },
   );
   run.holds.blocked.add(entityId);
@@ -566,9 +574,10 @@ async function applyRejected(run: BatchRun, entry: Collapsed, answer: BatchAnswe
   const undos = takeRollbacks([seq, ...entry.absorbed].reverse());
   if (undos.length < 1 + entry.absorbed.length) {
     // O-F5a: the run outlived its tab, so it stays `failed` rather than half-undone.
-    await markOperation(db, seq, "failed", codeOf(error), {}, (tx) =>
-      reconcileRow(tx, entity, entityId),
-    );
+    await markOperation(db, seq, "failed", codeOf(error), {}, async (tx) => {
+      await reconcileRow(tx, entity, entityId);
+      await reconcileSplit(tx, entry.operation);
+    });
     run.holds.blocked.add(entityId);
     report.set(seq, { kind: "rejected", error });
     return;

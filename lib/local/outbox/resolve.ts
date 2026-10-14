@@ -1,41 +1,19 @@
-import type { OutboxEntity, OutboxOperation } from "../schema";
+import type { OutboxOperation } from "../schema";
 import { restoreAccountWrite } from "./accounts";
 import { isFutureDate, isNameTaken, ownServerRow, serverStamp } from "./conflict";
 import { forgetRollbacks, requestSync } from "./engine";
 import { operationPayload } from "./envelope";
 import { NotProjectableError } from "./projected";
 import { pendingOperations, type VaultDb, type WriteTransaction, writeTransaction } from "./queue";
-import { reconcileServerRow } from "./reconcile";
+import { reconcileServerRow, reconcileSplit } from "./reconcile";
 import { serverBaseline } from "./routes";
 import { refreshOutboxStatus } from "./status";
+import { isCreate, STORE_OF } from "./unsent";
 import { enqueue } from "./write";
-
-const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
 
 // An operation another tab put back in line is no longer the user's to discard.
 const stuck = (operation: OutboxOperation): boolean =>
   operation.status === "conflict" || operation.status === "failed";
-
-const STORE_OF: Record<
-  OutboxEntity,
-  | "accounts"
-  | "categories"
-  | "transactions"
-  | "budgets"
-  | "contacts"
-  | "sharedGroups"
-  | "sharedExpenses"
-  | "settlements"
-> = {
-  account: "accounts",
-  category: "categories",
-  transaction: "transactions",
-  budget: "budgets",
-  contact: "contacts",
-  sharedGroup: "sharedGroups",
-  sharedExpense: "sharedExpenses",
-  settlement: "settlements",
-};
 
 // D-24: the baseline kept aside is at least as fresh as the 409's `current`, which only backs it.
 async function reconcileResolved(tx: WriteTransaction, operation: OutboxOperation): Promise<void> {
@@ -118,6 +96,7 @@ async function discardSeeds(
     // A create the server never saw leaves no row behind; every other row goes back.
     if (isCreate(victim.action)) {
       await tx.objectStore(STORE_OF[victim.entity]).delete(victim.entityId);
+      await reconcileSplit(tx, victim);
       continue;
     }
     const key = `${victim.entity}:${victim.entityId}`;

@@ -1,0 +1,31 @@
+import type { MirrorStore, OutboxEntity, OutboxOperation } from "../schema";
+import { operationPayload } from "./envelope";
+
+export const STORE_OF = {
+  account: "accounts",
+  category: "categories",
+  transaction: "transactions",
+  budget: "budgets",
+  contact: "contacts",
+  sharedGroup: "sharedGroups",
+  sharedExpense: "sharedExpenses",
+  settlement: "settlements",
+} as const satisfies Record<OutboxEntity, MirrorStore>;
+
+export const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
+
+// T-170: the rows a create wrote exist only because it is queued, whatever its status.
+export function unsentRows(operations: readonly OutboxOperation[]): Map<MirrorStore, string[]> {
+  const rows = new Map<MirrorStore, string[]>();
+  const keep = (store: MirrorStore, id: string): void => {
+    const ids = rows.get(store);
+    if (ids) ids.push(id);
+    else rows.set(store, [id]);
+  };
+  for (const operation of operations) {
+    if (!isCreate(operation.action)) continue;
+    keep(STORE_OF[operation.entity], operation.entityId);
+    for (const id of operationPayload(operation).minted ?? []) keep("transactions", id);
+  }
+  return rows;
+}

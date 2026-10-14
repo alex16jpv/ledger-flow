@@ -71,6 +71,11 @@ export function queuedMirror(
       touched.add(movement);
       under(movement, operation);
     }
+    const split = splitMovement(operation);
+    if (split !== null) {
+      touched.add(rowKey("transaction", split));
+      under(rowKey("transaction", split), operation);
+    }
     if (operation.entity === "account" && operation.action === "setDefault") {
       defaultAccountId = operation.entityId;
     }
@@ -93,6 +98,19 @@ function writeOffTarget(operation: OutboxOperation): {
   const contactId = typeof body.contactId === "string" ? body.contactId : null;
   return { contactId: expenseId === null ? contactId : null, expenseId };
 }
+
+// The server stamps the movement an expense takes in the same request that creates the expense.
+export function splitMovement(operation: OutboxOperation): string | null {
+  if (operation.entity !== "sharedExpense" || operation.action !== "create") return null;
+  const { transactionId } = bodyOf(operation);
+  return typeof transactionId === "string" ? transactionId : null;
+}
+
+const stampSplit: Rule = (row, operation) => ({
+  ...(row as SyncTransaction),
+  sharedExpenseId: operation.entityId,
+  sharedGroupId: operationPayload(operation).params?.groupId ?? null,
+});
 
 const bodyOf = (operation: OutboxOperation): Record<string, unknown> => {
   const body = operationPayload(operation).body;
@@ -296,7 +314,9 @@ export function applyOperation<R extends MirrorRow>(
   const rule =
     entity === "sharedExpense" && operation.entity === "transaction"
       ? CARRIED[key]
-      : RULES[`${entity}:${operation.action}` as RouteKey];
+      : entity === "transaction" && splitMovement(operation) === row.id
+        ? stampSplit
+        : RULES[`${entity}:${operation.action}` as RouteKey];
   return rule ? (rule(row, operation, queued) as R) : row;
 }
 

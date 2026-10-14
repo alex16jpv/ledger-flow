@@ -10,11 +10,11 @@ import type { VaultHandle } from "./db";
 import { forgetLanded, landedOpIds, releaseLanded } from "./outbox/landed";
 import { type WriteTransaction, writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow, reconcileServerRow } from "./outbox/reconcile";
+import { clearMirror } from "./purge";
 import {
   advanceMirrorEpoch,
   joinedExpenseRecord,
   joinedGroupRecord,
-  MIRROR_STORES,
   PROFILE_KEY,
   profileRecord,
   readMirrorEpoch,
@@ -234,7 +234,7 @@ async function dropCopy(handle: VaultHandle, epoch: number): Promise<number> {
   const tx = writeTransaction(handle.db);
   const meta = tx.objectStore("meta");
   if ((await readMirrorEpoch(meta)) !== epoch) throw new PullSupersededError();
-  for (const name of MIRROR_STORES) await tx.objectStore(name).clear();
+  await clearMirror(tx, await tx.objectStore("outbox").getAll());
   await meta.delete("syncCursor");
   await meta.delete("syncedAt");
   await forgetLanded(meta);

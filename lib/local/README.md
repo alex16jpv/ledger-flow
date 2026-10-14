@@ -16,8 +16,8 @@ mirror says it cannot.
 | What it is                                     | a copy of the server, re-downloadable                                                                                                                                                                            | writes that have not reached the server                 |
 | Losing it costs                                | one pull                                                                                                                                                                                                         | the user's data                                         |
 | On a version bump                              | cleared and re-pulled                                                                                                                                                                                            | migrated one operation at a time, or the upgrade blocks |
-| On logout                                      | always cleared                                                                                                                                                                                                   | kept unless the caller confirms discarding it           |
-| On another account's sign-in                   | always cleared                                                                                                                                                                                                   | kept for its owner's next sign-in (T-167)               |
+| On logout                                      | cleared, but for the rows its kept queue created (T-170)                                                                                                                                                         | kept unless the caller confirms discarding it           |
+| On another account's sign-in                   | cleared, but for the rows its queue created (T-170)                                                                                                                                                              | kept for its owner's next sign-in (T-167)               |
 | On session expiry / app update / cache cleanup | untouched                                                                                                                                                                                                        | untouched (invariant 7)                                 |
 
 They share one database because **IndexedDB transactions cannot span two databases** and O-F4 has to
@@ -92,7 +92,12 @@ of its own: `queuedMirror` walks the operation over the expense too (with its ow
 `reproject.ts`), the fold keeps it, `queuedRows` lists it so the group is marked, a refusal, a conflict or a discard of the movement's edit puts the expense back, and a landing moves its baseline
 (`reconcileCarried`) until the next pull brings the server's. What the server would refuse for the
 link — a new amount under an `EXACT` split, a new type, deleting a movement whose block of guests has
-paid — is refused here with the same code, before anything is queued.
+paid — is refused here with the same code, before anything is queued. The other way round, an expense created
+from a movement stamps the movement with the expense and its group, keeping the movement's server row
+aside. While that create is queued the stamp is projected back over whatever row of the movement the
+feed brings; when the server takes the expense the movement's baseline moves to the stamp, and when
+the create is refused, conflicts or is discarded the movement goes back to its server row
+(`reconcileSplit`, T-170).
 
 **A loan never ends above zero, whatever the write** (T-156). The server caps a `LOAN` on the net a
 whole write leaves on it, so a delete or an edit that takes back what was borrowed from a loan paid off
@@ -164,8 +169,9 @@ snapshot down the same code path.
   rows. Start fresh erased the account's rows for good, with no tombstone the feed could send, so the backend answers a cursor issued before
   it with `409 RESYNC_REQUIRED`. `pullChanges` then empties the mirror stores, the cursor and
   `syncedAt` in one transaction that also moves `mirrorEpoch`, and pages again with no cursor: a
-  snapshot. The queue stays, as in "Force full resync" (invariant 7): what it holds for rows that are
-  gone comes back refused and waits in Sync for its owner. A snapshot refused the same way is an error,
+  snapshot. The queue stays, as in "Force full resync" (invariant 7), and so do the rows it created
+  (`clearMirror`, under Purging): what it holds for rows that are gone comes back refused and waits in
+  Sync for its owner. A snapshot refused the same way is an error,
   not another round.
 - **The row the feed sends is not the last word while the queue still holds writes for it** (D-23,
   F-25). `applyPage` hands each row to `outbox/reconcile.ts`, which puts the server's row down and
@@ -734,7 +740,19 @@ Purging is **never automatic**, with one exception: another account's sign-in (T
 time — on a shared device the next user must not see the previous one's data — and keeps unsent
 operations unless the caller confirms discarding them, reporting `operationsKept` /
 `operationsDiscarded` either way. It also moves the mirror epoch, so a pull already downloading
-writes nothing after it (T-164). `lib/query/purge.ts` keeps the disposable React Query caches
+writes nothing after it (T-164).
+
+**What the queue created stays in the copy** (T-170). A row written by a queued create — a movement,
+an account, a group, a payment and the movements it minted — is not a copy of anything the server
+has: the feed will not bring it back until the create lands, so a purge that dropped it left it out
+of every list while its balance still counted. `clearMirror` is the one way the mirror is emptied, by
+`purgeVault`, `purgeOtherVaults` and the `RESYNC_REQUIRED` snapshot: it keeps the records the queue's
+creates wrote (`unsentRows`, `outbox/unsent.ts`), whatever their status, exactly as they were, so a purge and a pull leave
+the copy as a pull alone would have. Rows of the server's that queued writes touch need no keeping:
+the snapshot brings them and `reconcile.ts` projects the queue back on top, including the stamp an
+expense still in the queue puts on the movement it splits. Discarding the unsent work keeps nothing.
+The `MIRROR_VERSION` reset of `openVault` is the exception: it keeps nothing, because a row written by
+an older build may not have the shape the new one reads. `lib/query/purge.ts` keeps the disposable React Query caches
 (`lf-cache-*`) and never matches the vault prefix.
 
 `SessionProvider` calls `purgeVault` on an explicit logout with the user's answer (F-34): with work

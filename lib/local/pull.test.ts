@@ -23,7 +23,7 @@ import {
   SyncFeedStalledError,
 } from "./pull";
 import { purgeVault } from "./purge";
-import type { OutboxOperation } from "./schema";
+import { type OutboxOperation, transactionRecord } from "./schema";
 
 type Changes = Partial<SyncChangesResponse["changes"]>;
 
@@ -567,7 +567,7 @@ describe("a copy from before a Start fresh (T-207)", () => {
   const resyncRequired = () =>
     new ApiError({ status: 409, code: "RESYNC_REQUIRED", message: "", requestId: "r" });
 
-  it("throws the copy away, keeps the queue and downloads the account again", async () => {
+  it("throws the copy away, keeps the queue and the rows it created, and downloads the account again", async () => {
     const vault = await openTestVault("u1");
     await vault.db.put("accounts", {
       id: "a-old",
@@ -577,6 +577,8 @@ describe("a copy from before a Start fresh (T-207)", () => {
     await vault.db.put("meta", { key: "syncCursor", value: "v1|before|" });
     await vault.db.put("meta", { key: "syncedAt", value: "2026-09-01T00:00:00.000Z" });
     await queue(vault, { entityId: "t-unsent", action: "create" });
+    const unsent = transactionRecord(transaction({ id: "t-unsent" }));
+    await vault.db.put("transactions", unsent);
     const before = Number((await vault.db.get("meta", "mirrorEpoch"))?.value ?? 0);
     const queries: PullPageQuery[] = [];
     const answers = [
@@ -599,6 +601,7 @@ describe("a copy from before a Start fresh (T-207)", () => {
     expect(await vault.db.get("accounts", "a-old")).toBeUndefined();
     expect(await vault.db.get("accounts", "a-new")).toBeDefined();
     expect(await vault.db.count("outbox")).toBe(1);
+    expect(await vault.db.get("transactions", "t-unsent")).toEqual(unsent);
     expect(result).toMatchObject({ changed: true, epoch: before + 1, cursor: "v2|after|" });
     expect((await vault.db.get("meta", "mirrorEpoch"))?.value).toBe(before + 1);
   });

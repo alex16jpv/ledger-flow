@@ -14,25 +14,30 @@ import {
   openTestVault,
   profile,
   settlement,
+  sharedExpense,
+  sharedGroup,
   transaction,
   wipeVaults,
 } from "@/lib/testing/vault";
 import type { SyncChangesResponse } from "@/types/api";
 
 import { pullChanges } from "../pull";
+import { purgeVault } from "../purge";
 import { readAccounts } from "../repository/accounts";
 import { setCurrentVault } from "../repository/read";
+import { readTransactions } from "../repository/transactions";
 import {
   accountRecord,
   type OutboxOperation,
   profileRecord,
   settlementRecord,
+  sharedGroupRecord,
   transactionRecord,
 } from "../schema";
 import { requestSync, resetSyncEngine } from "./engine";
 import { pendingOperations, type VaultDb } from "./queue";
 import { discardOperation } from "./resolve";
-import { deleteSettlement, recordSettlement } from "./shared";
+import { createSharedExpense, deleteSettlement, recordSettlement } from "./shared";
 import { refreshOutboxStatus, resetOutboxStatus } from "./status";
 import { createTransaction, deleteTransaction, updateTransaction } from "./transactions";
 
@@ -492,5 +497,206 @@ describe("a queued write the feed shows already applied (T-162)", () => {
     });
 
     expect(await balance()).toBe(1000);
+  });
+});
+
+// T-170: a row only the queue knows about is not the server's, so emptying the copy leaves it there.
+describe("what was created here and is still queued, after the copy is emptied (T-170)", () => {
+  const coffee = {
+    type: "EXPENSE" as const,
+    amount: 50,
+    date: "2026-09-04T11:00:00.000Z",
+    categoryId: "c1",
+    fromAccountId: "a1",
+    toAccountId: null,
+    description: "Coffee",
+    tags: [],
+    note: null,
+  };
+  const balance = async () => (await readAccounts())[0]?.balance;
+  const resync = async (vault: Awaited<ReturnType<typeof vaultWith>>, rows = {}) => {
+    await purgeVault("u1");
+    await pullChanges(vault, {
+      fetchPage: () =>
+        Promise.resolve(
+          feedOf({ user: profile(), accounts: [cash], transactions: [served], ...rows }),
+        ),
+    });
+  };
+
+  it("lists a movement created with no network again, as it was, once the resync has run", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    await createTransaction(coffee, "t2");
+    const before = await vault.db.get("transactions", "t2");
+
+    await resync(vault);
+
+    expect(await vault.db.get("transactions", "t2")).toEqual(before);
+    expect((await readTransactions({})).data.map((item) => item.id).sort()).toEqual(["t1", "t2"]);
+    expect(await balance()).toBe(950);
+  });
+
+  it("keeps a create the server refused for good, as the copy did before the resync", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    await createTransaction(coffee, "t2");
+    const [queued] = await pendingOperations(vault.db);
+    if (!queued) throw new Error("the create was not queued");
+    await vault.db.put("outbox", { ...queued, status: "failed", lastError: "VALIDATION_ERROR" });
+    const before = await vault.db.get("transactions", "t2");
+
+    await resync(vault);
+
+    expect(await vault.db.get("transactions", "t2")).toEqual(before);
+  });
+
+  it("keeps a payment and the movements it minted, and the balance they move", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    const payment = await recordSettlement({
+      groupId: null,
+      counterparty: { contactId: "k1", expenseId: null },
+      date: "2026-09-04T11:00:00.000Z",
+      collected: 600,
+      paid: 0,
+      outsideApp: false,
+      accountId: "a1",
+      lines: [],
+      refunded: 0,
+    });
+    const minted = (await vault.db.getAll("transactions")).filter(
+      (record) => record.row.sharedSettlementId === payment.id,
+    );
+
+    await resync(vault);
+
+    expect((await vault.db.get("settlements", payment.id))?.row).toEqual(payment);
+    for (const record of minted) {
+      expect(await vault.db.get("transactions", record.id)).toEqual(record);
+    }
+    expect(minted).toHaveLength(1);
+    expect(await balance()).toBe(1600);
+  });
+
+  it("keeps no row of the queue once the user discards it with the copy", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    await createTransaction(coffee, "t2");
+
+    await purgeVault("u1", { discardPendingWork: true });
+
+    expect(await vault.db.get("transactions", "t2")).toBeUndefined();
+  });
+
+  const lunchSplit = async (vault: Awaited<ReturnType<typeof vaultWith>>) => {
+    await vault.db.put("sharedGroups", sharedGroupRecord(sharedGroup({ id: "g1" })));
+    reportOnline(false);
+    const { split } = sharedExpense({ amount: 100 });
+    return createSharedExpense({
+      row: {
+        id: "e1",
+        groupId: "g1",
+        description: "Lunch",
+        date: served.date,
+        amount: 100,
+        paidByContactId: null,
+        split,
+        customSplit: false,
+      },
+      transactionId: "t1",
+    });
+  };
+  const stamped = { sharedExpenseId: "e1", sharedGroupId: "g1" };
+  const unstamped = { sharedExpenseId: null, sharedGroupId: null };
+  const movement = async (db: VaultDb) => db.get("transactions", "t1");
+  const edited = { ...served, note: "From the other device", updatedAt: T1 };
+
+  it("marks a movement of the server's as split, keeping its server row aside", async () => {
+    const vault = await vaultWith();
+    await lunchSplit(vault);
+
+    expect(await movement(vault.db)).toMatchObject({ row: stamped, server: served });
+  });
+
+  it("keeps the mark through a resync while the expense that takes it is queued", async () => {
+    const vault = await vaultWith();
+    await lunchSplit(vault);
+
+    await resync(vault, { sharedGroups: [sharedGroup({ id: "g1" })] });
+
+    expect((await vault.db.get("sharedExpenses", "e1"))?.row).toMatchObject({ id: "e1" });
+    expect(await movement(vault.db)).toMatchObject({ row: stamped, server: unstamped });
+  });
+
+  it("keeps the mark when an ordinary pull brings the movement changed elsewhere", async () => {
+    const vault = await vaultWith();
+    await lunchSplit(vault);
+
+    await pullChanges(vault, {
+      fetchPage: () => Promise.resolve(feedOf({ transactions: [edited] })),
+    });
+
+    expect(await movement(vault.db)).toMatchObject({
+      row: { ...stamped, note: "From the other device" },
+      server: { ...unstamped, updatedAt: T1 },
+    });
+  });
+
+  it("moves the movement's baseline to the mark once the server takes the expense", async () => {
+    const vault = await vaultWith();
+    const expense = await lunchSplit(vault);
+    await pullChanges(vault, {
+      fetchPage: () => Promise.resolve(feedOf({ transactions: [edited] })),
+    });
+
+    answerBatch(fetchMock, () => applied({ ...expense, updatedAt: T1 }));
+    reportOnline(true);
+    await requestSync();
+
+    expect(await pendingOperations(vault.db)).toEqual([]);
+    const record = await movement(vault.db);
+    expect(record?.row).toMatchObject(stamped);
+    expect(record?.server).toBeUndefined();
+  });
+
+  it("takes the mark off when the server refuses the expense for good", async () => {
+    const vault = await vaultWith();
+    await lunchSplit(vault);
+
+    answerBatch(fetchMock, () => rejectedWith("TRANSACTION_ALREADY_SHARED"));
+    reportOnline(true);
+    await requestSync();
+
+    expect(await statuses(vault.db)).toEqual(["failed"]);
+    expect((await movement(vault.db))?.row).toMatchObject(unstamped);
+  });
+
+  it("takes the mark off when the stuck expense is discarded", async () => {
+    const vault = await vaultWith();
+    await lunchSplit(vault);
+    const [queued] = await pendingOperations(vault.db);
+    if (!queued) throw new Error("the expense was not queued");
+    await vault.db.put("outbox", { ...queued, status: "failed", lastError: "VALIDATION_ERROR" });
+
+    await discardOperation(vault.db, queued.seq);
+
+    expect(await vault.db.get("sharedExpenses", "e1")).toBeUndefined();
+    expect(await movement(vault.db)).toMatchObject({ row: unstamped });
+  });
+
+  it("gives way to the server's row when the create had landed and its answer was lost", async () => {
+    const vault = await vaultWith();
+    reportOnline(false);
+    await createTransaction(coffee, "t2");
+    const theirs = transaction({ ...coffee, id: "t2", updatedAt: T1 });
+
+    await resync(vault, {
+      accounts: [{ ...cash, balance: 950, updatedAt: T1 }],
+      transactions: [served, theirs],
+    });
+
+    expect((await vault.db.get("transactions", "t2"))?.row).toEqual(theirs);
+    expect(await balance()).toBe(950);
   });
 });

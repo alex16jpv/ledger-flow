@@ -33,21 +33,10 @@ import {
   queuedMirror,
   reprojectWalk,
   rowKey,
+  splitMovement,
   willBeSent,
 } from "./reproject";
-
-const STORE_OF = {
-  account: "accounts",
-  category: "categories",
-  transaction: "transactions",
-  budget: "budgets",
-  contact: "contacts",
-  sharedGroup: "sharedGroups",
-  sharedExpense: "sharedExpenses",
-  settlement: "settlements",
-} as const satisfies Record<OutboxEntity, string>;
-
-const isCreate = (action: string): boolean => action === "create" || action === "quickAdd";
+import { isCreate, STORE_OF } from "./unsent";
 
 // The queue as it stands, read once for a whole page of the feed rather than once per row.
 export interface ReconcileContext {
@@ -155,11 +144,30 @@ export async function reconcileRow(
   }
 }
 
+// T-170: the movement an expense is created from is stamped only while the create is still queued.
+export async function reconcileSplit(
+  tx: WriteTransaction,
+  operation: OutboxOperation,
+  landed = false,
+): Promise<void> {
+  const movement = splitMovement(operation);
+  if (movement === null) return;
+  const record = await tx.objectStore("transactions").get(movement);
+  const baseline = record?.server ?? record?.row;
+  if (!baseline) return;
+  const context = await reconcileContext(tx);
+  const server = landed
+    ? applyOperation("transaction", baseline, operation, context.queued)
+    : undefined;
+  await reconcileRow(tx, "transaction", movement, server, context);
+}
+
 // The server wrote the movement's expense in the same request, so that baseline moves as well.
 export async function reconcileCarried(
   tx: WriteTransaction,
   operation: OutboxOperation,
 ): Promise<void> {
+  await reconcileSplit(tx, operation, true);
   const { sharedExpenseId } = operationPayload(operation);
   if (sharedExpenseId === undefined) return;
   const record = await tx.objectStore("sharedExpenses").get(sharedExpenseId);
