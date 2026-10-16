@@ -41,6 +41,13 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): voi
   unauthorizedHandler = handler;
 }
 
+const RENEWABLE_AUTH_PATHS = ["/auth/me", "/auth/sessions"];
+
+function mayRenewOn(path: string): boolean {
+  if (!path.startsWith("/auth/")) return true;
+  return RENEWABLE_AUTH_PATHS.some((route) => path === route || path.startsWith(`${route}/`));
+}
+
 let confirmationRequiredHandler: (() => void) | null = null;
 
 export function setConfirmationRequiredHandler(handler: (() => void) | null): void {
@@ -124,7 +131,7 @@ export async function api<T>(path: string, request: ApiRequest = {}): Promise<T>
   const startedAt = Date.now();
   let response = await send(path, request, requestId);
 
-  if (response.status === 401 && unauthorizedHandler && !path.startsWith("/auth/")) {
+  if (response.status === 401 && unauthorizedHandler && mayRenewOn(path)) {
     const error = toApiError(response, await readJson(response.clone()), requestId);
     if (sessionMayRenew(error) && (await unauthorizedHandler(error, { startedAt, path })))
       response = await send(path, request, requestId);

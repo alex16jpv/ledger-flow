@@ -120,6 +120,40 @@ describe("api", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    ["GET", "/auth/me"],
+    ["GET", "/auth/sessions"],
+    ["DELETE", "/auth/sessions/s1"],
+  ] as const)("renews the session for %s %s [T-173]", async (method, path) => {
+    fetchMock
+      .mockResolvedValueOnce(
+        json({ error: "Unauthorized", message: "No session" }, { status: 401 }),
+      )
+      .mockResolvedValueOnce(json({ ok: true }));
+    const handler = vi.fn().mockResolvedValue(true);
+    setUnauthorizedHandler(handler);
+    await expect(api(path, { method })).resolves.toEqual({ ok: true });
+    expect(handler).toHaveBeenCalledWith(expect.any(ApiError), expect.objectContaining({ path }));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ["POST", "/auth/login"],
+    ["POST", "/auth/logout"],
+    ["POST", "/auth/logout-all"],
+    ["POST", "/auth/verify"],
+    ["DELETE", "/auth/change-email"],
+    ["GET", "/auth/meta"],
+    ["GET", "/auth/sessionsx"],
+  ] as const)("leaves a 401 from %s %s to its caller", async (method, path) => {
+    fetchMock.mockResolvedValue(json({ error: "Unauthorized", message: "no" }, { status: 401 }));
+    const handler = vi.fn().mockResolvedValue(true);
+    setUnauthorizedHandler(handler);
+    await expect(api(path, { method })).rejects.toMatchObject({ status: 401 });
+    expect(handler).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("never renews the session for a wrong current password, which would guess it twice", async () => {
     fetchMock.mockResolvedValue(
       json(
