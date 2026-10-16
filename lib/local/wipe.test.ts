@@ -7,10 +7,11 @@ import { tabChannel } from "@/lib/session/channel";
 import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 import { account } from "@/lib/testing/vault";
 
+import { WIPE_PATIENCE_MS, WipeIncompleteError } from "./db";
 import { noteVaultOpened, reportVaultEvictionIfAny } from "./evicted";
 import { setCurrentVault } from "./repository";
 import { accountRecord, vaultDatabaseName } from "./schema";
-import { clearSessionMarker, WIPE_PATIENCE_MS, WipeIncompleteError, wipeThisDevice } from "./wipe";
+import { clearSessionMarker, wipeThisDevice } from "./wipe";
 
 vi.mock("@/lib/session/api", () => ({ requestLogout: vi.fn() }));
 

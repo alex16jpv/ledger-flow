@@ -51,6 +51,8 @@ anyone awaits it; whoever awaits it still gets the rejection, and a failed reque
 A `versionchange` with no new version is another tab deleting the vault ("Delete everything on this
 device"). Then the mirror lets the handle go and does **not** open it again: opening is what creates a
 database, so it would come back empty and the next pass would download everything into it (T-166).
+An open already queued behind the delete lands after it all the same, so a mirror whose open created
+the database (`VaultHandle.created`) while the device has no marker closes it and drops it.
 `wipeThisDevice` clears the marker before it drops anything and, once every vault is gone, posts
 `device:wiped` on the tab channel: every tab in the app's frame answers with the same full load of
 sign-in the wiping tab does (`useWipedElsewhere`). Only then does it leave this-device-only and sign the

@@ -1,5 +1,6 @@
 import { forceCloseDatabase } from "fake-indexeddb";
 import { unwrap } from "idb";
+import type { MockInstance } from "vitest";
 
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { account, changes as feedChanges, wipeVaults } from "@/lib/testing/vault";
@@ -47,6 +48,7 @@ const feed: SyncChangesResponse = {
 };
 
 let queries: PullPageQuery[] = [];
+let marker: MockInstance<() => string> | null = null;
 let clock = 0;
 let answer: (page: SyncChangesResponse) => void = () => undefined;
 let failing = false;
@@ -70,6 +72,7 @@ function start(pending = false): () => void {
 }
 
 beforeEach(() => {
+  marker = vi.spyOn(document, "cookie", "get").mockReturnValue(`__Host-session=u1.${Date.now()}`);
   queries = [];
   failing = false;
   clock = 1_000_000;
@@ -86,6 +89,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  marker?.mockRestore();
   if (originalStorage) Object.defineProperty(navigator, "storage", originalStorage);
   vi.unstubAllGlobals();
   setCurrentVault(null);
@@ -167,6 +171,20 @@ describe("another tab deleting everything on this device (T-166)", () => {
     expect(names).not.toContain(vaultDatabaseName("u1"));
     expect(queries).toHaveLength(1);
     await expect(pullNow()).rejects.toThrow(ResyncUnavailableError);
+    stop();
+  });
+
+  // An open queued behind the delete lands after it, and opening is what creates the database.
+  it("drops a copy it had to create once the marker is gone", async () => {
+    marker?.mockReturnValue("");
+    const stop = start();
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(currentVault()).toBeNull();
+    const names = (await indexedDB.databases()).map((database) => database.name);
+    expect(names).not.toContain(vaultDatabaseName("u1"));
+    expect(queries).toHaveLength(0);
     stop();
   });
 });

@@ -31,11 +31,15 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   closes would leave the sheet spinning forever.
 - **Consequence:** offline the logout cannot reach the server, so the session cookies outlive the wipe
   until they expire or the next sign-in replaces them; with no marker the proxy sends every app route to
-  sign-in and no tab uses them. An open already queued behind the delete — a tab loading at that very
-  moment, or one still running a build from before this change, whose close reopens — creates the
-  database again, empty: nothing downloads into it, because the marker is gone and, online, so is the
-  session. Refusing to open without the marker would close that gap, but a live session with no marker
-  is a case the app accepts (`sessionIsFor`), and it would leave that user with no copy.
+  sign-in and no tab uses them. An open already queued behind the delete — a tab whose mirror was still
+  opening when the wipe began, which the e2e hit under load — lands after it and creates the database
+  again. So `openVault` says whether it created the database, and a mirror whose open did so with no
+  marker on the device closes it and drops it: the wipe clears the marker before it drops anything, and
+  without one the proxy serves no screen of the app, so no live session is refused its copy. Refusing
+  every open without a marker was rejected: `sessionIsFor` accepts a missing one, and an existing copy
+  is not the wipe's to decide. A tab still running a build from before this change reopens on the
+  delete and creates an empty database; nothing downloads into it, because the marker is gone and,
+  online, so is the session.
 
 ## 2026-10-13 · Emptying the copy keeps the rows the queue created (T-170)
 

@@ -49,6 +49,8 @@ export type OutboxState = "current" | "migrated" | "blocked";
 export interface VaultHandle {
   db: IDBPDatabase<VaultSchema>;
   userId: string;
+  // This open made the database: nothing had it, or another tab had just deleted it.
+  created: boolean;
   mirrorReset: boolean;
   outbox: OutboxState;
   blockedOperations: number;
@@ -226,8 +228,10 @@ export async function openVault(
 ): Promise<VaultHandle> {
   if (!isVaultSupported()) throw new VaultUnavailableError();
 
+  let created = false;
   const db = await openDB<VaultSchema>(vaultDatabaseName(userId), definition.schemaVersion, {
-    upgrade(database, _oldVersion, _newVersion, transaction) {
+    upgrade(database, oldVersion, _newVersion, transaction) {
+      created = oldVersion === 0;
       createStores(database, transaction);
     },
     blocking(_currentVersion, blockedVersion, event) {
@@ -253,6 +257,7 @@ export async function openVault(
   return {
     db,
     userId,
+    created,
     mirrorReset,
     outbox: outbox.state,
     blockedOperations: outbox.blocked.length,
@@ -261,6 +266,40 @@ export async function openVault(
       db.close();
     },
   };
+}
+
+export const WIPE_PATIENCE_MS = 10_000;
+
+export class WipeIncompleteError extends Error {
+  constructor(database: string, cause?: unknown) {
+    super(`The offline copy ${database} could not be deleted`, { cause });
+    this.name = "WipeIncompleteError";
+  }
+}
+
+export function dropDatabase(name: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    let patience: ReturnType<typeof setTimeout> | undefined;
+    const request = indexedDB.deleteDatabase(name);
+    request.onsuccess = () => {
+      clearTimeout(patience);
+      resolve();
+    };
+    request.onerror = () => {
+      clearTimeout(patience);
+      reject(new WipeIncompleteError(name, request.error));
+    };
+    // A connection that ignores `versionchange` holds the delete back for as long as it stays open.
+    request.onblocked = () => {
+      patience ??= setTimeout(() => {
+        reject(new WipeIncompleteError(name, "blocked by an open connection"));
+      }, WIPE_PATIENCE_MS);
+    };
+  });
+}
+
+export function dropVault(userId: string): Promise<void> {
+  return dropDatabase(vaultDatabaseName(userId));
 }
 
 // D-20: Firefox has no `indexedDB.databases()`, and reading the no as a loss invents one.

@@ -4,7 +4,7 @@ import { isLocalOnly } from "@/lib/network/local-only";
 import { fetchCurrentUser } from "@/lib/session/api";
 
 import { loadClockOffset } from "./clock";
-import { isVaultSupported, openVault, VAULT, type VaultHandle } from "./db";
+import { dropVault, isVaultSupported, openVault, VAULT, type VaultHandle } from "./db";
 import { noteVaultOpened, reportVaultEvictionIfAny } from "./evicted";
 import {
   refreshOutboxStatus,
@@ -184,6 +184,12 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     const opened = await openVault(userId, VAULT, { onClosed: reopen, onDeleted: release });
     if (state.stopped) {
       opened.close();
+      return;
+    }
+    // T-166: a wipe clears the marker before it drops anything, so this open came after it.
+    if (opened.created && readSessionMarker() === null) {
+      opened.close();
+      await dropVault(userId);
       return;
     }
     // F-66 and T-163: what the last session learned of this clock, before any read answers from here.

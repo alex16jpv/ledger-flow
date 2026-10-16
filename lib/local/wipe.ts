@@ -10,40 +10,10 @@ import { appliedProfile } from "@/lib/session/applied-profile";
 import { tabChannel } from "@/lib/session/channel";
 import { unsentTheme } from "@/lib/theme/unsent";
 
-import { isVaultSupported } from "./db";
+import { dropDatabase, isVaultSupported } from "./db";
 import { forgetVaultsOpened } from "./evicted";
 import { currentVault, setCurrentVault } from "./repository";
 import { VAULT_DB_PREFIX } from "./schema";
-
-export const WIPE_PATIENCE_MS = 10_000;
-
-export class WipeIncompleteError extends Error {
-  constructor(database: string, cause?: unknown) {
-    super(`The offline copy ${database} could not be deleted`, { cause });
-    this.name = "WipeIncompleteError";
-  }
-}
-
-function dropDatabase(name: string): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    let patience: ReturnType<typeof setTimeout> | undefined;
-    const request = indexedDB.deleteDatabase(name);
-    request.onsuccess = () => {
-      clearTimeout(patience);
-      resolve();
-    };
-    request.onerror = () => {
-      clearTimeout(patience);
-      reject(new WipeIncompleteError(name, request.error));
-    };
-    // A connection that ignores `versionchange` holds the delete back for as long as it stays open.
-    request.onblocked = () => {
-      patience ??= setTimeout(() => {
-        reject(new WipeIncompleteError(name, "blocked by an open connection"));
-      }, WIPE_PATIENCE_MS);
-    };
-  });
-}
 
 // §2.6: a wipe that left the marker would send the user back to the same sheet.
 export function clearSessionMarker(): void {
