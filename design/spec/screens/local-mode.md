@@ -79,6 +79,20 @@ On confirmation the copy, the queue and **the device's session marker** are dele
 sign-in with the toast "Everything on this device was deleted". **The marker is not a detail:** it is
 what stops the device from insisting on opening the copy of a user the server no longer has.
 
+**Every tab goes, and so does the session.** The deletion is of the device, not of the tab that asked:
+any other tab of the app open in this browser goes to the same sign-in with the same notice, and none
+of them opens the copy again or downloads it back (T-166). With a connection, it also signs this device
+out on the server — the screen it lands on asks you to sign in, so a session left alive behind it would
+be a lie, and would keep its row in Active sessions. With no connection the deletion still happens; the
+server session simply ends on its own.
+
+**When something stays behind** (`#delete-local-copy-failed`): the browser can refuse the deletion, or
+another window can hold the copy open and never let go. Then the sheet does not leave and does not say
+"deleted": a `warning` alert below the first, "**Not everything was deleted.** Close the app in your
+other tabs and windows, then try again.", and the button reads "Try again". Going to sign-in saying
+everything was deleted while the copy is still there would be exactly the lie this sheet exists to
+avoid.
+
 **Everyone sees the deletion**, not just development. The case is not only a database wiped locally: it
 is an account that no longer exists, a borrowed device, or a browser someone wants to leave clean. A
 control that only exists in development is not there when it is needed.

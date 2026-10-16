@@ -27,16 +27,15 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Tile } from "@/components/ui/Tile";
 import { useToast } from "@/components/ui/Toast";
 import { LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
-import { localePrefix } from "@/lib/i18n/locales";
 import { Link } from "@/lib/i18n/navigation";
 import { useDates } from "@/lib/i18n/useDates";
 import { iconProps } from "@/lib/icons/sizes";
 import { forceFullResync, pullNow } from "@/lib/local/mirror";
 import { syncTransport } from "@/lib/local/outbox/engine";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
-import { wipeThisDevice } from "@/lib/local/wipe";
+import { loadSignInAfterWipe, wipeThisDevice } from "@/lib/local/wipe";
 import { connectivityStore } from "@/lib/network/connectivity";
-import { localOnlyStore, setLocalOnly } from "@/lib/network/local-only";
+import { localOnlyStore } from "@/lib/network/local-only";
 import { warmAppShell } from "@/lib/pwa/service-worker";
 import { useSession } from "@/lib/session";
 
@@ -390,11 +389,7 @@ export function SyncStatusView() {
         }}
         onConfirm={async () => {
           await wipeThisDevice();
-          setLocalOnly(false);
-          // A full load, not a client navigation: nothing in memory may survive a wipe.
-          window.location.assign(
-            new URL(`${localePrefix(locale)}${LOGIN_PATH}?wiped=1`, window.location.origin),
-          );
+          loadSignInAfterWipe(locale);
         }}
       />
       <InstallSheet

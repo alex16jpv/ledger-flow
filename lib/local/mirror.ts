@@ -181,7 +181,7 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     if (marker?.userId === userId) {
       await reportVaultEvictionIfAny(userId, marker.issuedAt).catch(() => false);
     }
-    const opened = await openVault(userId, VAULT, { onClosed: reopen });
+    const opened = await openVault(userId, VAULT, { onClosed: reopen, onDeleted: release });
     if (state.stopped) {
       opened.close();
       return;
@@ -210,6 +210,13 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     adopt().catch((error: unknown) => {
       console.warn("ledger-flow: the offline mirror could not be reopened", error);
     });
+  };
+
+  const release = (): void => {
+    if (state.stopped) return;
+    activePull = null;
+    handle = null;
+    setCurrentVault(null);
   };
 
   const ready = isVaultSupported() ? adopt() : Promise.resolve();

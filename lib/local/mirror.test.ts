@@ -6,7 +6,13 @@ import { account, changes as feedChanges, wipeVaults } from "@/lib/testing/vault
 import type { SyncChangesResponse } from "@/types/api";
 
 import { VAULT } from "./db";
-import { forceFullResync, PULL_STALE_MS, pullNow, startMirror } from "./mirror";
+import {
+  forceFullResync,
+  PULL_STALE_MS,
+  pullNow,
+  ResyncUnavailableError,
+  startMirror,
+} from "./mirror";
 import type * as Outbox from "./outbox";
 import type { SyncEngineOptions } from "./outbox/engine";
 import { type PullPageQuery, SessionChangedError } from "./pull";
@@ -134,6 +140,33 @@ describe("the browser closing the connection (T-267)", () => {
       expect(currentVault()).not.toBe(dead);
     });
     await expect(currentVault()?.db.count("accounts")).resolves.toBe(1);
+    stop();
+  });
+});
+
+describe("another tab deleting everything on this device (T-166)", () => {
+  it("lets the vault go instead of opening it again and downloading everything", async () => {
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(queries).toHaveLength(1);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase(vaultDatabaseName("u1"));
+      request.onsuccess = () => {
+        resolve();
+      };
+      request.onerror = () => {
+        reject(request.error ?? new Error("the delete failed"));
+      };
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(currentVault()).toBeNull();
+    const names = (await indexedDB.databases()).map((database) => database.name);
+    expect(names).not.toContain(vaultDatabaseName("u1"));
+    expect(queries).toHaveLength(1);
+    await expect(pullNow()).rejects.toThrow(ResyncUnavailableError);
     stop();
   });
 });

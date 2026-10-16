@@ -204,6 +204,8 @@ async function upgradeOutbox(
 export interface OpenVaultOptions {
   // F-14, T-267: once another tab's upgrade or the browser closes this handle, every call throws `InvalidStateError`.
   onClosed?: () => void;
+  // T-166: another tab deleted the database; opening it again would create it empty and refill it.
+  onDeleted?: () => void;
 }
 
 // idb rejects every transaction's `done` even when nobody awaits it; the request that failed already carries the error.
@@ -228,10 +230,11 @@ export async function openVault(
     upgrade(database, _oldVersion, _newVersion, transaction) {
       createStores(database, transaction);
     },
-    blocking(_currentVersion, _blockedVersion, event) {
-      // Another tab is upgrading the schema; holding this connection open would stall it forever.
+    blocking(_currentVersion, blockedVersion, event) {
+      // Another tab is upgrading or deleting the vault; holding this connection open would stall it forever.
       (event.target as IDBDatabase | null)?.close();
-      options.onClosed?.();
+      if (blockedVersion === null) options.onDeleted?.();
+      else options.onClosed?.();
     },
     terminated() {
       options.onClosed?.();

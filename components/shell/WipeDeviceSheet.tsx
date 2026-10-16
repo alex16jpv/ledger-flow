@@ -24,6 +24,7 @@ export function WipeDeviceSheet({
 }) {
   const t = useTranslations("states.noSession");
   const [wiping, setWiping] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [elsewhere, setElsewhere] = useState<number | null>(null);
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export function WipeDeviceSheet({
     return () => {
       wanted = false;
       setElsewhere(null);
+      setFailed(false);
     };
   }, [open]);
 
@@ -61,10 +63,14 @@ export function WipeDeviceSheet({
             disabled={elsewhere === null}
             onClick={() => {
               setWiping(true);
-              void Promise.resolve(onConfirm());
+              Promise.resolve(onConfirm()).catch((error: unknown) => {
+                reportError(error, "vault");
+                setFailed(true);
+                setWiping(false);
+              });
             }}
           >
-            {t("confirmCta")}
+            {failed ? t("retry") : t("confirmCta")}
           </Button>
         </div>
       }
@@ -73,6 +79,11 @@ export function WipeDeviceSheet({
         {pending > 0 ? t("confirmBody", { count: pending }) : t("confirmBodyEmpty")}
         {elsewhere ? ` ${t("confirmElsewhere", { count: elsewhere })}` : null}
       </Alert>
+      {failed && (
+        <Alert tone="warning" role="alert" title={t("failedTitle")}>
+          {t("failedBody")}
+        </Alert>
+      )}
     </Sheet>
   );
 }

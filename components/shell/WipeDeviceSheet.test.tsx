@@ -3,10 +3,13 @@ import userEvent from "@testing-library/user-event";
 
 import { setCurrentVault } from "@/lib/local/repository";
 import type { OutboxOperation } from "@/lib/local/schema";
+import { reportError } from "@/lib/observability/reporter";
 import { renderWithProviders } from "@/lib/testing/render";
 import { openTestVault, wipeVaults } from "@/lib/testing/vault";
 
 import { WipeDeviceSheet } from "./WipeDeviceSheet";
+
+vi.mock("@/lib/observability/reporter", () => ({ reportError: vi.fn() }));
 
 const operation = (seq: number): OutboxOperation => ({
   seq,
@@ -62,6 +65,42 @@ describe("WipeDeviceSheet", () => {
 
     expect(onConfirm).toHaveBeenCalledOnce();
     expect(screen.queryByText(/from another account/)).not.toBeInTheDocument();
+  });
+
+  // T-166: going to sign-in saying everything was deleted while the copy is still there is the lie.
+  it("stays open and offers to try again when not everything could be deleted", async () => {
+    setCurrentVault(await openTestVault("me"));
+    const onConfirm = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("blocked"))
+      .mockResolvedValueOnce(undefined);
+
+    view(onConfirm);
+    await userEvent.click(await screen.findByRole("button", { name: "Delete everything" }));
+
+    expect(
+      (await screen.findByText("Not everything was deleted.")).closest("[role=alert]"),
+    ).not.toBeNull();
+    expect(reportError).toHaveBeenCalledWith(expect.any(Error), "vault");
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(onConfirm).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks again from the start once it is closed and opened", async () => {
+    setCurrentVault(await openTestVault("me"));
+    const onConfirm = vi.fn().mockRejectedValue(new Error("blocked"));
+    const sheet = (open: boolean) => (
+      <WipeDeviceSheet open={open} pending={2} onCancel={vi.fn()} onConfirm={onConfirm} />
+    );
+    const { rerender } = renderWithProviders(sheet(true));
+    await userEvent.click(await screen.findByRole("button", { name: "Delete everything" }));
+    await screen.findByText("Not everything was deleted.");
+
+    rerender(sheet(false));
+    rerender(sheet(true));
+
+    expect(await screen.findByRole("button", { name: "Delete everything" })).toBeInTheDocument();
+    expect(screen.queryByText("Not everything was deleted.")).not.toBeInTheDocument();
   });
 
   it("never counts this account's own queue twice", async () => {
