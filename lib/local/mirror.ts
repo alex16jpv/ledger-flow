@@ -4,7 +4,7 @@ import { isLocalOnly } from "@/lib/network/local-only";
 import { fetchCurrentUser } from "@/lib/session/api";
 
 import { loadClockOffset } from "./clock";
-import { isVaultSupported, openVault, VAULT, type VaultHandle } from "./db";
+import { dropVault, isVaultSupported, openVault, VAULT, type VaultHandle } from "./db";
 import { noteVaultOpened, reportVaultEvictionIfAny } from "./evicted";
 import {
   refreshOutboxStatus,
@@ -181,9 +181,15 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     if (marker?.userId === userId) {
       await reportVaultEvictionIfAny(userId, marker.issuedAt).catch(() => false);
     }
-    const opened = await openVault(userId, VAULT, { onClosed: reopen });
+    const opened = await openVault(userId, VAULT, { onClosed: reopen, onDeleted: release });
     if (state.stopped) {
       opened.close();
+      return;
+    }
+    // T-166: a wipe clears the marker before it drops anything, so this open came after it.
+    if (opened.created && readSessionMarker() === null) {
+      opened.close();
+      await dropVault(userId);
       return;
     }
     // F-66 and T-163: what the last session learned of this clock, before any read answers from here.
@@ -210,6 +216,13 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     adopt().catch((error: unknown) => {
       console.warn("ledger-flow: the offline mirror could not be reopened", error);
     });
+  };
+
+  const release = (): void => {
+    if (state.stopped) return;
+    activePull = null;
+    handle = null;
+    setCurrentVault(null);
   };
 
   const ready = isVaultSupported() ? adopt() : Promise.resolve();

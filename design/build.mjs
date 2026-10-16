@@ -4040,16 +4040,20 @@ const threeExits = () => {
   });
 };
 
-const deleteLocalCopy = ({ elsewhere = 0 } = {}) => {
+const deleteLocalCopy = ({ elsewhere = 0, failed = false } = {}) => {
   const others = elsewhere
     ? ` It also deletes <b>${elsewhere} unsent changes from another account</b> that signed in on this browser.`
+    : "";
+  const failure = failed
+    ? `<div class="alert warning">${iconSvg("triangle-alert")}<span><b>Not everything was deleted.</b> Close the app in your other tabs and windows, then try again.</span></div>`
     : "";
   const inner =
     `<div class="alert danger">${iconSvg("trash-2")}<span>This deletes the copy of your data on this device and ` +
     `<b>2 changes that only exist here</b>. It does not delete your account: signing in again downloads ` +
     `everything the server has.${others}</span></div>` +
+    failure +
     '<div class="hstack" style="gap:10px"><button class="btn ghost lg" style="flex:1">Cancel</button>' +
-    '<button class="btn danger lg" style="flex:1.4">Delete everything</button></div>';
+    `<button class="btn danger lg" style="flex:1.4">${failed ? "Try again" : "Delete everything"}</button></div>`;
   return screen(settingsBodyDim(), {
     tab: "inicio",
     side: "inicio",
@@ -8904,6 +8908,13 @@ const PAGES = [
         "Another account's unsent changes wait hidden on this device after someone else signed in. The deletion takes them too, so the sheet counts them and says whose they are.",
         deleteLocalCopy({ elsewhere: 3 }),
         { added: "2026-09-26" },
+      ),
+      plate(
+        "delete-local-copy-failed",
+        "Delete everything · something stayed behind",
+        "The browser refused, or another window held the copy open. The sheet stays, says so, and offers to try again: it never goes to sign-in saying everything was deleted.",
+        deleteLocalCopy({ failed: true }),
+        { added: "2026-10-16" },
       ),
       plate(
         "another-account-signed-in",

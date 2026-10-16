@@ -49,6 +49,8 @@ export type OutboxState = "current" | "migrated" | "blocked";
 export interface VaultHandle {
   db: IDBPDatabase<VaultSchema>;
   userId: string;
+  // This open made the database: nothing had it, or another tab had just deleted it.
+  created: boolean;
   mirrorReset: boolean;
   outbox: OutboxState;
   blockedOperations: number;
@@ -204,6 +206,8 @@ async function upgradeOutbox(
 export interface OpenVaultOptions {
   // F-14, T-267: once another tab's upgrade or the browser closes this handle, every call throws `InvalidStateError`.
   onClosed?: () => void;
+  // T-166: another tab deleted the database; opening it again would create it empty and refill it.
+  onDeleted?: () => void;
 }
 
 // idb rejects every transaction's `done` even when nobody awaits it; the request that failed already carries the error.
@@ -224,14 +228,17 @@ export async function openVault(
 ): Promise<VaultHandle> {
   if (!isVaultSupported()) throw new VaultUnavailableError();
 
+  let created = false;
   const db = await openDB<VaultSchema>(vaultDatabaseName(userId), definition.schemaVersion, {
-    upgrade(database, _oldVersion, _newVersion, transaction) {
+    upgrade(database, oldVersion, _newVersion, transaction) {
+      created = oldVersion === 0;
       createStores(database, transaction);
     },
-    blocking(_currentVersion, _blockedVersion, event) {
-      // Another tab is upgrading the schema; holding this connection open would stall it forever.
+    blocking(_currentVersion, blockedVersion, event) {
+      // Another tab is upgrading or deleting the vault; holding this connection open would stall it forever.
       (event.target as IDBDatabase | null)?.close();
-      options.onClosed?.();
+      if (blockedVersion === null) options.onDeleted?.();
+      else options.onClosed?.();
     },
     terminated() {
       options.onClosed?.();
@@ -250,6 +257,7 @@ export async function openVault(
   return {
     db,
     userId,
+    created,
     mirrorReset,
     outbox: outbox.state,
     blockedOperations: outbox.blocked.length,
@@ -258,6 +266,40 @@ export async function openVault(
       db.close();
     },
   };
+}
+
+export const WIPE_PATIENCE_MS = 10_000;
+
+export class WipeIncompleteError extends Error {
+  constructor(database: string, cause?: unknown) {
+    super(`The offline copy ${database} could not be deleted`, { cause });
+    this.name = "WipeIncompleteError";
+  }
+}
+
+export function dropDatabase(name: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    let patience: ReturnType<typeof setTimeout> | undefined;
+    const request = indexedDB.deleteDatabase(name);
+    request.onsuccess = () => {
+      clearTimeout(patience);
+      resolve();
+    };
+    request.onerror = () => {
+      clearTimeout(patience);
+      reject(new WipeIncompleteError(name, request.error));
+    };
+    // A connection that ignores `versionchange` holds the delete back for as long as it stays open.
+    request.onblocked = () => {
+      patience ??= setTimeout(() => {
+        reject(new WipeIncompleteError(name, "blocked by an open connection"));
+      }, WIPE_PATIENCE_MS);
+    };
+  });
+}
+
+export function dropVault(userId: string): Promise<void> {
+  return dropDatabase(vaultDatabaseName(userId));
 }
 
 // D-20: Firefox has no `indexedDB.databases()`, and reading the no as a loss invents one.

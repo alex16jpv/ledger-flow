@@ -1,12 +1,19 @@
 import { forceCloseDatabase } from "fake-indexeddb";
 import { unwrap } from "idb";
+import type { MockInstance } from "vitest";
 
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
 import { account, changes as feedChanges, wipeVaults } from "@/lib/testing/vault";
 import type { SyncChangesResponse } from "@/types/api";
 
 import { VAULT } from "./db";
-import { forceFullResync, PULL_STALE_MS, pullNow, startMirror } from "./mirror";
+import {
+  forceFullResync,
+  PULL_STALE_MS,
+  pullNow,
+  ResyncUnavailableError,
+  startMirror,
+} from "./mirror";
 import type * as Outbox from "./outbox";
 import type { SyncEngineOptions } from "./outbox/engine";
 import { type PullPageQuery, SessionChangedError } from "./pull";
@@ -41,6 +48,7 @@ const feed: SyncChangesResponse = {
 };
 
 let queries: PullPageQuery[] = [];
+let marker: MockInstance<() => string> | null = null;
 let clock = 0;
 let answer: (page: SyncChangesResponse) => void = () => undefined;
 let failing = false;
@@ -64,6 +72,7 @@ function start(pending = false): () => void {
 }
 
 beforeEach(() => {
+  marker = vi.spyOn(document, "cookie", "get").mockReturnValue(`__Host-session=u1.${Date.now()}`);
   queries = [];
   failing = false;
   clock = 1_000_000;
@@ -80,6 +89,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  marker?.mockRestore();
   if (originalStorage) Object.defineProperty(navigator, "storage", originalStorage);
   vi.unstubAllGlobals();
   setCurrentVault(null);
@@ -134,6 +144,47 @@ describe("the browser closing the connection (T-267)", () => {
       expect(currentVault()).not.toBe(dead);
     });
     await expect(currentVault()?.db.count("accounts")).resolves.toBe(1);
+    stop();
+  });
+});
+
+describe("another tab deleting everything on this device (T-166)", () => {
+  it("lets the vault go instead of opening it again and downloading everything", async () => {
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(queries).toHaveLength(1);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase(vaultDatabaseName("u1"));
+      request.onsuccess = () => {
+        resolve();
+      };
+      request.onerror = () => {
+        reject(request.error ?? new Error("the delete failed"));
+      };
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(currentVault()).toBeNull();
+    const names = (await indexedDB.databases()).map((database) => database.name);
+    expect(names).not.toContain(vaultDatabaseName("u1"));
+    expect(queries).toHaveLength(1);
+    await expect(pullNow()).rejects.toThrow(ResyncUnavailableError);
+    stop();
+  });
+
+  // An open queued behind the delete lands after it, and opening is what creates the database.
+  it("drops a copy it had to create once the marker is gone", async () => {
+    marker?.mockReturnValue("");
+    const stop = start();
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(currentVault()).toBeNull();
+    const names = (await indexedDB.databases()).map((database) => database.name);
+    expect(names).not.toContain(vaultDatabaseName("u1"));
+    expect(queries).toHaveLength(0);
     stop();
   });
 });

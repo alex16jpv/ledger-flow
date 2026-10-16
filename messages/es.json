@@ -833,6 +833,9 @@
       "confirmBodyEmpty": "Esto borra la copia de tus datos en este dispositivo. No borra tu cuenta: al entrar otra vez se descarga todo lo que tenga el servidor.",
       "confirmElsewhere": "También borra {count, plural, =1 {# cambio sin enviar} other {# cambios sin enviar}} de otra cuenta que inició sesión en este navegador.",
       "confirmCta": "Borrar todo",
+      "failedTitle": "No se borró todo.",
+      "failedBody": "Cierra la app en tus otras pestañas y ventanas y vuelve a intentarlo.",
+      "retry": "Reintentar",
       "cancel": "Cancelar",
       "wiped": "Se borró todo en este dispositivo"
     },

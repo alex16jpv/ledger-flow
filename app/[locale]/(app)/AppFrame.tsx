@@ -25,14 +25,14 @@ import { readSessionMarker, vaultUserFor } from "@/lib/auth/marker";
 import { CONFIRM_TO_CONTINUE_PATH, LOGIN_PATH, REAUTH_PARAM } from "@/lib/auth/routes";
 import { isEnabled } from "@/lib/flags";
 import { FormatSettingsProvider } from "@/lib/i18n/FormatSettingsProvider";
-import { localePrefix } from "@/lib/i18n/locales";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { isAppLocale } from "@/lib/i18n/routing";
 import { noMirror, startMirror } from "@/lib/local/mirror";
 import { useOutbox } from "@/lib/local/outbox/useOutbox";
 import { expectVault } from "@/lib/local/repository";
 import { useMirrorProfile } from "@/lib/local/useMirrorProfile";
-import { wipeThisDevice } from "@/lib/local/wipe";
+import { useWipedElsewhere } from "@/lib/local/useWipedElsewhere";
+import { loadSignInAfterWipe, wipeThisDevice } from "@/lib/local/wipe";
 import { HistoryTracker } from "@/lib/navigation/history";
 import { reportOnline } from "@/lib/network/connectivity";
 import { startHeartbeat } from "@/lib/network/heartbeat";
@@ -76,6 +76,7 @@ function Frame({ children }: { children: ReactNode }) {
   // F-41: closing the sheet in local mode closes it for good; a new session remounts it clear.
   const [sheetDismissed, setSheetDismissed] = useState(false);
   useEffect(() => startHeartbeat(), []);
+  useWipedElsewhere();
   useProfilePreferences();
   const userId = session.user?.id;
   const sessionStatus = session.status;
@@ -213,12 +214,8 @@ function Frame({ children }: { children: ReactNode }) {
           }}
           onWipe={async () => {
             await wipeThisDevice();
-            setLocalOnly(false);
             queryClient.clear();
-            // A full load, not a client navigation: after a wipe nothing in memory may survive.
-            window.location.assign(
-              new URL(`${localePrefix(locale)}${LOGIN_PATH}?wiped=1`, window.location.origin),
-            );
+            loadSignInAfterWipe(locale);
           }}
         />
       )}

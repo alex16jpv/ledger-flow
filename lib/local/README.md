@@ -48,6 +48,19 @@ closes it on its own (`terminated` — iOS after a long suspension, site data cl
 connection. Every transaction's `done` on the vault's connection is observed at birth, because `idb` rejects it whether or not
 anyone awaits it; whoever awaits it still gets the rejection, and a failed request rejects its own call.
 
+A `versionchange` with no new version is another tab deleting the vault ("Delete everything on this
+device"). Then the mirror lets the handle go and does **not** open it again: opening is what creates a
+database, so it would come back empty and the next pass would download everything into it (T-166).
+An open already queued behind the delete lands after it all the same, so a mirror whose open created
+the database (`VaultHandle.created`) while the device has no marker closes it and drops it.
+`wipeThisDevice` clears the marker before it drops anything and, once every vault is gone, posts
+`device:wiped` on the tab channel: every tab in the app's frame answers with the same full load of
+sign-in the wiping tab does (`useWipedElsewhere`). Only then does it leave this-device-only and sign the
+device out on the server (best effort: offline the cookies outlive it, but without the marker nothing
+uses them). A delete the browser refuses rejects with `WipeIncompleteError` at once, and one held back
+by a connection that never closes after `WIPE_PATIENCE_MS`; then no tab is told, the session and the
+choice stay, and the sheet says not everything was deleted instead of going to sign-in.
+
 ## Record shape
 
 Mirror records are `{ id, row, updatedAt, …index keys }` and `row` is **exactly** what

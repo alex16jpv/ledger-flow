@@ -7,7 +7,8 @@ export type TabMessage =
   | { type: "session:refreshed"; at: number }
   | { type: "theme"; palette: string; mode: string }
   | { type: "locale"; locale: string }
-  | { type: "outbox:changed"; vault: string };
+  | { type: "outbox:changed"; vault: string }
+  | { type: "device:wiped" };
 
 type Listener = (message: TabMessage) => void;
 

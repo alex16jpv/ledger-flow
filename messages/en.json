@@ -833,6 +833,9 @@
       "confirmBodyEmpty": "This deletes the copy of your data on this device. It does not delete your account: signing in again downloads everything the server has.",
       "confirmElsewhere": "It also deletes {count, plural, =1 {# unsent change} other {# unsent changes}} from another account that signed in on this browser.",
       "confirmCta": "Delete everything",
+      "failedTitle": "Not everything was deleted.",
+      "failedBody": "Close the app in your other tabs and windows, then try again.",
+      "retry": "Try again",
       "cancel": "Cancel",
       "wiped": "Everything on this device was deleted"
     },

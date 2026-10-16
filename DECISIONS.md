@@ -5,6 +5,42 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-16 · Deleting everything on this device reaches every tab, and ends the session (T-166)
+
+- **Context:** "Delete everything on this device" dropped the vault while another tab of the app was
+  open. That tab's connection got the `versionchange`, closed, and `startMirror` opened it again as it
+  does after a schema upgrade (F-14) — and opening is what creates a database, so the vault came back
+  empty and the next pass downloaded everything into it, while the wiping tab said it was deleted. The
+  session was still alive on the server, so nothing stopped that pass. And `dropDatabase` resolved on
+  `blocked` and on `error`, so a delete that did not happen was reported as done.
+- **Decision:** a `versionchange` whose new version is `null` is a delete, and `openVault` reports it as
+  `onDeleted` instead of `onClosed`; the mirror lets the handle go and never reopens on it. The wipe
+  clears the marker before it drops anything and, once every vault is gone, posts `device:wiped` on the
+  tab channel: every tab in the app's frame clears its memory and loads sign-in with the same notice
+  (`useWipedElsewhere`). Only then does it leave this-device-only and sign this device out
+  (`/auth/logout`, after `noteSessionEnded`), because the screen it lands on asks you to sign in and a
+  live session behind it would be untrue and keep its row in Active sessions. A delete waits for
+  `success`: `error` rejects at once and `blocked` after `WIPE_PATIENCE_MS` (10 s), both with
+  `WipeIncompleteError`; then no other tab is told, the session and the choice stay, and the sheet stays
+  open saying not everything was deleted, with "Try again" (`local-mode.md#delete-local-copy-failed`).
+  The full load of sign-in is `loadSignInAfterWipe`, shared by the two sheets and the other tabs.
+  Taken by the session (the design already said the wipe ends at sign-in).
+- **Alternatives (not taken):** having `reopen` check the session marker first, as the audit suggested
+  — the marker is a cookie another process writes, so a tab can read it before the change lands, while
+  the `null` version is in the event itself; waiting for `blocked` with no cap — a window that never
+  closes would leave the sheet spinning forever.
+- **Consequence:** offline the logout cannot reach the server, so the session cookies outlive the wipe
+  until they expire or the next sign-in replaces them; with no marker the proxy sends every app route to
+  sign-in and no tab uses them. An open already queued behind the delete — a tab whose mirror was still
+  opening when the wipe began, which the e2e hit under load — lands after it and creates the database
+  again. So `openVault` says whether it created the database, and a mirror whose open did so with no
+  marker on the device closes it and drops it: the wipe clears the marker before it drops anything, and
+  without one the proxy serves no screen of the app, so no live session is refused its copy. Refusing
+  every open without a marker was rejected: `sessionIsFor` accepts a missing one, and an existing copy
+  is not the wipe's to decide. A tab still running a build from before this change reopens on the
+  delete and creates an empty database; nothing downloads into it, because the marker is gone and,
+  online, so is the session.
+
 ## 2026-10-13 · Emptying the copy keeps the rows the queue created (T-170)
 
 - **Context:** a resync, a logout that keeps the unsent work, another account's sign-in and a
