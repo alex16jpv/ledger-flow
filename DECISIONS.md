@@ -5,6 +5,23 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-16 · `/auth/me` and `/auth/sessions` renew an expired session like any other read (T-173)
+
+- **Context:** the client exempted every `/auth/*` path from the 401 handler, `/auth/me` included. The
+  access cookie lives 15 minutes, so opening or reloading the app after that asked `/me` once, got a
+  401, never refreshed, and the session sat in `error` (`retry: false`) until the window regained
+  focus: Settings showed half its rows and Language could not be changed. Active sessions failed the
+  same way after the same pause.
+- **Decision:** `api()` renews on a 401 for `/auth/me` and `/auth/sessions` (and `/auth/sessions/:id`),
+  which only read or revoke with the access token. Every other `/auth/*` route stays exempt: they are
+  public, check a password (a 401 there is a wrong password, and renewing would guess it twice), or end
+  or renew the session themselves (`logout`, `logout-all`). The email routes keep `withFreshSession`.
+- **Alternative:** wrapping the `/me` query in `withFreshSession`. It renews with `since = now`, so a
+  `/me` that started before another tab's refresh would rotate the token again; the client's handler
+  passes the request's start, and covers Active sessions too.
+- **Consequence:** with no session left at all, `/me` alone now takes the app to `expired` (the session
+  sheet), where it could sit in `error` until another read hit the dead session.
+
 ## 2026-10-16 · Deleting everything on this device reaches every tab, and ends the session (T-166)
 
 - **Context:** "Delete everything on this device" dropped the vault while another tab of the app was
@@ -2649,6 +2666,7 @@ ZeroDecimalCurrency[]` rejects a code the server does not treat as zero-decimal,
   alone). A 401 whose request started before the last successful refresh is retried without a new
   refresh (`since` check), and `session:refreshed` messages from other tabs update that timestamp,
   so two expired tabs never rotate the same token. `/auth/*` calls are exempt from the handler.
+  _Narrowed by T-173 (2026-10-16): `/auth/me` and `/auth/sessions` go through it._
 - **`BroadcastChannel("lf")`** (`lib/session/channel.ts`) carries `session:expired`,
   `session:logout`, `session:refreshed`, `theme` and `locale`. The theme store posts on every
   persisted change and applies remote changes without persisting them again; `SessionProvider`

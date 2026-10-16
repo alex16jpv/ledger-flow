@@ -134,7 +134,7 @@ export function resetRefreshState(): void {
 
 const isUnauthorized = (error: unknown) => error instanceof ApiError && sessionMayRenew(error);
 
-// The client renews on a 401 everywhere but `/auth/*`, which the access frame and email routes use.
+// For calls the client's 401 handler does not cover: no `SessionProvider` mounted, or an exempt `/auth/*` route.
 export async function withFreshSession<T>(run: () => Promise<T>): Promise<T> {
   try {
     return await run();

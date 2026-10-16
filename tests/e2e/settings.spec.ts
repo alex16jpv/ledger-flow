@@ -56,6 +56,31 @@ test("switching the language moves to /es, persists on reload and is stored on t
   expect(consoleErrors).toEqual([]);
 });
 
+test("opening the app after the access cookie expired renews the session and Settings works [T-173]", async ({
+  page,
+  request,
+}) => {
+  await signedInPage(page, request);
+  await page.goto("/settings");
+  await expect(page.getByRole("button", { name: /^Language/ })).toBeVisible();
+  await page.context().clearCookies({ name: "__Host-access" });
+  await page.reload();
+  await page.getByRole("button", { name: /^Language/ }).click();
+  await expect(page.getByRole("option", { name: /Español/ })).toBeEnabled();
+
+  await page.context().clearCookies({ name: "__Host-access" });
+  const sessionsRefused = page.waitForResponse(
+    (response) => response.url().endsWith("/api/auth/sessions") && response.status() === 401,
+  );
+  await page.route("**/api/**", async (route) => {
+    if (!/\/api\/auth\/(sessions|refresh)$/.test(route.request().url())) await sessionsRefused;
+    await route.continue();
+  });
+  await page.goto("/settings/sessions");
+  await sessionsRefused;
+  await expect(page.getByText("This device", { exact: true })).toBeVisible();
+});
+
 async function anotherDevice(
   browser: Parameters<Parameters<typeof test>[2]>[0]["browser"],
   email: string,
@@ -256,8 +281,13 @@ test("a sign-out everywhere with no session left lands on Sign in saying the oth
   request,
 }) => {
   await signedInPage(page, request);
+  // The app's opening reads must land before the session dies, or one of them shows the expired sheet first.
+  const opened = ["/api/sync/changes", "/api/invitations", "/api/transactions"].map((path) =>
+    page.waitForResponse((response) => new URL(response.url()).pathname === path && response.ok()),
+  );
   await page.goto("/settings/sessions");
   await expect(page.getByText("This device", { exact: true })).toBeVisible();
+  await Promise.all(opened);
   // A new account saves this device's theme on opening the app: that write must land before the session dies.
   await expect.poll(() => savedTheme(request)).not.toBeNull();
   await page.context().clearCookies({ name: /^(__Host-access|__Secure-refresh)$/ });
