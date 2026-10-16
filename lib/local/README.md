@@ -42,6 +42,20 @@ Reconciliation happens on every open, not inside `upgradeneeded`: a `versionchan
 cannot await outside work, and refusing to bump a number in `meta` is a far clearer way to block than
 aborting a schema upgrade.
 
+**Two builds on one copy (T-171).** While its connection is open, every tab holds the shared Web Lock
+`lf-vault-<userId>:<schema>.<mirror>.<outbox>`, taken before the open so a tab its upgrade closes
+already finds it. Before opening, the mirror posts `vault:opening` with its three numbers on the tab
+channel, and a tab of an older build lets the copy go. An open that meets an older copy waits, at most
+`OLDER_TABS_PATIENCE_MS` (3 s), for the older builds' locks to be released before it resets or migrates
+anything. An open that meets a copy newer than its build — `VersionError`, or a stored mirror or outbox
+version above its own — throws `VaultOutdatedError` and touches nothing when a tab of a newer build
+holds a lock or a new worker is installing or waiting; otherwise it is what a rolled-back deploy finds,
+and the mirror is reset and the queue blocked as before (a newer schema still fails, because IndexedDB
+cannot open below the stored version). A tab that stepped aside works as with no copy — reads and
+writes go to the server — and `onOutdated` raises the new-version stripe, whose Reload brings the newer
+build. Any other failure to open or reopen, and a lock that cannot be taken, are reported under the
+`vault` scope. Without `navigator.locks` an older build resets the copy as it did before.
+
 A handle can die under the app: another tab's schema upgrade asks for it (`blocking`), or the browser
 closes it on its own (`terminated` — iOS after a long suspension, site data cleared). Either way
 `startMirror` drops it and opens a new one the way it opened the first, eviction check included (F-14, T-267), so no read or pass keeps calling a closed
@@ -272,7 +286,10 @@ keys and the components do not know the difference. `read(fromServer, fromMirror
 - it first waits for the vault the frame said it was about to open (F-31). The screens render, and
   query, before `AppFrame`'s effects run, so a read that decided on the handle alone went to the
   server with a full mirror sitting there; `AppFrame` raises the gate while it renders and
-  `startMirror` lowers it with the handle, or with null when none opens;
+  `startMirror` lowers it with the handle, or with null when none opens. Stopping the mirror takes the
+  gate down and `startMirror` raises it again, so a sign-in after a sign-out without a reload waits for
+  its own vault too (T-171); `startMirror` replaces a gate `noMirror` already answered, and a gate
+  raised once something has answered starts out answered;
 - **the mirror is the primary path, network or not** (O-F2b, decision 12.2). `READ_SOURCE` in
   `repository/read.ts` is the constant that says so, and setting it back to `"server"` is the whole
   way back to the fallback of O-F2a;

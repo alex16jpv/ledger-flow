@@ -43,7 +43,8 @@ the user.
    syncing": that is `signedout`, which describes a session that died on its own.
 
 8. **`update`** (`#new-version` on [states.md](states.md)) — **blue** (`--info-soft` / `--info`), the one
-   stripe that is good news: a new version of the app is waiting. "**A new version of Ledger Flow is
+   stripe that is good news: a new version of the app is waiting, or another tab already runs one over
+   this device's copy (T-171). "**A new version of Ledger Flow is
    ready.**" plus "Reloading takes a second. Nothing you saved is lost.", with **"Reload"** and a ✕ that
    puts it away until the app is next opened or comes back to the screen. ES «**Hay una versión nueva de
    Ledger Flow.**» + «Recargar tarda un segundo. No se pierde nada de lo que guardaste.» + «Recargar».

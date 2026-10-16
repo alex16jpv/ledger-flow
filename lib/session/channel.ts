@@ -8,6 +8,13 @@ export type TabMessage =
   | { type: "theme"; palette: string; mode: string }
   | { type: "locale"; locale: string }
   | { type: "outbox:changed"; vault: string }
+  | {
+      type: "vault:opening";
+      userId: string;
+      schemaVersion: number;
+      mirrorVersion: number;
+      outboxVersion: number;
+    }
   | { type: "device:wiped" };
 
 type Listener = (message: TabMessage) => void;

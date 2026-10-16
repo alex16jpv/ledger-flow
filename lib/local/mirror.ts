@@ -1,10 +1,20 @@
 import { readSessionMarker, sessionIsFor } from "@/lib/auth/marker";
 import { connectivityStore } from "@/lib/network/connectivity";
 import { isLocalOnly } from "@/lib/network/local-only";
+import { reportError } from "@/lib/observability/reporter";
 import { fetchCurrentUser } from "@/lib/session/api";
+import { tabChannel } from "@/lib/session/channel";
 
 import { loadClockOffset } from "./clock";
-import { dropVault, isVaultSupported, openVault, VAULT, type VaultHandle } from "./db";
+import {
+  dropVault,
+  isNewerVault,
+  isVaultSupported,
+  openVault,
+  VAULT,
+  type VaultHandle,
+  VaultOutdatedError,
+} from "./db";
 import { noteVaultOpened, reportVaultEvictionIfAny } from "./evicted";
 import {
   refreshOutboxStatus,
@@ -16,7 +26,7 @@ import {
 import { requestPersistentStorage } from "./persist";
 import { pullChanges, type PullOptions, PullSupersededError, SessionChangedError } from "./pull";
 import { purgeVault } from "./purge";
-import { setCurrentVault } from "./repository";
+import { raiseVaultGate, resetVaultGate, setCurrentVault } from "./repository";
 import { PROFILE_KEY, profileRecord, readMirrorEpoch } from "./schema";
 
 // Plan §4.2: on open, on focus if stale, and after a push — never on a background timer.
@@ -27,6 +37,8 @@ export interface MirrorOptions {
   now?: () => number;
   // F-38: the pull writes behind React Query's back; nothing here knows about React.
   onChanged?: () => void;
+  // T-171: another tab runs a newer build of the copy, so this one has to be reloaded.
+  onOutdated?: () => void;
 }
 
 // Nothing on this page is going to open a vault: the reads waiting for one (F-31) stop waiting.
@@ -76,6 +88,7 @@ export async function forceFullResync(userId: string): Promise<void> {
 }
 
 export function startMirror(userId: string, options: MirrorOptions = {}): () => void {
+  raiseVaultGate();
   const now = options.now ?? Date.now;
   let handle: VaultHandle | null = null;
   let running: Promise<boolean> | null = null;
@@ -83,7 +96,9 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
   let served = 0;
   let lastPullAt = 0;
   let restamped = false;
-  const state = { stopped: false };
+  const state = { stopped: false, outdated: false };
+  // A function, so a check after an `await` is not narrowed away by the one before it.
+  const letGo = (): boolean => state.stopped || state.outdated;
 
   // H-14: the feed carries the profile only when it changed, so a mirror can end with no zone.
   const ensureProfile = async (vault: VaultHandle, epoch: number): Promise<boolean> => {
@@ -181,8 +196,15 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     if (marker?.userId === userId) {
       await reportVaultEvictionIfAny(userId, marker.issuedAt).catch(() => false);
     }
+    tabChannel.post({
+      type: "vault:opening",
+      userId,
+      schemaVersion: VAULT.schemaVersion,
+      mirrorVersion: VAULT.mirrorVersion,
+      outboxVersion: VAULT.outboxVersion,
+    });
     const opened = await openVault(userId, VAULT, { onClosed: reopen, onDeleted: release });
-    if (state.stopped) {
+    if (letGo()) {
       opened.close();
       return;
     }
@@ -194,6 +216,10 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     }
     // F-66 and T-163: what the last session learned of this clock, before any read answers from here.
     await loadClockOffset(opened.db);
+    if (letGo()) {
+      opened.close();
+      return;
+    }
     handle = opened;
     noteVaultOpened(userId);
     setCurrentVault(opened);
@@ -208,16 +234,6 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     await requestSync();
   };
 
-  // F-14, T-267: another tab's new schema or the browser closed this connection, so reads go back to the server.
-  const reopen = (): void => {
-    if (state.stopped) return;
-    handle = null;
-    setCurrentVault(null);
-    adopt().catch((error: unknown) => {
-      console.warn("ledger-flow: the offline mirror could not be reopened", error);
-    });
-  };
-
   const release = (): void => {
     if (state.stopped) return;
     activePull = null;
@@ -225,25 +241,49 @@ export function startMirror(userId: string, options: MirrorOptions = {}): () => 
     setCurrentVault(null);
   };
 
+  const standAside = (): void => {
+    if (letGo()) return;
+    state.outdated = true;
+    handle?.close();
+    release();
+    options.onOutdated?.();
+  };
+
+  const failed = (error: unknown): void => {
+    if (error instanceof VaultOutdatedError) standAside();
+    else reportError(error, "vault");
+  };
+
+  // F-14, T-267: another tab's new schema or the browser closed this connection, so reads go back to the server.
+  const reopen = (): void => {
+    if (letGo()) return;
+    handle = null;
+    setCurrentVault(null);
+    adopt().catch(failed);
+  };
+
+  const unfollowTabs = tabChannel.subscribe((message) => {
+    if (message.type !== "vault:opening" || message.userId !== userId) return;
+    if (isNewerVault(message, VAULT)) standAside();
+  });
+
   const ready = isVaultSupported() ? adopt() : Promise.resolve();
 
-  ready
-    .catch((error: unknown) => {
-      console.warn("ledger-flow: the offline mirror could not be opened", error);
-    })
-    .finally(() => {
-      // A read waiting for this vault (F-31) gets its answer even when none opened.
-      if (!state.stopped) setCurrentVault(handle);
-    });
+  ready.catch(failed).finally(() => {
+    // A read waiting for this vault (F-31) gets its answer even when none opened.
+    if (!state.stopped) setCurrentVault(handle);
+  });
 
   return () => {
     state.stopped = true;
     activePull = null;
     unsubscribe();
+    unfollowTabs();
     stopEngine();
     window.removeEventListener("focus", pullIfStale);
     document.removeEventListener("visibilitychange", pullIfStale);
     setCurrentVault(null);
+    resetVaultGate();
     resetOutboxStatus();
     handle?.close();
     handle = null;

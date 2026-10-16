@@ -52,7 +52,10 @@ server fails and when something has to be confirmed.
   second. Nothing you saved is lost.", with **Reload** and a **✕** ("Not now"). It does not expire and no toast replaces it. On a device working on this device only it goes before that stripe, which never goes away on its own. The ✕ puts it away until the app is next opened or comes back to the screen (from
   another app, another tab, the lock screen) for as long as that screen still runs the older version; meanwhile Settings ›
   Version says so and has its own Reload ([settings.md](settings.md)). Coming back also looks for a new
-  version, so a phone that never reloads the app still finds one. It never reloads on its own. Until
+  version, so a phone that never reloads the app still finds one. It never reloads on its own. It also
+  appears when another tab of the same browser runs a newer version of the app over the same offline
+  copy (T-171): from then on this tab stops using the copy — its screens ask the server and what it saves
+  goes straight there, so without network a save fails as it does with no copy — until Reload. Until
   T-196 it was a five-second toast, which a Saved replaced and which was never shown again: the
   alternatives are on `variants.html`.
 - **Confirm your email** (`#confirm-your-email`, T-210, T-237): only an account from before the app sent

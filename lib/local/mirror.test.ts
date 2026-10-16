@@ -3,12 +3,17 @@ import { unwrap } from "idb";
 import type { MockInstance } from "vitest";
 
 import { connectivityStore, reportOnline } from "@/lib/network/connectivity";
-import { account, changes as feedChanges, wipeVaults } from "@/lib/testing/vault";
+import { setErrorReporter } from "@/lib/observability/reporter";
+import { tabChannel } from "@/lib/session/channel";
+import { installFakeLocks } from "@/lib/testing/locks";
+import { account, changes as feedChanges, openTestVault, wipeVaults } from "@/lib/testing/vault";
 import type { SyncChangesResponse } from "@/types/api";
 
+import type * as Clock from "./clock";
 import { VAULT } from "./db";
 import {
   forceFullResync,
+  noMirror,
   PULL_STALE_MS,
   pullNow,
   ResyncUnavailableError,
@@ -18,10 +23,28 @@ import type * as Outbox from "./outbox";
 import type { SyncEngineOptions } from "./outbox/engine";
 import { type PullPageQuery, SessionChangedError } from "./pull";
 import { purgeVault } from "./purge";
-import { currentVault, expectVault, read, resetVaultGate, setCurrentVault } from "./repository";
+import {
+  currentVault,
+  expectVault,
+  read,
+  resetVaultGate,
+  setCurrentVault,
+  vaultReady,
+} from "./repository";
 import { PROFILE_KEY, vaultDatabaseName } from "./schema";
 
 const engine = vi.hoisted(() => ({ options: undefined as SyncEngineOptions | undefined }));
+const clockLoad = vi.hoisted(() => ({ during: null as (() => void) | null }));
+vi.mock("./clock", async (importOriginal) => {
+  const original = await importOriginal<typeof Clock>();
+  return {
+    ...original,
+    loadClockOffset: async (...args: Parameters<typeof original.loadClockOffset>) => {
+      clockLoad.during?.();
+      return original.loadClockOffset(...args);
+    },
+  };
+});
 vi.mock("./outbox", async (importOriginal) => {
   const original = await importOriginal<typeof Outbox>();
   return {
@@ -53,11 +76,13 @@ let clock = 0;
 let answer: (page: SyncChangesResponse) => void = () => undefined;
 let failing = false;
 const onChanged = vi.fn();
+const onOutdated = vi.fn();
 
 function start(pending = false): () => void {
   return startMirror("u1", {
     now: () => clock,
     onChanged,
+    onOutdated,
     pull: {
       fetchPage: (query) => {
         queries.push(query);
@@ -78,6 +103,7 @@ beforeEach(() => {
   clock = 1_000_000;
   persist.mockClear();
   onChanged.mockClear();
+  onOutdated.mockClear();
   vi.stubGlobal(
     "fetch",
     vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(meResponse())),
@@ -104,7 +130,6 @@ describe("another tab upgrading the schema (F-14)", () => {
     await vi.waitFor(() => {
       expect(currentVault()?.userId).toBe("u1");
     });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     // Holding the connection through a `versionchange` would stall the newer tab forever.
     const other = indexedDB.open(vaultDatabaseName("u1"), VAULT.schemaVersion + 1);
@@ -122,8 +147,145 @@ describe("another tab upgrading the schema (F-14)", () => {
     await vi.waitFor(() => {
       expect(currentVault()).toBeNull();
     });
-    warn.mockRestore();
     stop();
+  });
+});
+
+describe("a newer build of the app in another tab (T-171)", () => {
+  let uninstallLocks: () => void = () => undefined;
+  afterEach(() => {
+    clockLoad.during = null;
+    uninstallLocks();
+    uninstallLocks = () => undefined;
+    setErrorReporter(null);
+  });
+
+  const opened = (overrides: Partial<typeof VAULT> = {}, userId = "u1") => {
+    tabChannel.emitLocal({
+      type: "vault:opening",
+      userId,
+      schemaVersion: VAULT.schemaVersion,
+      mirrorVersion: VAULT.mirrorVersion,
+      outboxVersion: VAULT.outboxVersion,
+      ...overrides,
+    });
+  };
+
+  it("steps aside and asks for a reload when that tab opens the copy", async () => {
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(queries).toHaveLength(1);
+    });
+
+    opened({ mirrorVersion: VAULT.mirrorVersion + 1 });
+
+    expect(onOutdated).toHaveBeenCalledOnce();
+    expect(currentVault()).toBeNull();
+    await expect(vaultReady()).resolves.toBeNull();
+    await expect(pullNow()).rejects.toThrow(ResyncUnavailableError);
+    stop();
+  });
+
+  it("stays on the copy for a tab of the same build or of another user", async () => {
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(queries).toHaveLength(1);
+    });
+
+    opened();
+    opened({ mirrorVersion: VAULT.mirrorVersion + 1 }, "u2");
+
+    expect(onOutdated).not.toHaveBeenCalled();
+    expect(currentVault()?.userId).toBe("u1");
+    stop();
+  });
+
+  it("does not take the copy when that tab announces itself while this one is still opening it", async () => {
+    clockLoad.during = () => {
+      opened({ mirrorVersion: VAULT.mirrorVersion + 1 });
+    };
+    const stop = start();
+
+    await vi.waitFor(() => {
+      expect(onOutdated).toHaveBeenCalledOnce();
+    });
+    await expect(vaultReady()).resolves.toBeNull();
+    expect(queries).toHaveLength(0);
+    stop();
+  });
+
+  it("never opens a copy that tab holds", async () => {
+    uninstallLocks = installFakeLocks();
+    await openTestVault("u1", { ...VAULT, mirrorVersion: VAULT.mirrorVersion + 1 });
+    const stop = start();
+
+    await vi.waitFor(() => {
+      expect(onOutdated).toHaveBeenCalledOnce();
+    });
+    await expect(vaultReady()).resolves.toBeNull();
+    expect(queries).toHaveLength(0);
+    stop();
+  });
+
+  it("reports a copy it cannot open for any other reason", async () => {
+    const reporter = vi.fn();
+    setErrorReporter(reporter);
+    const upgraded = await openTestVault("u1", {
+      ...VAULT,
+      schemaVersion: VAULT.schemaVersion + 1,
+    });
+    upgraded.close();
+    const stop = start();
+
+    await vi.waitFor(() => {
+      expect(reporter).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "VersionError" }),
+        expect.objectContaining({ scope: "vault" }),
+      );
+    });
+    expect(onOutdated).not.toHaveBeenCalled();
+    stop();
+  });
+});
+
+describe("signing in again without a reload (T-171)", () => {
+  it("makes the first reads and writes wait for the new vault", async () => {
+    expectVault();
+    const first = start();
+    await vi.waitFor(() => {
+      expect(currentVault()).not.toBeNull();
+    });
+    first();
+
+    const second = start();
+
+    // Before T-171 the gate stayed down, so these went to the server and skipped the queue.
+    await expect(vaultReady()).resolves.toMatchObject({ userId: "u1" });
+    second();
+  });
+
+  it("waits for the vault of a mirror that starts after the frame said none was coming", async () => {
+    expectVault();
+    noMirror();
+
+    const stop = start();
+
+    await expect(vaultReady()).resolves.toMatchObject({ userId: "u1" });
+    stop();
+  });
+
+  it("never leaves a gate up once nothing is going to open a vault", async () => {
+    expectVault();
+    const stop = start();
+    await vi.waitFor(() => {
+      expect(currentVault()).not.toBeNull();
+    });
+    stop();
+    noMirror();
+
+    expectVault();
+
+    await expect(vaultReady()).resolves.toBeNull();
   });
 });
 

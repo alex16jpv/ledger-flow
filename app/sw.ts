@@ -1,5 +1,7 @@
 import { defaultCache } from "@serwist/next/worker";
 import {
+  CacheFirst,
+  ExpirationPlugin,
   NetworkFirst,
   NetworkOnly,
   type PrecacheEntry,
@@ -54,8 +56,14 @@ function isOwnAnswer(response: Response): boolean {
   return response.status === 200 && !response.redirected;
 }
 
+// Next writes its build id (`"b"`) into every document and payload it renders.
+async function isThisBuild(response: Response): Promise<boolean> {
+  return (await response.clone().text()).includes(self.__BUILD_ID);
+}
+
 const ownAnswerOnly: SerwistPlugin = {
-  cacheWillUpdate: ({ response }) => Promise.resolve(isOwnAnswer(response) ? response : null),
+  cacheWillUpdate: async ({ response }) =>
+    isOwnAnswer(response) && (await isThisBuild(response)) ? response : null,
 };
 
 // An unread body holds its connection, and six of them stall every later fetch of the worker.
@@ -77,9 +85,11 @@ const shellPages: NetworkFirst = new NetworkFirst({
   matchOptions: { ignoreVary: true },
 });
 
+const manifest = self.__SW_MANIFEST ?? [];
+
 // Data lives in React Query's persisted cache, never in the worker: /api is always network-only.
 const serwist: Serwist = new Serwist({
-  precacheEntries: self.__SW_MANIFEST,
+  precacheEntries: manifest,
   skipWaiting: false,
   clientsClaim: true,
   navigationPreload: true,
@@ -106,6 +116,10 @@ const serwist: Serwist = new Serwist({
       matcher: ({ request, sameOrigin, url }) =>
         sameOrigin && request.mode === "navigate" && isShellPath(url.pathname),
       handler: { handle: shellDocument },
+    },
+    {
+      matcher: ({ sameOrigin, url }) => sameOrigin && isBuildAsset(url),
+      handler: { handle: previousStatic },
     },
     ...defaultCache,
   ],
@@ -246,7 +260,7 @@ async function rscNavigation({
 async function storePayload(cacheName: string, url: string, event: ExtendableEvent): Promise<void> {
   const response = await network.handle({ request: payloadRequest(url), event });
   const payload = response.headers.get("content-type")?.startsWith(RSC_CONTENT_TYPE) ?? false;
-  if (payload && isOwnAnswer(response)) {
+  if (payload && isOwnAnswer(response) && (await isThisBuild(response))) {
     await (await caches.open(cacheName)).put(shellCacheKey(url), response);
     return;
   }
@@ -357,10 +371,56 @@ async function swapShell(cacheName: string): Promise<void> {
   await Promise.all(leftovers.map((name) => caches.delete(name)));
 }
 
+const PREVIOUS_STATIC = "app-static-previous";
+
+// Only scripts and styles: the fonts are not precached, and `defaultCache` keeps them as they are used.
+function isBuildAsset(url: URL): boolean {
+  return url.pathname.startsWith("/_next/static/") && /\.(?:js|css)$/.test(url.pathname);
+}
+
+async function keepPreviousStatic(): Promise<void> {
+  await caches.delete(stagingOf(PREVIOUS_STATIC));
+  const current = new Set(
+    manifest.map(
+      (entry) =>
+        new URL(typeof entry === "string" ? entry : entry.url, self.location.href).pathname,
+    ),
+  );
+  const precache = await caches.open(serwist.precacheStrategy.cacheName);
+  const previous = await caches.open(stagingOf(PREVIOUS_STATIC));
+  for (const request of await precache.keys()) {
+    const url = new URL(request.url);
+    if (!isBuildAsset(url) || current.has(url.pathname)) continue;
+    const response = await precache.match(request);
+    if (response) await previous.put(url.pathname, response);
+  }
+}
+
+// What `defaultCache` did with these before this route took them over.
+const otherBuildAssets: CacheFirst = new CacheFirst({
+  cacheName: "next-static-js-assets",
+  plugins: [
+    new ExpirationPlugin({ maxEntries: 64, maxAgeSeconds: 24 * 60 * 60, maxAgeFrom: "last-used" }),
+  ],
+});
+
+async function previousStatic({
+  request,
+  event,
+}: {
+  request: Request;
+  event: ExtendableEvent;
+}): Promise<Response> {
+  const kept = await (await caches.open(PREVIOUS_STATIC)).match(new URL(request.url).pathname);
+  return kept ?? otherBuildAssets.handle({ request, event });
+}
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(stageShell(event));
+  event.waitUntil(Promise.all([stageShell(event), keepPreviousStatic()]));
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(Promise.all([swapShell(SHELL_CACHE), swapShell(SHELL_RSC_CACHE)]));
+  event.waitUntil(
+    Promise.all([swapShell(SHELL_CACHE), swapShell(SHELL_RSC_CACHE), swapShell(PREVIOUS_STATIC)]),
+  );
 });

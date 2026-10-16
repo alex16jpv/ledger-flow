@@ -7,6 +7,7 @@ import {
   wrap,
 } from "idb";
 
+import { reportError } from "@/lib/observability/reporter";
 import type { User } from "@/types/api";
 
 import { forgetLanded } from "./outbox/landed";
@@ -44,6 +45,19 @@ export const VAULT: VaultDefinition = {
   outboxMigrations: OUTBOX_MIGRATIONS,
 };
 
+export type VaultVersions = Pick<
+  VaultDefinition,
+  "schemaVersion" | "mirrorVersion" | "outboxVersion"
+>;
+
+export function isNewerVault(versions: VaultVersions, than: VaultVersions): boolean {
+  return (
+    versions.schemaVersion > than.schemaVersion ||
+    versions.mirrorVersion > than.mirrorVersion ||
+    versions.outboxVersion > than.outboxVersion
+  );
+}
+
 export type OutboxState = "current" | "migrated" | "blocked";
 
 export interface VaultHandle {
@@ -63,6 +77,13 @@ export class VaultUnavailableError extends Error {
   constructor(cause?: unknown) {
     super("IndexedDB is not available in this context", { cause });
     this.name = "VaultUnavailableError";
+  }
+}
+
+export class VaultOutdatedError extends Error {
+  constructor(cause?: unknown) {
+    super("The offline copy belongs to a newer version of the app open in another tab", { cause });
+    this.name = "VaultOutdatedError";
   }
 }
 
@@ -203,6 +224,89 @@ async function upgradeOutbox(
   return { state: migrated.length > 0 ? "migrated" : "current", blocked: [] };
 }
 
+const VAULT_LOCK_PREFIX = "lf-vault-";
+
+function vaultLockName(userId: string, versions: VaultVersions): string {
+  return `${VAULT_LOCK_PREFIX}${userId}:${String(versions.schemaVersion)}.${String(versions.mirrorVersion)}.${String(versions.outboxVersion)}`;
+}
+
+function vaultLocks(): LockManager | undefined {
+  return typeof navigator !== "undefined" ? navigator.locks : undefined;
+}
+
+async function holdVaultLock(userId: string, versions: VaultVersions): Promise<() => void> {
+  const locks = vaultLocks();
+  if (!locks) return () => undefined;
+  return new Promise((granted) => {
+    locks
+      .request(vaultLockName(userId, versions), { mode: "shared" }, () => {
+        return new Promise<void>((release) => {
+          granted(release);
+        });
+      })
+      .catch((error: unknown) => {
+        reportError(error, "vault");
+        granted(() => undefined);
+      });
+  });
+}
+
+interface HeldVault {
+  name: string;
+  versions: VaultVersions;
+}
+
+async function heldVaults(userId: string): Promise<HeldVault[]> {
+  const locks = vaultLocks();
+  if (!locks) return [];
+  const prefix = `${VAULT_LOCK_PREFIX}${userId}:`;
+  const { held = [] } = await locks.query();
+  return held.flatMap(({ name }) => {
+    if (!name?.startsWith(prefix)) return [];
+    const [schemaVersion = 0, mirrorVersion = 0, outboxVersion = 0] = name
+      .slice(prefix.length)
+      .split(".")
+      .map(Number);
+    return [{ name, versions: { schemaVersion, mirrorVersion, outboxVersion } }];
+  });
+}
+
+async function newBuildWaiting(): Promise<boolean> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return false;
+  const registration = await navigator.serviceWorker.getRegistration().catch(() => undefined);
+  return Boolean(registration?.waiting ?? registration?.installing);
+}
+
+async function newerBuildAround(userId: string, versions: VaultVersions): Promise<boolean> {
+  const held = await heldVaults(userId);
+  if (held.some((vault) => isNewerVault(vault.versions, versions))) return true;
+  return newBuildWaiting();
+}
+
+export const OLDER_TABS_PATIENCE_MS = 3_000;
+
+// A frozen tab only hears `vault:opening` when it wakes, and the copy cannot wait for that.
+async function olderBuildsLetGo(userId: string, versions: VaultVersions): Promise<void> {
+  const locks = vaultLocks();
+  if (!locks) return;
+  const older = new Set(
+    (await heldVaults(userId))
+      .filter((vault) => isNewerVault(versions, vault.versions))
+      .map((vault) => vault.name),
+  );
+  await Promise.all(
+    [...older].map((name) =>
+      locks
+        .request(
+          name,
+          { mode: "exclusive", signal: AbortSignal.timeout(OLDER_TABS_PATIENCE_MS) },
+          () => undefined,
+        )
+        .catch(() => undefined),
+    ),
+  );
+}
+
 export interface OpenVaultOptions {
   // F-14, T-267: once another tab's upgrade or the browser closes this handle, every call throws `InvalidStateError`.
   onClosed?: () => void;
@@ -221,6 +325,40 @@ function observeDone(db: IDBPDatabase<VaultSchema>): void {
   };
 }
 
+async function openDatabase(
+  userId: string,
+  definition: VaultDefinition,
+  options: OpenVaultOptions,
+  releaseLock: () => void,
+): Promise<{ db: IDBPDatabase<VaultSchema>; created: boolean }> {
+  let created = false;
+  try {
+    const db = await openDB<VaultSchema>(vaultDatabaseName(userId), definition.schemaVersion, {
+      upgrade(database, oldVersion, _newVersion, transaction) {
+        created = oldVersion === 0;
+        createStores(database, transaction);
+      },
+      blocking(_currentVersion, blockedVersion, event) {
+        // Another tab is upgrading or deleting the vault; holding this connection open would stall it forever.
+        (event.target as IDBDatabase | null)?.close();
+        releaseLock();
+        if (blockedVersion === null) options.onDeleted?.();
+        else options.onClosed?.();
+      },
+      terminated() {
+        releaseLock();
+        options.onClosed?.();
+      },
+    });
+    return { db, created };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "VersionError") {
+      if (await newerBuildAround(userId, definition)) throw new VaultOutdatedError(error);
+    }
+    throw error;
+  }
+}
+
 export async function openVault(
   userId: string,
   definition: VaultDefinition = VAULT,
@@ -228,44 +366,51 @@ export async function openVault(
 ): Promise<VaultHandle> {
   if (!isVaultSupported()) throw new VaultUnavailableError();
 
-  let created = false;
-  const db = await openDB<VaultSchema>(vaultDatabaseName(userId), definition.schemaVersion, {
-    upgrade(database, oldVersion, _newVersion, transaction) {
-      created = oldVersion === 0;
-      createStores(database, transaction);
-    },
-    blocking(_currentVersion, blockedVersion, event) {
-      // Another tab is upgrading or deleting the vault; holding this connection open would stall it forever.
-      (event.target as IDBDatabase | null)?.close();
-      if (blockedVersion === null) options.onDeleted?.();
-      else options.onClosed?.();
-    },
-    terminated() {
-      options.onClosed?.();
-    },
-  });
-  observeDone(db);
+  // Held before opening, so a tab this open's upgrade closes already finds it when it reopens.
+  const releaseLock = await holdVaultLock(userId, definition);
+  let db: IDBPDatabase<VaultSchema> | null = null;
+  try {
+    const opened = await openDatabase(userId, definition, options, releaseLock);
+    db = opened.db;
+    observeDone(db);
 
-  await db.put("meta", { key: "userId", value: userId });
+    const storedMirrorVersion = await readMetaNumber(db, "mirrorVersion");
+    const stored: VaultVersions = {
+      schemaVersion: definition.schemaVersion,
+      mirrorVersion: storedMirrorVersion ?? 0,
+      outboxVersion: (await readMetaNumber(db, "outboxVersion")) ?? 0,
+    };
+    if (isNewerVault(stored, definition) && (await newerBuildAround(userId, definition))) {
+      throw new VaultOutdatedError();
+    }
+    if (isNewerVault(definition, stored)) await olderBuildsLetGo(userId, definition);
 
-  const storedMirrorVersion = await readMetaNumber(db, "mirrorVersion");
-  const mirrorReset = storedMirrorVersion !== definition.mirrorVersion;
-  if (mirrorReset) await resetMirror(db, definition.mirrorVersion);
+    await db.put("meta", { key: "userId", value: userId });
 
-  const outbox = await upgradeOutbox(db, definition);
+    const mirrorReset = storedMirrorVersion !== definition.mirrorVersion;
+    if (mirrorReset) await resetMirror(db, definition.mirrorVersion);
 
-  return {
-    db,
-    userId,
-    created,
-    mirrorReset,
-    outbox: outbox.state,
-    blockedOperations: outbox.blocked.length,
-    blockedSeqs: outbox.blocked,
-    close: () => {
-      db.close();
-    },
-  };
+    const outbox = await upgradeOutbox(db, definition);
+
+    const database = db;
+    return {
+      db: database,
+      userId,
+      created: opened.created,
+      mirrorReset,
+      outbox: outbox.state,
+      blockedOperations: outbox.blocked.length,
+      blockedSeqs: outbox.blocked,
+      close: () => {
+        database.close();
+        releaseLock();
+      },
+    };
+  } catch (error) {
+    db?.close();
+    releaseLock();
+    throw error;
+  }
 }
 
 export const WIPE_PATIENCE_MS = 10_000;

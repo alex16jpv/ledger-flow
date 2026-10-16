@@ -41,11 +41,20 @@ export function expectVault(): void {
   });
 }
 
+export function raiseVaultGate(): void {
+  if (opened) return;
+  opening = new Promise<VaultHandle | null>((resolve) => {
+    opened = resolve;
+  });
+}
+
 export function setCurrentVault(handle: VaultHandle | null): void {
   const changed = handle !== current;
   current = handle;
   opened?.(handle);
   opened = null;
+  // A gate raised after this answer would wait for a vault nobody is opening any more.
+  opening ??= Promise.resolve(handle);
   if (changed) markSuggestionsStale();
 }
 
@@ -64,7 +73,7 @@ export async function vaultReady(): Promise<VaultHandle | null> {
   return current;
 }
 
-// Test seam: the gate is raised once per page load, so nothing lowers it back for the next test.
+// T-171: a stopped mirror takes its gate down, so the next one (a sign-in without a reload) raises its own.
 export function resetVaultGate(): void {
   opening = null;
   opened = null;

@@ -39,6 +39,7 @@ import { startHeartbeat } from "@/lib/network/heartbeat";
 import { setLocalOnly } from "@/lib/network/local-only";
 import { NETWORK_PATIENCE_MS } from "@/lib/network/timeouts";
 import { warmAppShell } from "@/lib/pwa/service-worker";
+import { reportUpdateWaiting } from "@/lib/pwa/update";
 import { invalidateMirrorBacked } from "@/lib/query/domains";
 import { useMounted } from "@/lib/react/useMounted";
 import { useWaitedPast } from "@/lib/react/useWaitedPast";
@@ -115,7 +116,12 @@ function Frame({ children }: { children: ReactNode }) {
   }, [queryClient]);
   // §2.6: only the user restarts the mirror — a later session for the same user must not (R-3b).
   useEffect(() => {
-    if (localUserId) return startMirror(localUserId, { onChanged: onMirrorChanged });
+    if (localUserId) {
+      return startMirror(localUserId, {
+        onChanged: onMirrorChanged,
+        onOutdated: reportUpdateWaiting,
+      });
+    }
     return undefined;
   }, [localUserId, onMirrorChanged]);
   useEffect(() => {
