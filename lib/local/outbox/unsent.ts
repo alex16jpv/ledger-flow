@@ -1,5 +1,12 @@
-import type { MirrorStore, OutboxEntity, OutboxOperation } from "../schema";
+import {
+  MIRROR_STORES,
+  type MirrorRecord,
+  type MirrorStore,
+  type OutboxEntity,
+  type OutboxOperation,
+} from "../schema";
 import { operationPayload } from "./envelope";
+import type { WriteTransaction } from "./queue";
 
 export const STORE_OF = {
   account: "accounts",
@@ -28,4 +35,31 @@ export function unsentRows(operations: readonly OutboxOperation[]): Map<MirrorSt
     for (const id of operationPayload(operation).minted ?? []) keep("transactions", id);
   }
   return rows;
+}
+
+export type CarryRecord = (
+  store: MirrorStore,
+  record: MirrorRecord<unknown>,
+) => MirrorRecord<unknown> | null;
+
+const asTheyAre: CarryRecord = (_store, record) => record;
+
+export async function clearMirror(
+  tx: WriteTransaction,
+  queued: readonly OutboxOperation[],
+  present: readonly string[] = MIRROR_STORES,
+  carry: CarryRecord = asTheyAre,
+): Promise<void> {
+  const unsent = unsentRows(queued);
+  for (const name of MIRROR_STORES) {
+    if (!present.includes(name)) continue;
+    const store = tx.objectStore(name);
+    const kept = await Promise.all((unsent.get(name) ?? []).map((id) => store.get(id)));
+    await store.clear();
+    for (const record of kept) {
+      const carried = record ? carry(name, record) : null;
+      // A step returns the shape this build reads, which no type from an older build can state.
+      if (carried) await store.put(carried as NonNullable<typeof record>);
+    }
+  }
 }

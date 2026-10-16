@@ -4,7 +4,8 @@ import { account, openTestVault, settlement, transaction, wipeVaults } from "@/l
 
 import { countPendingOperations, vaultExists } from "./db";
 import { writeTransaction } from "./outbox/queue";
-import { clearMirror, purgeOtherVaults, purgeVault } from "./purge";
+import { clearMirror } from "./outbox/unsent";
+import { purgeOtherVaults, purgeVault } from "./purge";
 import { accountRecord, type OutboxOperation, settlementRecord, transactionRecord } from "./schema";
 
 function operation(seq: number): OutboxOperation {

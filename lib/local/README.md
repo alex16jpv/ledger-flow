@@ -15,14 +15,16 @@ mirror says it cannot.
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | What it is                                     | a copy of the server, re-downloadable                                                                                                                                                                            | writes that have not reached the server                 |
 | Losing it costs                                | one pull                                                                                                                                                                                                         | the user's data                                         |
-| On a version bump                              | cleared and re-pulled                                                                                                                                                                                            | migrated one operation at a time, or the upgrade blocks |
+| On a version bump                              | cleared and re-pulled, but for the rows its queue created, each migrated to the new shape (T-268)                                                                                                                | migrated one operation at a time, or the upgrade blocks |
 | On logout                                      | cleared, but for the rows its kept queue created (T-170)                                                                                                                                                         | kept unless the caller confirms discarding it           |
 | On another account's sign-in                   | cleared, but for the rows its queue created (T-170)                                                                                                                                                              | kept for its owner's next sign-in (T-167)               |
 | On session expiry / app update / cache cleanup | untouched                                                                                                                                                                                                        | untouched (invariant 7)                                 |
 
 They share one database because **IndexedDB transactions cannot span two databases** and O-F4 has to
-write the entity and its operation atomically (plan §4.1). Nothing here ever calls `deleteDatabase`
-on a vault, and the mirror reset transaction deliberately excludes the `outbox` store.
+write the entity and its operation atomically (plan §4.1). Only two things call `deleteDatabase` on a
+vault: "Delete everything on this device" (`wipeThisDevice`), and the mirror dropping a vault its own
+open just recreated after another tab deleted it (T-166). The mirror reset only reads the `outbox`
+store, to know which rows the queue created.
 
 ## Versions
 
@@ -32,6 +34,13 @@ Three numbers, because the two halves migrate by opposite rules:
   and indexes; it never deletes or reshapes one.
 - **`MIRROR_VERSION`** — logical, kept in `meta`. Changing it clears every mirror store and drops
   `syncCursor`/`syncedAt`, so the next pull is a full snapshot. `openVault` reports `mirrorReset`.
+  The rows the queue's creates wrote are the exception (T-268): no snapshot can bring them back, so
+  each one is walked through `MIRROR_MIGRATIONS[n]`, one step per version, to the shape the new build
+  reads; a step returning `null`, a missing step, a copy a newer build wrote or a blocked queue keeps
+  nothing. **Bumping it means writing the step from the old number** — the identity when the bump only
+  adds stores or asks for the server's rows again — and `migrations.test.ts` fails until it exists.
+  The queue is migrated before the reset, so which rows to keep is read from operations this build
+  understands.
 - **`OUTBOX_VERSION`** — logical, kept in `meta`. Changing it runs `OUTBOX_MIGRATIONS[n]` over every
   queued operation. A migration returning `null` means "cannot be carried forward": then **nothing is
   written**, `openVault` reports `outbox: "blocked"` with `blockedOperations`, and the stored version
@@ -775,14 +784,15 @@ writes nothing after it (T-164).
 **What the queue created stays in the copy** (T-170). A row written by a queued create — a movement,
 an account, a group, a payment and the movements it minted — is not a copy of anything the server
 has: the feed will not bring it back until the create lands, so a purge that dropped it left it out
-of every list while its balance still counted. `clearMirror` is the one way the mirror is emptied, by
-`purgeVault`, `purgeOtherVaults` and the `RESYNC_REQUIRED` snapshot: it keeps the records the queue's
+of every list while its balance still counted. `clearMirror` (`outbox/unsent.ts`) is the one way the mirror is emptied, by
+`purgeVault`, `purgeOtherVaults`, the `RESYNC_REQUIRED` snapshot and the version reset: it keeps the records the queue's
 creates wrote (`unsentRows`, `outbox/unsent.ts`), whatever their status, exactly as they were, so a purge and a pull leave
 the copy as a pull alone would have. Rows of the server's that queued writes touch need no keeping:
 the snapshot brings them and `reconcile.ts` projects the queue back on top, including the stamp an
 expense still in the queue puts on the movement it splits. Discarding the unsent work keeps nothing.
-The `MIRROR_VERSION` reset of `openVault` is the exception: it keeps nothing, because a row written by
-an older build may not have the shape the new one reads. `lib/query/purge.ts` keeps the disposable React Query caches
+The `MIRROR_VERSION` reset of `openVault` keeps them too, but walks each one through
+`MIRROR_MIGRATIONS` first (T-268, _Versions_ above), because a row written by an older build may not
+have the shape the new one reads. `lib/query/purge.ts` keeps the disposable React Query caches
 (`lf-cache-*`) and never matches the vault prefix.
 
 `SessionProvider` calls `purgeVault` on an explicit logout with the user's answer (F-34): with work

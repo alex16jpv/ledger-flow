@@ -10,7 +10,7 @@ import type { VaultHandle } from "./db";
 import { forgetLanded, landedOpIds, releaseLanded } from "./outbox/landed";
 import { type WriteTransaction, writeTransaction } from "./outbox/queue";
 import { reconcileContext, reconcileRow, reconcileServerRow } from "./outbox/reconcile";
-import { clearMirror } from "./purge";
+import { clearMirror } from "./outbox/unsent";
 import {
   advanceMirrorEpoch,
   joinedExpenseRecord,
