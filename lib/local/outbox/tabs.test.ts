@@ -41,7 +41,7 @@ const reply = (init: RequestInit | undefined): Response =>
     }),
   } satisfies SyncBatchResponse);
 
-// A Web Lock per name, granted in request order, honouring `signal` while it waits.
+// A Web Lock per name, granted in request order, honouring `signal` while it waits; a shared one never waits.
 function installLocks(): { holdUntil: (name: string) => () => void } {
   const tails = new Map<string, Promise<unknown>>();
   const request = (
@@ -52,6 +52,7 @@ function installLocks(): { holdUntil: (name: string) => () => void } {
     const run = typeof optionsOrRun === "function" ? optionsOrRun : maybeRun;
     const signal = typeof optionsOrRun === "function" ? undefined : optionsOrRun.signal;
     if (!run) throw new TypeError("no callback");
+    if (typeof optionsOrRun !== "function" && optionsOrRun.mode === "shared") return run();
     const previous = tails.get(name) ?? Promise.resolve();
     const granted = new Promise<void>((resolve, reject) => {
       signal?.addEventListener("abort", () => {
@@ -72,7 +73,8 @@ function installLocks(): { holdUntil: (name: string) => () => void } {
     );
     return held;
   };
-  Object.defineProperty(navigator, "locks", { value: { request }, configurable: true });
+  const query = (): Promise<LockManagerSnapshot> => Promise.resolve({ held: [], pending: [] });
+  Object.defineProperty(navigator, "locks", { value: { request, query }, configurable: true });
   return {
     holdUntil: (name) => {
       let release: () => void = () => undefined;

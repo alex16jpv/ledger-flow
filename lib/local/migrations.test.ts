@@ -1,15 +1,18 @@
 import { openDB } from "idb";
 
+import { installFakeLocks } from "@/lib/testing/locks";
 import { account, openTestVault, transaction, wipeVaults } from "@/lib/testing/vault";
 
 import {
   countPendingOperations,
   MIRROR_VERSION,
+  openVault,
   type OutboxMigrations,
   VAULT,
   VAULT_SCHEMA_VERSION,
   type VaultDefinition,
   vaultExists,
+  VaultOutdatedError,
 } from "./db";
 import {
   accountRecord,
@@ -90,6 +93,129 @@ describe("mirror migrations", () => {
     expect(upgraded.mirrorReset).toBe(true);
     expect(await upgraded.db.count("accounts")).toBe(0);
     expect(await upgraded.db.count("outbox")).toBe(20);
+  });
+});
+
+describe("two builds of the app on one copy (T-171)", () => {
+  let uninstall: () => void = () => undefined;
+  beforeEach(() => {
+    uninstall = installFakeLocks();
+  });
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    uninstall();
+    await wipeVaults();
+  });
+
+  const newer = definition({ mirrorVersion: MIRROR_VERSION + 1 });
+
+  it("an older build leaves alone a copy a newer tab still holds", async () => {
+    const held = await openTestVault("u1", newer);
+    await held.db.put("accounts", accountRecord(account({ id: "a1" })));
+
+    await expect(openVault("u1", VAULT)).rejects.toThrow(VaultOutdatedError);
+
+    // Before T-171 the older build reset it, and the newer tab reset it back on its next open.
+    expect(await held.db.count("accounts")).toBe(1);
+    expect((await held.db.get("meta", "mirrorVersion"))?.value).toBe(MIRROR_VERSION + 1);
+  });
+
+  it("an older build resets a newer copy nobody holds, which is what a rolled-back deploy finds", async () => {
+    const before = await openTestVault("u1", newer);
+    await before.db.put("accounts", accountRecord(account({ id: "a1" })));
+    before.close();
+
+    const older = await openTestVault("u1", VAULT);
+
+    expect(older.mirrorReset).toBe(true);
+    expect(await older.db.count("accounts")).toBe(0);
+    expect((await older.db.get("meta", "mirrorVersion"))?.value).toBe(MIRROR_VERSION);
+  });
+
+  it("an older build leaves alone a queue a newer tab still holds", async () => {
+    await openTestVault("u1", definition({ outboxVersion: 2 }));
+
+    await expect(openVault("u1", VAULT)).rejects.toThrow(VaultOutdatedError);
+  });
+
+  it("a newer schema held by an open tab is outdated, not a failure", async () => {
+    await openTestVault("u1", definition({ schemaVersion: VAULT_SCHEMA_VERSION + 1 }));
+
+    await expect(openVault("u1", VAULT)).rejects.toThrow(VaultOutdatedError);
+  });
+
+  it("a newer schema nobody holds is still the failure it was", async () => {
+    const upgraded = await openTestVault(
+      "u1",
+      definition({ schemaVersion: VAULT_SCHEMA_VERSION + 1 }),
+    );
+    upgraded.close();
+
+    await expect(openVault("u1", VAULT)).rejects.toMatchObject({ name: "VersionError" });
+  });
+
+  it("an older build leaves a newer copy alone while the newer build waits in the worker", async () => {
+    const before = await openTestVault("u1", newer);
+    await before.db.put("accounts", accountRecord(account({ id: "a1" })));
+    before.close();
+    Object.defineProperty(navigator, "serviceWorker", {
+      value: { getRegistration: () => Promise.resolve({ waiting: {}, installing: null }) },
+      configurable: true,
+    });
+
+    try {
+      // Offline, a reset here leaves the user with an empty copy until the newer build fills it again.
+      await expect(openVault("u1", VAULT)).rejects.toThrow(VaultOutdatedError);
+    } finally {
+      Reflect.deleteProperty(navigator, "serviceWorker");
+    }
+    const after = await openTestVault("u1", newer);
+    expect(await after.db.count("accounts")).toBe(1);
+  });
+
+  it("a newer build waits for the older tabs to let the copy go before it resets it", async () => {
+    const older = await openTestVault("u1", VAULT);
+    await older.db.put("accounts", accountRecord(account({ id: "a1" })));
+    let opened = false;
+
+    const upgrading = openVault("u1", newer).then((vault) => {
+      opened = true;
+      return vault;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(opened).toBe(false);
+
+    older.close();
+    const upgraded = await upgrading;
+    expect(upgraded.mirrorReset).toBe(true);
+    expect(await upgraded.db.count("accounts")).toBe(0);
+    upgraded.close();
+  });
+
+  it("a newer build does not wait for ever on an older tab that never answers", async () => {
+    await openTestVault("u1", VAULT);
+    vi.spyOn(AbortSignal, "timeout").mockReturnValue(AbortSignal.abort());
+
+    const upgraded = await openTestVault("u1", newer);
+
+    expect(upgraded.mirrorReset).toBe(true);
+  });
+
+  it("the same build in another tab is no reason to step aside", async () => {
+    await openTestVault("u1", VAULT);
+
+    const again = await openTestVault("u1", VAULT);
+
+    expect(again.mirrorReset).toBe(false);
+  });
+
+  it("lets its version go when the copy closes", async () => {
+    const vault = await openTestVault("u1", newer);
+    vault.close();
+
+    await vi.waitFor(async () => {
+      expect((await navigator.locks.query()).held).toEqual([]);
+    });
   });
 });
 

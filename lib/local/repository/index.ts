@@ -34,6 +34,7 @@ export {
   expectVault,
   mirrorPage,
   type MirrorReader,
+  raiseVaultGate,
   read,
   resetVaultGate,
   setCurrentVault,

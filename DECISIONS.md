@@ -5,6 +5,61 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-16 · Two builds of the app never share the copy, and the worker keeps only its own build (T-171)
+
+- **Context** (audit 2026-09-23, finding 33, and the review of T-196):
+  - `openVault` reset the mirror whenever its stored version was not its own, so a tab of an older build
+    emptied a newer copy and the newer tab emptied it back on its next open; meanwhile each wrote rows
+    in its own shape into the other's copy.
+  - After a schema upgrade the older tab's reopen failed with `VersionError`, said so only in the
+    console, and that tab went on writing straight to the server, outside the queue.
+  - The worker kept every online navigation's document in `app-shell`, so between a deploy and the
+    new worker's activation the old worker held new-build documents beside old chunks; offline, such a
+    document asked for chunks nothing had cached. And when one tab's Reload activated the new worker,
+    the precache dropped the old build's chunks under the tabs still running it.
+  - The read gate (`opening ??=`) was raised once per page load: after a sign-out and a sign-in without
+    a reload, the first reads went to the server and the first writes skipped the queue.
+- **Decision:**
+  - Each tab holds the shared Web Lock `lf-vault-<userId>:<schema>.<mirror>.<outbox>` while its
+    connection is open, taken before the open. Before opening, the mirror posts `vault:opening` with its
+    numbers, and an older tab holding the copy lets it go; an open that finds an older copy waits up to
+    3 s for the older builds' locks to go before it resets or migrates anything (a frozen tab hears the
+    message only when it wakes). An open that meets a newer copy (`VersionError`, or a stored mirror or
+    outbox version above its own) throws `VaultOutdatedError` and touches nothing when a tab of that
+    newer build holds a lock or a new worker is installing or waiting — offline, with the newer build
+    waiting in the worker and its tab closed, a reset would leave an empty copy; otherwise it is a
+    rolled-back deploy, and the mirror is reset and the queue blocked as before. That tab then works as
+    with no copy and the mirror's `onOutdated` raises the new-version stripe (T-196), whose words are
+    true here too: another tab already runs the newer version, and nothing saved is lost.
+  - Failures to open or reopen the vault, and a vault lock that cannot be taken, are reported to Sentry
+    under `vault` instead of only logged.
+  - The worker keeps a document or a payload in the shell caches (live and staged) only when its body
+    carries the worker's own build id, which Next writes into both (`"b"`, checked on 16.3.8 against
+    the e2e build). The install stages the precached `/_next/static/` scripts and styles the new manifest
+    no longer lists, and the activation swaps them into `app-static-previous`, as the shell is staged
+    and swapped; a script or style outside the precache is answered from there first, and otherwise
+    by the same cache-first runtime cache `defaultCache` used for it. Fonts stay with `defaultCache`:
+    they are not precached (the two Geist files), and it keeps them as they are used. If a Next upgrade
+    stopped writing the build id, nothing would be kept in the shell caches without any error: the
+    e2e `two-builds.spec.ts` is what catches it.
+  - Stopping the mirror takes the gate down, `startMirror` raises it again even over an answer
+    `noMirror` already gave, and `setCurrentVault` leaves an answered gate behind it so a later
+    `expectVault` never waits for nothing.
+- **Alternatives (not taken):** comparing the mirror version with `<` alone, as the audit proposed — a
+  rolled-back deploy would then never use its copy again; folding the mirror version into the
+  IndexedDB version so `versionchange` tells the older tab — same cost on a rollback, which could then
+  never open the database; reloading the older tabs on their own — the app never reloads by itself
+  (T-196) and a tab may hold a half-typed form; a response header with the build id — Next sends none,
+  and the body already carries it; keeping the previous precache by not letting
+  Serwist clean it — its activation deletes what the manifest does not list, with no option to skip it.
+- **Consequence:** a tab of an older build next to a newer one stays usable online and shows the stripe;
+  offline its saves fail as they would without a copy, until Reload. Without `navigator.locks` an older
+  build still resets a newer copy, and so do tabs of the builds before this change, which hold no lock
+  and do not listen: the first deploy of it is not protected yet. Holding a lock for a page's life
+  costs nothing in the back/forward cache: the app's documents are already `no-store`. The previous build's changed chunks are stored twice for one
+  generation. Between a deploy and the new worker, a screen the warm never kept stays without a document,
+  so without network it answers `offline.html` where it used to answer one that could not load.
+
 ## 2026-10-16 · `/auth/me` and `/auth/sessions` renew an expired session like any other read (T-173)
 
 - **Context:** the client exempted every `/auth/*` path from the 401 handler, `/auth/me` included. The
