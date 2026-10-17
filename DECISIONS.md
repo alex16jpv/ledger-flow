@@ -19,8 +19,12 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
   cannot read (`outbox: "blocked"`) keeps nothing, which is what every reset did before. The queue is
   migrated first, so the rows to keep are read from operations this build understands. Whoever bumps
   `MIRROR_VERSION` writes the step from the old number — the identity when only stores were added or the
-  server's rows have to be pulled again — and a test in `migrations.test.ts` fails until it exists.
-  Taken by the session (technical).
+  server's rows have to be pulled again — and a test in `migrations.test.ts` fails until it exists. A
+  step reshapes a record in place: it cannot move it to another store or change its `id`. The stored
+  version is read again inside the reset's transaction, so two tabs of the new build opening together
+  walk each row once (rows carry no version of their own, unlike operations), and a step that throws
+  is reported and drops only that row, instead of committing a copy cleared halfway. Taken by the
+  session (technical).
 - **Alternatives (not taken):** storing each create's projected row in its payload and putting it back
   after the reset, as T-170 left proposed — a new outbox format across the eight create routes, and the
   copy goes stale the moment a later write edits the unsent row or folds into it, so it would also need
@@ -164,8 +168,8 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **Consequence:** the `MIRROR_VERSION` reset of `openVault` still keeps nothing: a row an older build
   wrote may not have the shape the new one reads, and only the outbox migrates. Until the create lands,
   a version bump hides it from the lists the way every purge did before; that is T-268 on the owner's
-  list. _Superseded on 2026-10-16 by T-268: the reset keeps them too, through `MIRROR_MIGRATIONS`._ On a logout, and when another account signs in (T-167: "the copy goes, the queue
-  waits"), the kept rows stay in that user's own vault, next to the queue that already holds the same
+  list. _Superseded on 2026-10-16 by T-268: the reset keeps them too, through `MIRROR_MIGRATIONS`._
+  On a logout, and when another account signs in (T-167: "the copy goes, the queue waits"), the kept rows stay in that user's own vault, next to the queue that already holds the same
   data, and no other session reads that vault.
 
 ## 2026-10-13 · A resent edit answered `duplicate` moves the guards behind it (T-168)
@@ -3498,7 +3502,10 @@ cover` is set once in the root layout for the standalone display.
   can enforce with code and tests, so the discipline gives way.
 - **Consequence:** invariant 7 is protected by code, not by structure: nothing ever calls
   `deleteDatabase` on a vault, the mirror reset transaction deliberately does not include the
-  `outbox` store, and both rules have a test that fails when they are broken.
+  `outbox` store, and both rules have a test that fails when they are broken. _Since T-166 two things
+  delete a vault on purpose ("Delete everything on this device", and the mirror dropping a vault its
+  own open recreated after another tab deleted it); since T-268 the reset opens `outbox` to read which
+  rows the queue created, and never writes it (`migrations.test.ts`: the queue comes out whole)._
 
 ## 2026-09-03 · Three version numbers, because the two halves migrate by opposite rules (O-F1)
 

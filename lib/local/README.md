@@ -37,7 +37,8 @@ Three numbers, because the two halves migrate by opposite rules:
   The rows the queue's creates wrote are the exception (T-268): no snapshot can bring them back, so
   each one is walked through `MIRROR_MIGRATIONS[n]`, one step per version, to the shape the new build
   reads; a step returning `null`, a missing step, a copy a newer build wrote or a blocked queue keeps
-  nothing. **Bumping it means writing the step from the old number** — the identity when the bump only
+  nothing, and a step that throws is reported and drops only that row. A step reshapes a record in
+  place: it cannot move it to another store or change its `id`. **Bumping it means writing the step from the old number** — the identity when the bump only
   adds stores or asks for the server's rows again — and `migrations.test.ts` fails until it exists.
   The queue is migrated before the reset, so which rows to keep is read from operations this build
   understands.

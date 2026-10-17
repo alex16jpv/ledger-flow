@@ -1,5 +1,6 @@
 import { openDB } from "idb";
 
+import { setErrorReporter } from "@/lib/observability/reporter";
 import { installFakeLocks } from "@/lib/testing/locks";
 import { account, openTestVault, settlement, transaction, wipeVaults } from "@/lib/testing/vault";
 
@@ -27,7 +28,7 @@ import {
   type VaultSchema,
 } from "./schema";
 
-// The mirror version that shipped with T-268: no device can hold queued rows from before it.
+// The mirror version T-268 shipped with: no step exists below it.
 const FIRST_CARRIED_MIRROR_VERSION = 5;
 
 const definition = (overrides: Partial<VaultDefinition> = {}): VaultDefinition => ({
@@ -247,6 +248,72 @@ describe("the queue's own rows through a mirror version bump", () => {
     expect(upgraded.outbox).toBe("migrated");
     expect(await upgraded.db.getAllKeys("accounts")).toEqual(["a-new"]);
     expect(await upgraded.db.count("settlements")).toBe(0);
+  });
+
+  it("two tabs of the new build opening together walk each row through a step once", async () => {
+    const rows = await seedUnsent();
+    const newer = definition({
+      mirrorVersion: MIRROR_VERSION + 1,
+      mirrorMigrations: { [MIRROR_VERSION]: stamped("first") },
+    });
+
+    const [first, second] = await Promise.all([
+      openTestVault("u1", newer),
+      openTestVault("u1", newer),
+    ]);
+
+    expect([first.mirrorReset, second.mirrorReset].sort()).toEqual([false, true]);
+    expect(await first.db.get("accounts", "a-new")).toEqual({
+      ...rows.created,
+      updatedAt: `${rows.created.updatedAt}+first`,
+    });
+  });
+
+  it("a step that throws drops that row and reports it, and the reset still completes", async () => {
+    const reported: unknown[] = [];
+    setErrorReporter((error) => reported.push(error));
+    await seedUnsent();
+    const broken = new Error("a step that cannot read this row");
+
+    try {
+      const upgraded = await openTestVault(
+        "u1",
+        definition({
+          mirrorVersion: MIRROR_VERSION + 1,
+          mirrorMigrations: {
+            [MIRROR_VERSION]: (store, record) => {
+              if (store === "settlements") throw broken;
+              return record;
+            },
+          },
+        }),
+      );
+
+      expect(upgraded.mirrorReset).toBe(true);
+      expect(await upgraded.db.getAllKeys("accounts")).toEqual(["a-new"]);
+      expect(await upgraded.db.count("settlements")).toBe(0);
+      expect(await upgraded.db.getAllKeys("transactions")).toEqual(["m-new"]);
+      expect((await upgraded.db.get("meta", "mirrorVersion"))?.value).toBe(MIRROR_VERSION + 1);
+      expect(reported).toEqual([broken]);
+    } finally {
+      setErrorReporter(null);
+    }
+  });
+
+  it("keeps nothing from a copy that never recorded its mirror version", async () => {
+    await seedUnsent();
+    const bare = await openTestVault("u1");
+    await bare.db.delete("meta", "mirrorVersion");
+    bare.close();
+
+    const upgraded = await openTestVault(
+      "u1",
+      definition({ mirrorMigrations: { 0: (_store, record) => record } }),
+    );
+
+    expect(upgraded.mirrorReset).toBe(true);
+    expect(await upgraded.db.count("accounts")).toBe(0);
+    expect(await upgraded.db.count("outbox")).toBe(3);
   });
 
   it("every mirror version since T-268 has its step, so a bump cannot forget what only the queue holds", () => {

@@ -1,9 +1,12 @@
+import type { StoreNames } from "idb";
+
 import {
   MIRROR_STORES,
   type MirrorRecord,
   type MirrorStore,
   type OutboxEntity,
   type OutboxOperation,
+  type VaultSchema,
 } from "../schema";
 import { operationPayload } from "./envelope";
 import type { WriteTransaction } from "./queue";
@@ -37,17 +40,17 @@ export function unsentRows(operations: readonly OutboxOperation[]): Map<MirrorSt
   return rows;
 }
 
-export type CarryRecord = (
+export type CarryRecord = <R extends MirrorRecord<unknown>>(
   store: MirrorStore,
-  record: MirrorRecord<unknown>,
-) => MirrorRecord<unknown> | null;
+  record: R,
+) => R | null;
 
 const asTheyAre: CarryRecord = (_store, record) => record;
 
 export async function clearMirror(
   tx: WriteTransaction,
   queued: readonly OutboxOperation[],
-  present: readonly string[] = MIRROR_STORES,
+  present: readonly StoreNames<VaultSchema>[] = MIRROR_STORES,
   carry: CarryRecord = asTheyAre,
 ): Promise<void> {
   const unsent = unsentRows(queued);
@@ -58,8 +61,7 @@ export async function clearMirror(
     await store.clear();
     for (const record of kept) {
       const carried = record ? carry(name, record) : null;
-      // A step returns the shape this build reads, which no type from an older build can state.
-      if (carried) await store.put(carried as NonNullable<typeof record>);
+      if (carried) await store.put(carried);
     }
   }
 }
