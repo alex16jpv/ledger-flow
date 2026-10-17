@@ -11,9 +11,12 @@ import { reportError } from "@/lib/observability/reporter";
 import type { User } from "@/types/api";
 
 import { forgetLanded } from "./outbox/landed";
+import { clearMirror } from "./outbox/unsent";
 import {
   advanceMirrorEpoch,
   MIRROR_STORES,
+  type MirrorRecord,
+  type MirrorStore,
   type OutboxOperation,
   PROFILE_KEY,
   VAULT_DB_PREFIX,
@@ -31,11 +34,21 @@ export type OutboxMigrations = Readonly<Record<number, OutboxMigration>>;
 
 export const OUTBOX_MIGRATIONS: OutboxMigrations = {};
 
+// T-268: carries a row only the queue holds from one mirror version to the next; null drops it.
+export type MirrorMigration = (
+  store: MirrorStore,
+  record: MirrorRecord<unknown>,
+) => MirrorRecord<unknown> | null;
+export type MirrorMigrations = Readonly<Record<number, MirrorMigration>>;
+
+export const MIRROR_MIGRATIONS: MirrorMigrations = {};
+
 export interface VaultDefinition {
   schemaVersion: number;
   mirrorVersion: number;
   outboxVersion: number;
   outboxMigrations: OutboxMigrations;
+  mirrorMigrations: MirrorMigrations;
 }
 
 export const VAULT: VaultDefinition = {
@@ -43,6 +56,7 @@ export const VAULT: VaultDefinition = {
   mirrorVersion: MIRROR_VERSION,
   outboxVersion: OUTBOX_VERSION,
   outboxMigrations: OUTBOX_MIGRATIONS,
+  mirrorMigrations: MIRROR_MIGRATIONS,
 };
 
 export type VaultVersions = Pick<
@@ -169,17 +183,64 @@ async function readMetaNumber(
   return typeof record?.value === "number" ? record.value : null;
 }
 
-async function resetMirror(db: IDBPDatabase<VaultSchema>, mirrorVersion: number): Promise<void> {
-  const tx = db.transaction([...MIRROR_STORES, "meta"], "readwrite");
-  for (const name of MIRROR_STORES) await tx.objectStore(name).clear();
+// Only walks forward, like the queue: a row a newer build wrote is never reinterpreted.
+function migrateRecord(
+  store: MirrorStore,
+  record: MirrorRecord<unknown>,
+  from: number,
+  target: number,
+  migrations: MirrorMigrations,
+): MirrorRecord<unknown> | null {
+  if (from > target) return null;
+  let current: MirrorRecord<unknown> | null = record;
+  try {
+    for (let version = from; current && version < target; version += 1) {
+      const step: MirrorMigration | undefined = migrations[version];
+      current = step ? step(store, current) : null;
+    }
+  } catch (error) {
+    // Thrown inside the reset's transaction, it would commit a copy cleared halfway.
+    reportError(error, "vault");
+    return null;
+  }
+  return current;
+}
+
+// False when another tab of this build already reset it: its rows are in the new shape.
+async function resetMirror(
+  db: IDBPDatabase<VaultSchema>,
+  definition: VaultDefinition,
+  outbox: OutboxState,
+): Promise<boolean> {
+  const tx = db.transaction([...MIRROR_STORES, "outbox", "meta"], "readwrite");
   const meta = tx.objectStore("meta");
-  // The cursor goes with the rows it describes; the outbox store is deliberately not in this tx.
+  const record = await meta.get("mirrorVersion");
+  const stored = typeof record?.value === "number" ? record.value : null;
+  if (stored === definition.mirrorVersion) {
+    await tx.done;
+    return false;
+  }
+  const queued =
+    outbox === "blocked" || stored === null ? [] : await tx.objectStore("outbox").getAll();
+  await clearMirror(tx, queued, MIRROR_STORES, (store, row) =>
+    stored === null
+      ? null
+      : // A step returns the shape this build reads, which no type from an older build can state.
+        (migrateRecord(
+          store,
+          row,
+          stored,
+          definition.mirrorVersion,
+          definition.mirrorMigrations,
+        ) as typeof row | null),
+  );
   await meta.delete("syncCursor");
   await meta.delete("syncedAt");
   await forgetLanded(meta);
   await advanceMirrorEpoch(meta);
-  await meta.put({ key: "mirrorVersion", value: mirrorVersion });
+  await meta.put({ key: "mirrorVersion", value: definition.mirrorVersion });
   await tx.done;
+  return true;
 }
 
 // Only walks forward: an operation from a newer build blocks an older one, never reinterpreted.
@@ -387,10 +448,11 @@ export async function openVault(
 
     await db.put("meta", { key: "userId", value: userId });
 
-    const mirrorReset = storedMirrorVersion !== definition.mirrorVersion;
-    if (mirrorReset) await resetMirror(db, definition.mirrorVersion);
-
     const outbox = await upgradeOutbox(db, definition);
+
+    const mirrorReset =
+      storedMirrorVersion !== definition.mirrorVersion &&
+      (await resetMirror(db, definition, outbox.state));
 
     const database = db;
     return {

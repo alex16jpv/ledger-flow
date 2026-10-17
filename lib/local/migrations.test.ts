@@ -1,12 +1,16 @@
 import { openDB } from "idb";
 
+import { setErrorReporter } from "@/lib/observability/reporter";
 import { installFakeLocks } from "@/lib/testing/locks";
-import { account, openTestVault, transaction, wipeVaults } from "@/lib/testing/vault";
+import { account, openTestVault, settlement, transaction, wipeVaults } from "@/lib/testing/vault";
 
 import {
   countPendingOperations,
+  MIRROR_MIGRATIONS,
   MIRROR_VERSION,
+  type MirrorMigration,
   openVault,
+  OUTBOX_VERSION,
   type OutboxMigrations,
   VAULT,
   VAULT_SCHEMA_VERSION,
@@ -18,10 +22,14 @@ import {
   accountRecord,
   MIRROR_STORES,
   type OutboxOperation,
+  settlementRecord,
   transactionRecord,
   vaultDatabaseName,
   type VaultSchema,
 } from "./schema";
+
+// The mirror version T-268 shipped with: no step exists below it.
+const FIRST_CARRIED_MIRROR_VERSION = 5;
 
 const definition = (overrides: Partial<VaultDefinition> = {}): VaultDefinition => ({
   ...VAULT,
@@ -93,6 +101,227 @@ describe("mirror migrations", () => {
     expect(upgraded.mirrorReset).toBe(true);
     expect(await upgraded.db.count("accounts")).toBe(0);
     expect(await upgraded.db.count("outbox")).toBe(20);
+  });
+});
+
+// T-268: a row a queued create wrote is on no server yet, so the new snapshot cannot bring it back.
+describe("the queue's own rows through a mirror version bump", () => {
+  afterEach(wipeVaults);
+
+  const stamped =
+    (mark: string): MirrorMigration =>
+    (_store, record) => ({ ...record, updatedAt: `${record.updatedAt}+${mark}` });
+
+  async function seedUnsent(vaultDefinition: VaultDefinition = VAULT) {
+    const vault = await openTestVault("u1", vaultDefinition);
+    const rows = {
+      server: accountRecord(account({ id: "a-server" })),
+      created: accountRecord(account({ id: "a-new", name: "Edited after creating it" })),
+      payment: settlementRecord(settlement({ id: "s-new" })),
+      minted: transactionRecord(transaction({ id: "m-new", sharedSettlementId: "s-new" })),
+    };
+    await vault.db.put("accounts", rows.server);
+    await vault.db.put("accounts", rows.created);
+    await vault.db.put("settlements", rows.payment);
+    await vault.db.put("transactions", rows.minted);
+    await vault.db.put(
+      "outbox",
+      operation(1, { entity: "account", entityId: "a-new", status: "conflict" }),
+    );
+    await vault.db.put(
+      "outbox",
+      operation(2, { entity: "account", entityId: "a-new", action: "update" }),
+    );
+    await vault.db.put(
+      "outbox",
+      operation(3, { entity: "settlement", entityId: "s-new", payload: { minted: ["m-new"] } }),
+    );
+    vault.close();
+    return rows;
+  }
+
+  it("keeps what the queue's creates wrote, as they are now, walked through every step", async () => {
+    const rows = await seedUnsent();
+
+    const upgraded = await openTestVault(
+      "u1",
+      definition({
+        mirrorVersion: MIRROR_VERSION + 2,
+        mirrorMigrations: {
+          [MIRROR_VERSION]: stamped("first"),
+          [MIRROR_VERSION + 1]: stamped("second"),
+        },
+      }),
+    );
+
+    expect(upgraded.mirrorReset).toBe(true);
+    const carried = `${rows.created.updatedAt}+first+second`;
+    expect(await upgraded.db.getAll("accounts")).toEqual([{ ...rows.created, updatedAt: carried }]);
+    expect(await upgraded.db.getAllKeys("settlements")).toEqual(["s-new"]);
+    expect(await upgraded.db.getAllKeys("transactions")).toEqual(["m-new"]);
+    expect(await upgraded.db.count("outbox")).toBe(3);
+    expect(await upgraded.db.get("meta", "syncCursor")).toBeUndefined();
+  });
+
+  it("drops only the row a step cannot carry", async () => {
+    await seedUnsent();
+
+    const upgraded = await openTestVault(
+      "u1",
+      definition({
+        mirrorVersion: MIRROR_VERSION + 1,
+        mirrorMigrations: {
+          [MIRROR_VERSION]: (store, record) => (store === "settlements" ? null : record),
+        },
+      }),
+    );
+
+    expect(await upgraded.db.getAllKeys("accounts")).toEqual(["a-new"]);
+    expect(await upgraded.db.count("settlements")).toBe(0);
+    expect(await upgraded.db.getAllKeys("transactions")).toEqual(["m-new"]);
+  });
+
+  it("keeps nothing when a version on the way has no step", async () => {
+    await seedUnsent();
+
+    const upgraded = await openTestVault(
+      "u1",
+      definition({
+        mirrorVersion: MIRROR_VERSION + 2,
+        mirrorMigrations: { [MIRROR_VERSION]: stamped("first") },
+      }),
+    );
+
+    expect(upgraded.mirrorReset).toBe(true);
+    expect(await upgraded.db.count("accounts")).toBe(0);
+    expect(await upgraded.db.count("settlements")).toBe(0);
+    expect(await upgraded.db.count("transactions")).toBe(0);
+    expect(await upgraded.db.count("outbox")).toBe(3);
+  });
+
+  it("keeps nothing a newer build wrote when a rolled-back one resets the copy", async () => {
+    await seedUnsent(definition({ mirrorVersion: MIRROR_VERSION + 1 }));
+
+    const older = await openTestVault("u1", VAULT);
+
+    expect(older.mirrorReset).toBe(true);
+    expect(await older.db.count("accounts")).toBe(0);
+    expect(await older.db.count("outbox")).toBe(3);
+  });
+
+  it("keeps nothing while the queue is blocked: this build cannot say which rows it wrote", async () => {
+    await seedUnsent();
+
+    const blocked = await openTestVault(
+      "u1",
+      definition({
+        mirrorVersion: MIRROR_VERSION + 1,
+        outboxVersion: OUTBOX_VERSION + 1,
+        mirrorMigrations: { [MIRROR_VERSION]: (_store, record) => record },
+      }),
+    );
+
+    expect(blocked.outbox).toBe("blocked");
+    expect(await blocked.db.count("accounts")).toBe(0);
+    expect(await blocked.db.count("outbox")).toBe(3);
+  });
+
+  it("reads which rows to keep from the queue already migrated", async () => {
+    await seedUnsent();
+
+    const upgraded = await openTestVault(
+      "u1",
+      definition({
+        mirrorVersion: MIRROR_VERSION + 1,
+        outboxVersion: OUTBOX_VERSION + 1,
+        outboxMigrations: {
+          [OUTBOX_VERSION]: (op) => ({
+            ...op,
+            opVersion: OUTBOX_VERSION + 1,
+            action: op.entity === "settlement" ? "update" : op.action,
+          }),
+        },
+        mirrorMigrations: { [MIRROR_VERSION]: (_store, record) => record },
+      }),
+    );
+
+    expect(upgraded.outbox).toBe("migrated");
+    expect(await upgraded.db.getAllKeys("accounts")).toEqual(["a-new"]);
+    expect(await upgraded.db.count("settlements")).toBe(0);
+  });
+
+  it("two tabs of the new build opening together walk each row through a step once", async () => {
+    const rows = await seedUnsent();
+    const newer = definition({
+      mirrorVersion: MIRROR_VERSION + 1,
+      mirrorMigrations: { [MIRROR_VERSION]: stamped("first") },
+    });
+
+    const [first, second] = await Promise.all([
+      openTestVault("u1", newer),
+      openTestVault("u1", newer),
+    ]);
+
+    expect([first.mirrorReset, second.mirrorReset].sort()).toEqual([false, true]);
+    expect(await first.db.get("accounts", "a-new")).toEqual({
+      ...rows.created,
+      updatedAt: `${rows.created.updatedAt}+first`,
+    });
+  });
+
+  it("a step that throws drops that row and reports it, and the reset still completes", async () => {
+    const reported: unknown[] = [];
+    setErrorReporter((error) => reported.push(error));
+    await seedUnsent();
+    const broken = new Error("a step that cannot read this row");
+
+    try {
+      const upgraded = await openTestVault(
+        "u1",
+        definition({
+          mirrorVersion: MIRROR_VERSION + 1,
+          mirrorMigrations: {
+            [MIRROR_VERSION]: (store, record) => {
+              if (store === "settlements") throw broken;
+              return record;
+            },
+          },
+        }),
+      );
+
+      expect(upgraded.mirrorReset).toBe(true);
+      expect(await upgraded.db.getAllKeys("accounts")).toEqual(["a-new"]);
+      expect(await upgraded.db.count("settlements")).toBe(0);
+      expect(await upgraded.db.getAllKeys("transactions")).toEqual(["m-new"]);
+      expect((await upgraded.db.get("meta", "mirrorVersion"))?.value).toBe(MIRROR_VERSION + 1);
+      expect(reported).toEqual([broken]);
+    } finally {
+      setErrorReporter(null);
+    }
+  });
+
+  it("keeps nothing from a copy that never recorded its mirror version", async () => {
+    await seedUnsent();
+    const bare = await openTestVault("u1");
+    await bare.db.delete("meta", "mirrorVersion");
+    bare.close();
+
+    const upgraded = await openTestVault(
+      "u1",
+      definition({ mirrorMigrations: { 0: (_store, record) => record } }),
+    );
+
+    expect(upgraded.mirrorReset).toBe(true);
+    expect(await upgraded.db.count("accounts")).toBe(0);
+    expect(await upgraded.db.count("outbox")).toBe(3);
+  });
+
+  it("every mirror version since T-268 has its step, so a bump cannot forget what only the queue holds", () => {
+    for (let version = FIRST_CARRIED_MIRROR_VERSION; version < MIRROR_VERSION; version += 1) {
+      expect(MIRROR_MIGRATIONS[version], `MIRROR_MIGRATIONS[${String(version)}]`).toBeTypeOf(
+        "function",
+      );
+    }
   });
 });
 

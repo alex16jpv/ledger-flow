@@ -4,35 +4,13 @@ import { forgetOfflineReadyAnnouncement } from "@/lib/pwa/readiness";
 
 import { isVaultSupported, otherVaultUsers, vaultExists } from "./db";
 import { forgetLanded } from "./outbox/landed";
-import type { WriteTransaction } from "./outbox/queue";
-import { unsentRows } from "./outbox/unsent";
-import {
-  advanceMirrorEpoch,
-  MIRROR_STORES,
-  type OutboxOperation,
-  vaultDatabaseName,
-  type VaultSchema,
-} from "./schema";
+import { clearMirror } from "./outbox/unsent";
+import { advanceMirrorEpoch, MIRROR_STORES, vaultDatabaseName, type VaultSchema } from "./schema";
 import { markSuggestionsStale } from "./suggest/stale";
 
 type VaultStore = (typeof MIRROR_STORES)[number] | "meta" | "outbox";
 
 const PURGEABLE_STORES: readonly VaultStore[] = [...MIRROR_STORES, "meta", "outbox"];
-
-export async function clearMirror(
-  tx: WriteTransaction,
-  queued: readonly OutboxOperation[],
-  present: readonly VaultStore[] = PURGEABLE_STORES,
-): Promise<void> {
-  const unsent = unsentRows(queued);
-  for (const name of MIRROR_STORES) {
-    if (!present.includes(name)) continue;
-    const store = tx.objectStore(name);
-    const kept = await Promise.all((unsent.get(name) ?? []).map((id) => store.get(id)));
-    await store.clear();
-    for (const record of kept) if (record) await store.put(record);
-  }
-}
 
 export interface VaultPurgeOptions {
   discardPendingWork?: boolean;

@@ -5,6 +5,35 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 `design/preview/` for what it looks like). The API contract is `types/api.d.ts` and
 `lib/api/errors.ts`, generated from the backend's OpenAPI.
 
+## 2026-10-16 · A mirror version bump keeps the rows the queue created, through a step per version (T-268)
+
+- **Context:** T-170 made every purge keep the rows written by queued creates, except the
+  `MIRROR_VERSION` reset of `openVault`, which kept nothing: a row an older build wrote may not have the
+  shape the new one reads, and only the outbox had migrations. A deploy that bumped the version with
+  something created offline and unsent left it out of every list, while the projected balance still
+  counted it, until it was sent.
+- **Decision:** the reset goes through `clearMirror` like every other purge, and each record it keeps
+  is walked through `MIRROR_MIGRATIONS` (`lib/local/db.ts`), one step per mirror version, the way
+  `OUTBOX_MIGRATIONS` walks the queue. A step returns the record in the next version's shape, or `null`
+  to drop it; a missing step, a copy a newer build wrote (a rolled-back deploy) or a queue this build
+  cannot read (`outbox: "blocked"`) keeps nothing, which is what every reset did before. The queue is
+  migrated first, so the rows to keep are read from operations this build understands. Whoever bumps
+  `MIRROR_VERSION` writes the step from the old number — the identity when only stores were added or the
+  server's rows have to be pulled again — and a test in `migrations.test.ts` fails until it exists. A
+  step reshapes a record in place: it cannot move it to another store or change its `id`. The stored
+  version is read again inside the reset's transaction, so two tabs of the new build opening together
+  walk each row once (rows carry no version of their own, unlike operations), and a step that throws
+  is reported and drops only that row, instead of committing a copy cleared halfway. Taken by the
+  session (technical).
+- **Alternatives (not taken):** storing each create's projected row in its payload and putting it back
+  after the reset, as T-170 left proposed — a new outbox format across the eight create routes, and the
+  copy goes stale the moment a later write edits the unsent row or folds into it, so it would also need
+  the queue reprojected over it; rebuilding each row from its operation after the pull — the body does
+  not hold all of it (a quick capture takes the default account the device had then).
+- **Consequence:** an unsent create stays listed across a version bump whose step carries it.
+  `clearMirror` moved to `lib/local/outbox/unsent.ts`, next to `unsentRows`, so `db.ts` can use it
+  without importing `purge.ts`, which imports `db.ts`.
+
 ## 2026-10-16 · Two builds of the app never share the copy, and the worker keeps only its own build (T-171)
 
 - **Context** (audit 2026-09-23, finding 33, and the review of T-196):
@@ -139,8 +168,8 @@ The UI these decisions refine lives in `design/` (`design/spec/` for the what an
 - **Consequence:** the `MIRROR_VERSION` reset of `openVault` still keeps nothing: a row an older build
   wrote may not have the shape the new one reads, and only the outbox migrates. Until the create lands,
   a version bump hides it from the lists the way every purge did before; that is T-268 on the owner's
-  list. On a logout, and when another account signs in (T-167: "the copy goes, the queue
-  waits"), the kept rows stay in that user's own vault, next to the queue that already holds the same
+  list. _Superseded on 2026-10-16 by T-268: the reset keeps them too, through `MIRROR_MIGRATIONS`._
+  On a logout, and when another account signs in (T-167: "the copy goes, the queue waits"), the kept rows stay in that user's own vault, next to the queue that already holds the same
   data, and no other session reads that vault.
 
 ## 2026-10-13 · A resent edit answered `duplicate` moves the guards behind it (T-168)
@@ -3473,7 +3502,10 @@ cover` is set once in the root layout for the standalone display.
   can enforce with code and tests, so the discipline gives way.
 - **Consequence:** invariant 7 is protected by code, not by structure: nothing ever calls
   `deleteDatabase` on a vault, the mirror reset transaction deliberately does not include the
-  `outbox` store, and both rules have a test that fails when they are broken.
+  `outbox` store, and both rules have a test that fails when they are broken. _Since T-166 two things
+  delete a vault on purpose ("Delete everything on this device", and the mirror dropping a vault its
+  own open recreated after another tab deleted it); since T-268 the reset opens `outbox` to read which
+  rows the queue created, and never writes it (`migrations.test.ts`: the queue comes out whole)._
 
 ## 2026-09-03 · Three version numbers, because the two halves migrate by opposite rules (O-F1)
 
